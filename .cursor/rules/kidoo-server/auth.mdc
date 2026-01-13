@@ -1,0 +1,222 @@
+---
+description: "Règles d'authentification pour kidoo-server. Utiliser NextAuth v5, requireAuth pour les routes API, et les Server Actions pour l'inscription."
+alwaysApply: false
+globs:
+  - kidoo-server/auth.ts
+  - kidoo-server/lib/auth-helpers.ts
+  - kidoo-server/app/actions/auth.ts
+  - kidoo-server/app/api/auth/**/*.ts
+---
+
+# Règles du Module Authentification
+
+## Architecture
+
+L'authentification utilise :
+- **NextAuth.js v5 (Auth.js)** - Framework d'authentification
+- **PrismaAdapter** - Adapter Prisma pour NextAuth
+- **Credentials Provider** - Authentification email/password
+- **requireAuth** (`lib/auth-helpers.ts`) - Helper pour routes API
+- **Server Actions** (`app/actions/auth.ts`) - Pour l'inscription
+
+## Configuration NextAuth
+
+Le fichier `auth.ts` configure NextAuth :
+
+```typescript
+import NextAuth from 'next-auth';
+import { PrismaAdapter } from '@auth/prisma-adapter';
+import Credentials from 'next-auth/providers/credentials';
+import { prisma } from '@/lib/prisma';
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    Credentials({
+      // Configuration du provider
+    }),
+  ],
+});
+```
+
+## Utilisation dans les composants
+
+### Server Components
+
+```typescript
+import { auth } from '@/auth';
+
+export default async function Page() {
+  const session = await auth();
+
+  if (!session?.user) {
+    return <div>Non connecté</div>;
+  }
+
+  return <div>Bienvenue {session.user.email}</div>;
+}
+```
+
+### Server Actions
+
+```typescript
+'use server';
+
+import { auth } from '@/auth';
+import { prisma } from '@/lib/prisma';
+
+export async function getUserKidoos() {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    throw new Error('Non authentifié');
+  }
+
+  return await prisma.kidoo.findMany({
+    where: { userId: session.user.id },
+  });
+}
+```
+
+### Client Components
+
+```typescript
+'use client';
+
+import { signIn, signOut, useSession } from 'next-auth/react';
+
+export default function AuthButton() {
+  const { data: session, status } = useSession();
+
+  if (status === 'loading') {
+    return <div>Chargement...</div>;
+  }
+
+  if (session) {
+    return (
+      <>
+        <p>Connecté en tant que {session.user?.email}</p>
+        <button onClick={() => signOut()}>Déconnexion</button>
+      </>
+    );
+  }
+
+  return <button onClick={() => signIn()}>Connexion</button>;
+}
+```
+
+## Routes API - Authentification mobile
+
+Pour les routes API utilisées par l'app mobile, utiliser `requireAuth` :
+
+```typescript
+import { requireAuth } from '@/lib/auth-helpers';
+
+export async function GET(request: NextRequest) {
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return authResult.response; // 401
+  }
+
+  const { userId } = authResult;
+  // Utiliser userId pour les requêtes
+}
+```
+
+**Règle** : Toujours utiliser `requireAuth` pour les routes API, pas `auth()`.
+
+## Server Actions - Inscription
+
+L'inscription utilise des Server Actions :
+
+```typescript
+'use server';
+
+import { registerSchema } from '@/shared';
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
+
+export async function registerUser(data: RegisterInput): Promise<RegisterResult> {
+  // 1. Valider avec Zod
+  const validationResult = registerSchema.safeParse(data);
+  if (!validationResult.success) {
+    // Retourner erreur
+  }
+
+  // 2. Vérifier si l'utilisateur existe
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  // 3. Hasher le mot de passe
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  // 4. Créer l'utilisateur
+  const user = await prisma.user.create({ ... });
+
+  return { success: true, userId: user.id };
+}
+```
+
+**Règle** : Utiliser les Server Actions pour l'inscription, pas les routes API.
+
+## Variables d'environnement
+
+```env
+# NextAuth
+NEXTAUTH_SECRET="votre-secret-super-securise"
+NEXTAUTH_URL="http://localhost:3000"  # Optionnel
+
+# Base de données
+DATABASE_URL="postgresql://..."
+```
+
+## Protection des routes
+
+Le `proxy.ts` gère les routes publiques :
+
+```typescript
+const publicRoutes = [
+  '/auth/signin',
+  '/auth/signup',
+  '/api/auth',
+  '/api/auth/register',
+  '/api/auth/mobile',
+];
+```
+
+**Règle** : Les routes API protégées doivent utiliser `requireAuth`.
+
+## Hashing des mots de passe
+
+**TOUJOURS utiliser bcryptjs** avec un salt de 10 :
+
+```typescript
+import bcrypt from 'bcryptjs';
+
+const hashedPassword = await bcrypt.hash(password, 10);
+const isValid = await bcrypt.compare(password, hashedPassword);
+```
+
+**Règle** : Ne jamais stocker les mots de passe en clair.
+
+## Format de réponse
+
+Les Server Actions retournent :
+
+```typescript
+type RegisterResult = 
+  | { success: true; userId: string; message: string }
+  | { success: false; error: string; field?: string };
+```
+
+**Règle** : Utiliser ce format pour toutes les Server Actions d'authentification.
+
+## Règles strictes
+
+1. **Utiliser NextAuth v5** - Pas d'authentification custom
+2. **requireAuth pour routes API** - Pas `auth()` dans les routes API
+3. **Server Actions pour inscription** - Pas de route API pour l'inscription
+4. **Valider avec Zod** - Utiliser les schémas partagés
+5. **Hasher les mots de passe** - Toujours avec bcryptjs (salt 10)
+6. **Format de réponse standardisé** - `{ success, ... }`

@@ -1,0 +1,109 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  avatar        String?
+  password      String? // Pour l'authentification par mot de passe
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  kidoos        Kidoo[]
+  tags          Tag[]
+
+  @@map("users")
+}
+
+model Kidoo {
+  id             String   @id @default(uuid())
+  name           String
+  model          String   @default("classic") // Modèle du Kidoo (classic, mini, pro, etc.)
+  macAddress     String?
+  deviceId       String   @unique // UUID du device BLE
+  firmwareVersion String?
+  lastConnected  DateTime?
+  isConnected    Boolean  @default(false)
+  wifiSSID       String?
+  userId         String?
+  isSynced       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags         Tag[]
+
+  @@map("kidoos")
+  @@index([userId])
+  @@index([deviceId])
+  @@index([model])
+}
+
+model Tag {
+  id          String   @id @default(uuid()) // Identifiant unique écrit sur le tag NFC (UUID généré par Prisma)
+  uid         String   // UID du tag NFC (lecture seule, identifiant matériel du tag physique)
+  name        String?  // Nom optionnel pour le tag
+  kidooId     String
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  kidoo       Kidoo    @relation(fields: [kidooId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tags")
+  @@index([kidooId])
+  @@index([userId])
+  @@index([uid])
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}

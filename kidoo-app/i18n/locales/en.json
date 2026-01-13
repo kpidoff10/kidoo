@@ -1,0 +1,347 @@
+{
+  "translation": {
+    "common": {
+      "welcome": "Welcome!",
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "loading": "Loading...",
+      "error": "Error",
+      "close": "Close"
+    },
+    "networkError": {
+      "title": "Connection Error",
+      "message": "Unable to connect to the server. Please check your Internet connection and ensure the server is running.",
+      "endpoint": "Endpoint",
+      "retry": "Retry",
+      "close": "Close"
+    },
+    "app": {
+      "version": "Version",
+      "developerMode": {
+        "enabled": {
+          "title": "Developer mode enabled",
+          "message": "Developer mode has been successfully enabled."
+        },
+        "disabled": {
+          "title": "Developer mode disabled",
+          "message": "Developer mode has been successfully disabled."
+        },
+        "badge": "(Dev)"
+      }
+    },
+    "home": {
+      "title": "Welcome!",
+      "step1": {
+        "title": "Step 1: Try it",
+        "description": "Edit <1>app/(tabs)/index.tsx</1> to see changes. Press <2>{{shortcut}}</2> to open developer tools.",
+        "shortcuts": {
+          "ios": "cmd + d",
+          "android": "cmd + m",
+          "web": "F12"
+        }
+      },
+      "step2": {
+        "title": "Step 2: Explore",
+        "description": "Tap the Explore tab to learn more about what's included in this starter app."
+      },
+      "step3": {
+        "title": "Step 3: Get a fresh start",
+        "description": "When you're ready, run <1>npm run reset-project</1> to get a fresh <2>app</2> directory. This will move the current <2>app</2> to <2>app-example</2>."
+      }
+    },
+    "explore": {
+      "title": "Explore",
+      "description": "This app includes example code to help you get started.",
+      "sections": {
+        "fileBasedRouting": {
+          "title": "File-based routing",
+          "content": "This app has two screens: <1>app/(tabs)/index.tsx</1> and <1>app/(tabs)/explore.tsx</1>.",
+          "note": "The layout file in <1>app/(tabs)/_layout.tsx</1> sets up the tab navigator.",
+          "learnMore": "Learn more"
+        },
+        "platformSupport": {
+          "title": "Android, iOS, and web support",
+          "content": "You can open this project on Android, iOS, and the web. To open the web version, press <1>w</1> in the terminal running this project."
+        },
+        "images": {
+          "title": "Images",
+          "content": "For static images, you can use the <1>@2x</1> and <1>@3x</1> suffixes to provide files for different screen densities",
+          "learnMore": "Learn more"
+        },
+        "themes": {
+          "title": "Light and dark mode components",
+          "content": "This template has light and dark mode support. The <1>useColorScheme()</1> hook lets you inspect what the user's current color scheme is, and so you can adjust UI colors accordingly.",
+          "learnMore": "Learn more"
+        },
+        "animations": {
+          "title": "Animations",
+          "content": "This template includes an example of an animated component. The <1>components/HelloWave.tsx</1> component uses the powerful <2>react-native-reanimated</2> library to create a waving hand animation.",
+          "iosNote": "The <1>components/ParallaxScrollView.tsx</1> component provides a parallax effect for the header image."
+        }
+      }
+    },
+    "tabs": {
+      "home": "Home",
+      "explore": "Explore",
+      "kidoos": "My Kidoos"
+    },
+    "kidoos": {
+      "title": "My Kidoos",
+      "empty": {
+        "title": "No Kidoos",
+        "description": "You don't have any Kidoos yet. Add your first device to get started."
+      },
+      "tags": {
+        "empty": "No tags registered. Press + to add an NFC tag."
+      },
+      "add": {
+        "title": "Add a Kidoo",
+        "description": "Feature coming soon",
+        "confirm": "Add"
+      },
+      "scan": {
+        "title": "Search for Kidoo",
+        "start": "Scan",
+        "scanning": "Scanning...",
+        "notScanning": "Press Scan to start",
+        "bluetoothDisabled": "Please enable Bluetooth",
+        "bluetoothNotAvailable": "Bluetooth requires a native build. Make sure you ran \"npm run android\" and not Expo Go.",
+        "noDevicesFound": "No Kidoo devices found",
+        "waiting": "Waiting for scan...",
+        "deviceSelected": "Device selected",
+        "deviceName": "Name",
+        "deviceId": "ID"
+      },
+      "status": {
+        "connected": "Connected",
+        "disconnected": "Disconnected"
+      },
+        "detail": {
+          "title": "Kidoo Details",
+          "description": "Manage your Kidoo and its settings",
+          "actions": {
+            "rename": "Rename",
+            "renameSubtitle": "Change the Kidoo name",
+            "edit": "Edit",
+            "editSubtitle": "Modify settings",
+            "info": "Information",
+            "infoSubtitle": "Version {{version}}",
+            "infoSubtitleNoVersion": "View details",
+            "wifi": "Configure WiFi",
+            "wifiSubtitle": "Change the WiFi network",
+            "tags": "My tags",
+            "tagsSubtitle": "Manage NFC tags",
+            "delete": "Delete",
+            "deleteSubtitle": "Remove this Kidoo from your account"
+          },
+          "storage": {
+            "title": "Storage",
+            "loading": "Loading...",
+            "error": "Error loading",
+            "free": "Free",
+            "total": "Total"
+          },
+        "rename": {
+          "title": "Rename Kidoo",
+          "nameLabel": "Kidoo name",
+          "namePlaceholder": "My Kidoo",
+          "error": "Error renaming",
+          "errorEmpty": "Name cannot be empty"
+        },
+        "delete": {
+          "title": "Delete Kidoo",
+          "message": "Are you sure you want to delete \"{{name}}\"?",
+          "warning": "This action is irreversible",
+          "confirm": "Delete",
+          "error": "Error deleting"
+        },
+        "wifi": {
+          "title": "Configure WiFi",
+          "description": "Reconfigure the WiFi network for {{name}}",
+          "warningNotConnected": "The Kidoo must be connected to configure WiFi",
+          "success": "WiFi configuration successful!",
+          "configure": "Configure",
+          "errorSSIDRequired": "WiFi network name is required",
+          "errorNotConnected": "Kidoo is not connected",
+          "errorSendFailed": "Error sending command",
+          "errorConfigFailed": "Error configuring WiFi"
+        },
+        "nfc": {
+          "title": "Approach an NFC tag",
+          "description": "Approach an NFC tag to the NFC reader of your Kidoo",
+          "tagDetected": "Tag detected!",
+          "tagUID": "UID: {{uid}}",
+          "scanning": "Waiting for tag...",
+          "startScan": "Start reading",
+          "cancel": "Cancel",
+          "errorNotConnected": "Kidoo is not connected",
+          "errorReadFailed": "Error reading tag",
+          "errorSendFailed": "Error sending command",
+          "errorUnknown": "An error occurred"
+        }
+      },
+      "edit": {
+        "basic": {
+          "title": "Edit Basic Kidoo",
+          "description": "Settings specific to the Basic model",
+          "connecting": "Connecting to Kidoo...",
+          "notConnected": "Kidoo is not connected.",
+          "reconnect": "Reconnect",
+          "connected": "✓ Kidoo connected",
+          "settings": "Settings",
+          "comingSoon": "Edit settings will be available soon",
+          "errors": {
+            "connectionFailed": "Bluetooth connection failed",
+            "saveFailed": "Error saving settings",
+            "commandFailed": "Error sending command",
+            "timeout": "Request timeout",
+            "unknown": "An error occurred"
+          },
+          "success": {
+            "saved": "Settings saved successfully",
+            "connected": "Connection established successfully"
+          },
+          "menu": {
+            "title": "Features",
+            "brightness": {
+              "title": "Brightness",
+              "subtitle": "Adjust LED brightness",
+              "min": "Min",
+              "max": "Max"
+            },
+            "effects": {
+              "title": "LED Effects",
+              "subtitle": "Choose a light effect"
+            },
+            "sleep": {
+              "title": "Sleep Mode",
+              "subtitle": "Configure sleep mode"
+            },
+            "colors": {
+              "title": "Colors",
+              "subtitle": "Customize colors"
+            },
+            "system": {
+              "title": "System Information",
+              "subtitle": "Version {{version}}",
+              "subtitleNoVersion": "View information"
+            },
+            "reset": {
+              "title": "Reset",
+              "subtitle": "Restore default settings",
+              "confirmTitle": "Reset Settings",
+              "confirmMessage": "Are you sure you want to restore default settings? This action cannot be undone.",
+              "confirmButton": "Reset",
+              "cancelButton": "Cancel"
+            }
+          }
+        }
+      },
+      "setup": {
+        "title": "Kidoo Setup",
+        "subtitle": "Step {current} of {total}",
+        "step1": {
+          "title": "Name your Kidoo",
+          "presentation": "Choose a unique name to easily identify your Kidoo in the app.",
+          "deviceName": "Kidoo name",
+          "deviceNamePlaceholder": "My Kidoo",
+          "connectionMessage": "We will establish a Bluetooth connection with your Kidoo to start the configuration."
+        },
+        "step2": {
+          "title": "Configure WiFi",
+          "description": "Enter your WiFi network information so your Kidoo can connect to the Internet.",
+          "wifiSSID": "WiFi network name (SSID)",
+          "wifiSSIDPlaceholder": "My WiFi network",
+          "wifiPassword": "WiFi password",
+          "wifiPasswordPlaceholder": "Password",
+          "ssid": "Network name (SSID)",
+          "ssidPlaceholder": "My WiFi",
+          "password": "WiFi password",
+          "passwordPlaceholder": "••••••••"
+        },
+        "step3": {
+          "title": "Finalization",
+          "description": "Connecting to Kidoo and configuring WiFi network...",
+          "testing": "Testing Bluetooth connection...",
+          "connected": "Bluetooth connection established!",
+          "failed": "Bluetooth connection failed",
+          "waiting": "Waiting for test...",
+          "connectionFailed": "Connection failed",
+          "configuringWifi": "Configuring WiFi...",
+          "wifiConnected": "WiFi connected successfully!",
+          "wifiFailed": "WiFi configuration failed",
+          "noWifiSSID": "WiFi SSID missing",
+          "sendCommandFailed": "Error sending command",
+          "wifiConfigFailed": "Error configuring WiFi",
+          "wifiConnectionFailed": "WiFi connection failed",
+          "timeout": "Timeout exceeded",
+          "bluetoothStatus": "Bluetooth Connection",
+          "wifiStatus": "WiFi Configuration",
+          "wifiStatusSuccess": "WiFi: Connected",
+          "wifiStatusError": "WiFi: Error",
+          "connectionLost": "Bluetooth connection lost",
+          "timeoutWithError": "Timeout exceeded: {{error}}",
+          "connecting": "Connecting...",
+          "connected": "Connected",
+          "configuring": "Configuring...",
+          "wifiSuccess": "WiFi configured successfully",
+          "noWifiSSID": "WiFi SSID missing",
+          "notConnected": "Bluetooth not connected"
+        },
+        "buttons": {
+          "previous": "Previous",
+          "next": "Next",
+          "finish": "Finish"
+        }
+      }
+    },
+    "modal": {
+      "title": "This is a modal",
+      "goHome": "Go to home screen"
+    },
+    "actions": {
+      "action": "Action",
+      "share": "Share",
+      "more": "More"
+    },
+    "auth": {
+      "logout": "Logout",
+      "login": {
+        "title": "Login",
+        "subtitle": "Welcome to Kidoo",
+        "email": "Email",
+        "password": "Password",
+        "loginButton": "Sign in",
+        "noAccount": "Don't have an account?",
+        "signUp": "Sign up",
+        "forgotPassword": "Forgot password?",
+        "errors": {
+          "invalidCredentials": "Invalid email or password",
+          "required": "This field is required",
+          "invalidEmail": "Invalid email"
+        }
+      },
+      "register": {
+        "title": "Sign up",
+        "subtitle": "Create your Kidoo account",
+        "name": "Name",
+        "email": "Email",
+        "password": "Password",
+        "confirmPassword": "Confirm password",
+        "registerButton": "Sign up",
+        "haveAccount": "Already have an account?",
+        "signIn": "Sign in",
+        "errors": {
+          "passwordTooShort": "Password must be at least 8 characters",
+          "passwordsNotMatch": "Passwords do not match",
+          "emailExists": "An account with this email already exists",
+          "invalidEmail": "Invalid email",
+          "nameTooShort": "Name must be at least 2 characters"
+        },
+        "success": "Account created successfully!"
+      }
+    }
+  }
+}

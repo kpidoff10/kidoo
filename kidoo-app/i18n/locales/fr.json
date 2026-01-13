@@ -1,0 +1,345 @@
+{
+  "translation": {
+    "common": {
+      "welcome": "Bienvenue !",
+      "edit": "Modifier",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "delete": "Supprimer",
+      "loading": "Chargement...",
+      "error": "Erreur",
+      "close": "Fermer"
+    },
+    "networkError": {
+      "title": "Erreur de connexion",
+      "message": "Impossible de se connecter au serveur. Vérifiez votre connexion Internet et que le serveur est démarré.",
+      "endpoint": "Endpoint",
+      "retry": "Réessayer",
+      "close": "Fermer"
+    },
+    "app": {
+      "version": "Version",
+      "developerMode": {
+        "enabled": {
+          "title": "Mode développeur activé",
+          "message": "Le mode développeur a été activé avec succès."
+        },
+        "disabled": {
+          "title": "Mode développeur désactivé",
+          "message": "Le mode développeur a été désactivé avec succès."
+        },
+        "badge": "(Dev)"
+      }
+    },
+    "home": {
+      "title": "Bienvenue !",
+      "step1": {
+        "title": "Étape 1 : Essayer",
+        "description": "Modifiez <1>app/(tabs)/index.tsx</1> pour voir les changements. Appuyez sur <2>{{shortcut}}</2> pour ouvrir les outils de développement.",
+        "shortcuts": {
+          "ios": "cmd + d",
+          "android": "cmd + m",
+          "web": "F12"
+        }
+      },
+      "step2": {
+        "title": "Étape 2 : Explorer",
+        "description": "Appuyez sur l'onglet Explorer pour en savoir plus sur ce qui est inclus dans cette application de démarrage."
+      },
+      "step3": {
+        "title": "Étape 3 : Nouveau départ",
+        "description": "Lorsque vous êtes prêt, exécutez <1>npm run reset-project</1> pour obtenir un répertoire <2>app</2> vierge. Cela déplacera le <2>app</2> actuel vers <2>app-example</2>."
+      }
+    },
+    "explore": {
+      "title": "Explorer",
+      "description": "Cette application contient du code d'exemple pour vous aider à démarrer.",
+      "sections": {
+        "fileBasedRouting": {
+          "title": "Routage basé sur les fichiers",
+          "content": "Cette application a deux écrans : <1>app/(tabs)/index.tsx</1> et <1>app/(tabs)/explore.tsx</1>.",
+          "note": "Le fichier de mise en page dans <1>app/(tabs)/_layout.tsx</1> configure le navigateur à onglets.",
+          "learnMore": "En savoir plus"
+        },
+        "platformSupport": {
+          "title": "Support Android, iOS et web",
+          "content": "Vous pouvez ouvrir ce projet sur Android, iOS et le web. Pour ouvrir la version web, appuyez sur <1>w</1> dans le terminal exécutant ce projet."
+        },
+        "images": {
+          "title": "Images",
+          "content": "Pour les images statiques, vous pouvez utiliser les suffixes <1>@2x</1> et <1>@3x</1> pour fournir des fichiers pour différentes densités d'écran",
+          "learnMore": "En savoir plus"
+        },
+        "themes": {
+          "title": "Composants en mode clair et sombre",
+          "content": "Ce modèle prend en charge le mode clair et sombre. Le hook <1>useColorScheme()</1> vous permet d'inspecter le schéma de couleurs actuel de l'utilisateur et d'ajuster les couleurs de l'interface en conséquence.",
+          "learnMore": "En savoir plus"
+        },
+        "animations": {
+          "title": "Animations",
+          "content": "Ce modèle inclut un exemple de composant animé. Le composant <1>components/HelloWave.tsx</1> utilise la puissante bibliothèque <2>react-native-reanimated</2> pour créer une animation de main qui fait signe.",
+          "iosNote": "Le composant <1>components/ParallaxScrollView.tsx</1> fournit un effet de parallaxe pour l'image d'en-tête."
+        }
+      }
+    },
+    "tabs": {
+      "home": "Accueil",
+      "explore": "Explorer",
+      "kidoos": "Mes kidoos"
+    },
+    "kidoos": {
+      "title": "Mes kidoos",
+      "empty": {
+        "title": "Aucun Kidoo",
+        "description": "Vous n'avez pas encore de Kidoo. Ajoutez votre premier appareil pour commencer."
+      },
+      "tags": {
+        "empty": "Aucun tag enregistré. Appuyez sur + pour ajouter un tag NFC."
+      },
+      "add": {
+        "title": "Ajouter un Kidoo",
+        "description": "Fonctionnalité à venir",
+        "confirm": "Ajouter"
+      },
+      "scan": {
+        "title": "Recherche de Kidoo",
+        "start": "Scanner",
+        "scanning": "Recherche en cours...",
+        "notScanning": "Appuyez sur Scanner pour commencer",
+        "bluetoothDisabled": "Veuillez activer le Bluetooth",
+        "bluetoothNotAvailable": "Le Bluetooth nécessite un build natif. Assurez-vous d'avoir lancé \"npm run android\" et non Expo Go.",
+        "noDevicesFound": "Aucun appareil Kidoo trouvé",
+        "waiting": "En attente du scan...",
+        "deviceSelected": "Appareil sélectionné",
+        "deviceName": "Nom",
+        "deviceId": "ID"
+      },
+      "status": {
+        "connected": "Connecté",
+        "disconnected": "Déconnecté"
+      },
+        "detail": {
+          "title": "Détails du Kidoo",
+          "description": "Gérez votre Kidoo et ses paramètres",
+          "actions": {
+            "rename": "Renommer",
+            "renameSubtitle": "Modifier le nom du Kidoo",
+            "edit": "Modifier",
+            "editSubtitle": "Modifier les paramètres",
+            "info": "Informations",
+            "infoSubtitle": "Version {{version}}",
+            "infoSubtitleNoVersion": "Voir les détails",
+            "wifi": "Configurer le WiFi",
+            "wifiSubtitle": "Changer le réseau WiFi",
+            "tags": "Mes tags",
+            "tagsSubtitle": "Gérer les tags NFC",
+            "delete": "Supprimer",
+            "deleteSubtitle": "Retirer ce Kidoo de votre compte"
+          },
+          "storage": {
+            "title": "Stockage",
+            "loading": "Chargement...",
+            "error": "Erreur lors du chargement",
+            "free": "Libre",
+            "total": "Total"
+          },
+        "rename": {
+          "title": "Renommer le Kidoo",
+          "nameLabel": "Nom du Kidoo",
+          "namePlaceholder": "Mon Kidoo",
+          "error": "Erreur lors du renommage",
+          "errorEmpty": "Le nom ne peut pas être vide"
+        },
+        "delete": {
+          "title": "Supprimer le Kidoo",
+          "message": "Êtes-vous sûr de vouloir supprimer \"{{name}}\" ?",
+          "warning": "Cette action est irréversible",
+          "confirm": "Supprimer",
+          "error": "Erreur lors de la suppression"
+        },
+        "wifi": {
+          "title": "Configurer le WiFi",
+          "description": "Reconfigurez le réseau WiFi pour {{name}}",
+          "warningNotConnected": "Le Kidoo doit être connecté pour configurer le WiFi",
+          "success": "Configuration WiFi réussie !",
+          "configure": "Configurer",
+          "errorSSIDRequired": "Le nom du réseau WiFi est requis",
+          "errorNotConnected": "Le Kidoo n'est pas connecté",
+          "errorSendFailed": "Erreur lors de l'envoi de la commande",
+          "errorConfigFailed": "Erreur lors de la configuration WiFi"
+        },
+        "nfc": {
+          "title": "Approcher un tag NFC",
+          "description": "Approchez un tag NFC du lecteur NFC de votre Kidoo",
+          "tagDetected": "Tag détecté !",
+          "tagUID": "UID: {{uid}}",
+          "scanning": "En attente du tag...",
+          "startScan": "Commencer la lecture",
+          "cancel": "Annuler",
+          "errorNotConnected": "Le Kidoo n'est pas connecté",
+          "errorReadFailed": "Erreur lors de la lecture du tag",
+          "errorSendFailed": "Erreur lors de l'envoi de la commande",
+          "errorUnknown": "Une erreur est survenue"
+        }
+      },
+      "edit": {
+        "basic": {
+          "title": "Modifier le Kidoo Basic",
+          "description": "Paramètres spécifiques au modèle Basic",
+          "connecting": "Connexion au Kidoo en cours...",
+          "notConnected": "Le Kidoo n'est pas connecté.",
+          "reconnect": "Reconnecter",
+          "connected": "✓ Kidoo connecté",
+          "settings": "Paramètres",
+          "comingSoon": "Les paramètres d'édition seront disponibles prochainement",
+          "errors": {
+            "connectionFailed": "Échec de la connexion Bluetooth",
+            "saveFailed": "Erreur lors de la sauvegarde",
+            "commandFailed": "Erreur lors de l'envoi de la commande",
+            "timeout": "Délai d'attente dépassé",
+            "unknown": "Une erreur est survenue"
+          },
+          "success": {
+            "saved": "Paramètres enregistrés avec succès",
+            "connected": "Connexion établie avec succès"
+          },
+          "menu": {
+            "title": "Fonctionnalités",
+            "brightness": {
+              "title": "Luminosité",
+              "subtitle": "Ajuster la luminosité des LEDs",
+              "min": "Min",
+              "max": "Max"
+            },
+            "effects": {
+              "title": "Effets LED",
+              "subtitle": "Choisir un effet lumineux"
+            },
+            "sleep": {
+              "title": "Mode sommeil",
+              "subtitle": "Configurer le mode sommeil"
+            },
+            "colors": {
+              "title": "Couleurs",
+              "subtitle": "Personnaliser les couleurs"
+            },
+            "system": {
+              "title": "Informations système",
+              "subtitle": "Version {{version}}",
+              "subtitleNoVersion": "Voir les informations"
+            },
+            "reset": {
+              "title": "Réinitialiser",
+              "subtitle": "Restaurer les paramètres par défaut",
+              "confirmTitle": "Réinitialiser les paramètres",
+              "confirmMessage": "Êtes-vous sûr de vouloir restaurer les paramètres par défaut ? Cette action est irréversible.",
+              "confirmButton": "Réinitialiser",
+              "cancelButton": "Annuler"
+            }
+          }
+        }
+      },
+      "setup": {
+        "title": "Configuration du Kidoo",
+        "subtitle": "Étape {current} sur {total}",
+        "step1": {
+          "title": "Donnez un nom à votre Kidoo",
+          "presentation": "Choisissez un nom unique pour identifier facilement votre Kidoo dans l'application.",
+          "deviceName": "Nom du Kidoo",
+          "deviceNamePlaceholder": "Mon Kidoo",
+          "connectionMessage": "Nous allons établir une connexion Bluetooth avec votre Kidoo pour commencer la configuration."
+        },
+        "step2": {
+          "title": "Configurez le WiFi",
+          "description": "Entrez les informations de votre réseau WiFi pour que votre Kidoo puisse se connecter à Internet.",
+          "wifiSSID": "Nom du réseau WiFi (SSID)",
+          "wifiSSIDPlaceholder": "Mon réseau WiFi",
+          "wifiPassword": "Mot de passe WiFi",
+          "wifiPasswordPlaceholder": "Mot de passe",
+          "ssid": "Nom du réseau (SSID)",
+          "ssidPlaceholder": "Mon WiFi",
+          "password": "Mot de passe WiFi",
+          "passwordPlaceholder": "••••••••"
+        },
+        "step3": {
+          "title": "Finalisation",
+          "description": "Connexion au Kidoo et configuration du réseau WiFi en cours...",
+          "testing": "Test de connexion Bluetooth en cours...",
+          "connected": "Connecté",
+          "failed": "Échec de la connexion Bluetooth",
+          "waiting": "En attente du test...",
+          "connectionFailed": "Échec de la connexion",
+          "configuringWifi": "Configuration WiFi en cours...",
+          "wifiConnected": "WiFi connecté avec succès !",
+          "wifiFailed": "Échec de la configuration WiFi",
+          "noWifiSSID": "SSID WiFi manquant",
+          "sendCommandFailed": "Erreur lors de l'envoi de la commande",
+          "wifiConfigFailed": "Erreur lors de la configuration WiFi",
+          "wifiConnectionFailed": "Échec de la connexion WiFi",
+          "timeout": "Délai d'attente dépassé",
+          "bluetoothStatus": "Connexion Bluetooth",
+          "wifiStatus": "Configuration WiFi",
+          "wifiStatusSuccess": "WiFi: Connecté",
+          "wifiStatusError": "WiFi: Erreur",
+          "connectionLost": "Connexion Bluetooth perdue",
+          "timeoutWithError": "Délai d'attente dépassé: {{error}}",
+          "connecting": "Connexion en cours...",
+          "configuring": "Configuration en cours...",
+          "wifiSuccess": "WiFi configuré avec succès",
+          "notConnected": "Bluetooth non connecté"
+        },
+        "buttons": {
+          "previous": "Précédent",
+          "next": "Suivant",
+          "finish": "Terminer"
+        }
+      }
+    },
+    "modal": {
+      "title": "Ceci est une modale",
+      "goHome": "Aller à l'écran d'accueil"
+    },
+    "actions": {
+      "action": "Action",
+      "share": "Partager",
+      "more": "Plus"
+    },
+    "auth": {
+      "logout": "Déconnexion",
+      "login": {
+        "title": "Connexion",
+        "subtitle": "Bienvenue sur Kidoo",
+        "email": "Email",
+        "password": "Mot de passe",
+        "loginButton": "Se connecter",
+        "noAccount": "Pas encore de compte ?",
+        "signUp": "S'inscrire",
+        "forgotPassword": "Mot de passe oublié ?",
+        "errors": {
+          "invalidCredentials": "Email ou mot de passe incorrect",
+          "required": "Ce champ est requis",
+          "invalidEmail": "Email invalide"
+        }
+      },
+      "register": {
+        "title": "Inscription",
+        "subtitle": "Créez votre compte Kidoo",
+        "name": "Nom",
+        "email": "Email",
+        "password": "Mot de passe",
+        "confirmPassword": "Confirmer le mot de passe",
+        "registerButton": "S'inscrire",
+        "haveAccount": "Déjà un compte ?",
+        "signIn": "Se connecter",
+        "errors": {
+          "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
+          "passwordsNotMatch": "Les mots de passe ne correspondent pas",
+          "emailExists": "Un compte avec cet email existe déjà",
+          "invalidEmail": "Email invalide",
+          "nameTooShort": "Le nom doit contenir au moins 2 caractères"
+        },
+        "success": "Compte créé avec succès !"
+      }
+    }
+  }
+}

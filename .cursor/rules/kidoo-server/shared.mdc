@@ -1,0 +1,149 @@
+---
+description: "Règles pour les schémas et types partagés entre kidoo-server et kidoo-app. JAMAIS de duplication, utiliser @/shared pour importer depuis le dossier shared/."
+alwaysApply: false
+globs:
+  - kidoo-server/lib/shared.ts
+  - kidoo-server/app/api/**/*.ts
+  - kidoo-server/app/actions/**/*.ts
+  - shared/**/*
+---
+
+# Règles du Module Shared
+
+## Architecture
+
+Le dossier `shared/` contient les schémas et types partagés entre `kidoo-app` et `kidoo-server` :
+
+```
+shared/
+├── schemas/          # Schémas Zod de validation
+│   ├── auth.ts
+│   └── kidoo.ts
+├── types/            # Types TypeScript
+│   ├── api/          # Types de réponses API
+│   ├── kidoo.ts
+│   └── user.ts
+└── index.ts          # Export centralisé
+```
+
+## Utilisation dans kidoo-server
+
+### Import depuis shared
+
+```typescript
+// ✅ CORRECT - Utiliser le wrapper
+import { loginSchema, registerSchema, createKidooInputSchema } from '@/shared';
+import type { Kidoo, CreateKidooInput } from '@/shared';
+
+// Le fichier lib/shared.ts réexporte depuis ../../shared
+```
+
+**Règle** : Utiliser `@/shared` pour importer, pas de chemins relatifs vers `../../shared`.
+
+## Schémas de validation
+
+```typescript
+import { registerSchema, createKidooInputSchema } from '@/shared';
+
+// Dans une route API
+const validationResult = createKidooInputSchema.safeParse(body);
+if (!validationResult.success) {
+  const firstError = validationResult.error.issues[0];
+  return NextResponse.json(
+    {
+      success: false,
+      error: firstError.message,
+      field: firstError.path[0] as string,
+    },
+    { status: 400 }
+  );
+}
+
+// Dans une Server Action
+const validationResult = registerSchema.safeParse(data);
+if (!validationResult.success) {
+  // Gérer l'erreur
+}
+```
+
+## Types API
+
+```typescript
+import type { 
+  GetKidoosResponse, 
+  CreateKidooResponse,
+  CreateKidooError 
+} from '@/shared';
+```
+
+## Structure des schémas
+
+### Schémas Zod
+
+```typescript
+// shared/schemas/auth.ts
+import { z } from 'zod';
+
+export const loginSchema = z.object({
+  email: z.string().email('Email invalide'),
+  password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères'),
+});
+
+export type LoginInput = z.infer<typeof loginSchema>;
+```
+
+### Types API
+
+```typescript
+// shared/types/api/kidoo.ts
+export interface GetKidoosResponse extends ApiSuccess<Kidoo[]> {
+  data: Kidoo[];
+}
+
+export interface CreateKidooResponse extends ApiSuccess<Kidoo> {
+  data: Kidoo;
+}
+
+export interface CreateKidooError extends ApiError {
+  field?: 'name' | 'deviceId' | 'macAddress';
+}
+```
+
+## Configuration Webpack
+
+**IMPORTANT** : Pour que `@/shared` fonctionne, utiliser Webpack :
+
+```bash
+# Développement
+npm run dev
+
+# Build
+npm run build
+```
+
+Les scripts utilisent `--webpack` pour résoudre correctement les modules externes.
+
+**Règle** : Ne pas utiliser Turbopack pour le développement, utiliser Webpack.
+
+## Règles strictes
+
+1. **JAMAIS de duplication** - Les schémas/types sont dans `shared/`
+2. **Utiliser @/shared** - Pas de chemins relatifs vers `../../shared`
+3. **Schémas Zod partagés** - Pour la validation côté client et serveur
+4. **Types cohérents** - Les types API doivent correspondre aux réponses
+5. **Exports centralisés** - Tout exporter via `shared/index.ts`
+6. **Utiliser Webpack** - Pour résoudre les modules externes
+
+## Ajouter un nouveau schéma/type
+
+1. **Créer dans shared/** - `shared/schemas/monSchema.ts` ou `shared/types/monType.ts`
+2. **Exporter dans index.ts** - Ajouter l'export dans `shared/index.ts`
+3. **Utiliser dans les deux projets** - kidoo-app et kidoo-server
+
+## Validation
+
+Les schémas Zod sont utilisés pour :
+- **Validation côté client** - Dans les formulaires (kidoo-app)
+- **Validation côté serveur** - Dans les routes API et Server Actions (kidoo-server)
+
+**Règle** : Un seul schéma pour les deux, pas de duplication.

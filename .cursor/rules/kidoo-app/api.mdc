@@ -1,0 +1,169 @@
+---
+description: "Règles API pour kidoo-app. Toujours utiliser les fonctions api* (apiGet, apiPost, etc.), typer les réponses, gérer les erreurs avec try/catch, et utiliser les types partagés."
+alwaysApply: false
+globs:
+  - kidoo-app/services/**/*.ts
+  - kidoo-app/config/api.ts
+  - kidoo-app/app/**/*.tsx
+  - kidoo-app/components/**/*.tsx
+---
+
+# Règles du Module API
+
+## Architecture
+
+Les services API sont dans `services/` :
+- **api.ts** - Service API générique (GET, POST, PUT, DELETE)
+- **authService.ts** - Service d'authentification
+- **config/api.ts** - Configuration de l'API
+
+## Service API générique
+
+### Utilisation
+
+```tsx
+import { apiGet, apiPost, apiPut, apiDelete } from '@/services/api';
+
+// GET
+const kidoos = await apiGet<Kidoo[]>('/api/kidoos');
+
+// POST
+const newKidoo = await apiPost<Kidoo>('/api/kidoos', {
+  name: 'Mon Kidoo',
+  deviceId: 'device123',
+});
+
+// PUT
+const updated = await apiPut<Kidoo>(`/api/kidoos/${id}`, {
+  name: 'Nouveau nom',
+});
+
+// DELETE
+await apiDelete(`/api/kidoos/${id}`);
+```
+
+### Gestion des erreurs
+
+Toutes les fonctions lancent une `ApiException` en cas d'erreur :
+
+```tsx
+try {
+  const kidoos = await apiGet<Kidoo[]>('/api/kidoos');
+} catch (error) {
+  if (error instanceof ApiException) {
+    console.error('Status:', error.status);
+    console.error('Message:', error.message);
+    console.error('Field:', error.field); // Pour les erreurs de validation
+  }
+}
+```
+
+## Authentification dans les requêtes
+
+L'ID utilisateur est automatiquement ajouté dans les headers via `X-User-Id` :
+
+```tsx
+// Dans services/api.ts
+// L'ID utilisateur est récupéré depuis AsyncStorage
+headers: {
+  'X-User-Id': userId,
+  'Content-Type': 'application/json',
+}
+```
+
+## Configuration
+
+L'URL de base est dans `config/api.ts` :
+
+```tsx
+// Utilise EXPO_PUBLIC_API_URL ou 'http://localhost:3000' par défaut
+export const API_CONFIG = {
+  baseUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000',
+};
+```
+
+### Variables d'environnement
+
+Créer un fichier `.env` :
+
+```env
+EXPO_PUBLIC_API_URL=http://localhost:3000
+```
+
+Pour Android emulator :
+```env
+EXPO_PUBLIC_API_URL=http://10.0.2.2:3000
+```
+
+## Créer un nouveau service
+
+### 1. Créer le fichier service
+
+```tsx
+// services/kidooService.ts
+import { apiGet, apiPost, apiPut, apiDelete } from './api';
+import type { Kidoo, CreateKidooInput } from '@/types/shared';
+
+export async function getKidoos(): Promise<Kidoo[]> {
+  return apiGet<Kidoo[]>('/api/kidoos');
+}
+
+export async function createKidoo(data: CreateKidooInput): Promise<Kidoo> {
+  return apiPost<Kidoo>('/api/kidoos', data);
+}
+
+export async function updateKidoo(id: string, data: UpdateKidooInput): Promise<Kidoo> {
+  return apiPut<Kidoo>(`/api/kidoos/${id}`, data);
+}
+
+export async function deleteKidoo(id: string): Promise<void> {
+  return apiDelete(`/api/kidoos/${id}`);
+}
+```
+
+### 2. Utiliser dans les composants
+
+```tsx
+import { getKidoos, createKidoo } from '@/services/kidooService';
+
+const kidoos = await getKidoos();
+const newKidoo = await createKidoo({ name: 'Test', deviceId: '123' });
+```
+
+## Types partagés
+
+Utiliser les types depuis `@/types/shared` ou `@/shared` :
+
+```tsx
+import type { Kidoo, CreateKidooInput } from '@/types/shared';
+// ou
+import type { Kidoo, CreateKidooInput } from '@/shared';
+```
+
+## Réponses API
+
+Les réponses suivent le format standardisé :
+
+```typescript
+// Succès
+{
+  success: true,
+  data: T,
+  message?: string
+}
+
+// Erreur
+{
+  success: false,
+  error: string,
+  field?: string  // Pour les erreurs de validation
+}
+```
+
+## Règles strictes
+
+1. **Toujours utiliser les fonctions api*** - Ne pas utiliser fetch directement
+2. **Typer les réponses** - Utiliser les types TypeScript
+3. **Gérer les erreurs** - Toujours utiliser try/catch
+4. **Utiliser les types partagés** - Depuis `@/shared` ou `@/types/shared`
+5. **Variables d'environnement** - Utiliser `EXPO_PUBLIC_API_URL` pour la configuration
