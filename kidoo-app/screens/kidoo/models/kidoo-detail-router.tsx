@@ -3,36 +3,41 @@
  * Sélectionne automatiquement la bonne modale selon le modèle
  */
 
-import type { Kidoo } from '@/services/kidooService';
-import { BasicDetailModal } from './basic/detail';
+import { useKidooById } from '@/hooks/useKidoos';
+import { useAuth } from '@/contexts/AuthContext';
+import { LoadingState, ErrorState } from './components';
 import { ClassicDetailModal } from './classic/detail';
+import { BasicDetailModal } from './basic/detail';
 
 interface KidooDetailRouterProps {
-  kidoo: Kidoo;
-  onEdit?: () => void;
-  onViewInfo?: () => void;
-  onKidooUpdated?: (updatedKidoo: Kidoo | null) => void;
+  kidooId: string;
 }
 
 /**
  * Routeur qui sélectionne la bonne modale selon le modèle du Kidoo
  */
 export function KidooDetailRouter({
-  kidoo,
-  onEdit,
-  onViewInfo,
-  onKidooUpdated,
+  kidooId,
 }: KidooDetailRouterProps) {
+  const { user } = useAuth();
+  const { data: kidooQuery, isLoading, error } = useKidooById(kidooId, !!user?.id);
+
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
+  if (error || !kidooQuery?.success) {
+    return <ErrorState error={error?.message || 'Erreur lors du chargement du Kidoo'} />;
+  }
+
+  const kidoo = kidooQuery.data;
   const model = kidoo.model?.toLowerCase() || 'classic';
 
   switch (model) {
     case 'basic':
       return (
         <BasicDetailModal
-          kidoo={kidoo}
-          onEdit={onEdit}
-          onViewInfo={onViewInfo}
-          onKidooUpdated={onKidooUpdated}
+          kidooId={kidoo.id}
         />
       );
 
@@ -40,17 +45,14 @@ export function KidooDetailRouter({
     default:
       return (
         <ClassicDetailModal
-          kidoo={kidoo}
-          onEdit={onEdit}
-          onViewInfo={onViewInfo}
-          onKidooUpdated={onKidooUpdated}
+          kidooId={kidoo.id}
         />
       );
 
     // Ajoutez ici les nouveaux modèles :
     // case 'mini':
-    //   return <MiniDetailModal ... />;
+    //   return <MiniDetailModal kidooId={kidooId} ... />;
     // case 'pro':
-    //   return <ProDetailModal ... />;
+    //   return <ProDetailModal kidooId={kidooId} ... />;
   }
 }

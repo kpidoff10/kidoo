@@ -40,10 +40,10 @@ export function StorageInfoSkeleton() {
 
   return (
     <>
-      {/* Titre skeleton */}
+      {/* Titre skeleton - utiliser la même hauteur que textDefaultSemiBold (lineHeight = fontSize * 1.5) */}
       <Animated.View
         style={{
-          height: theme.typography.fontSize.md,
+          height: theme.typography.fontSize.md * theme.typography.lineHeight.normal,
           width: 100,
           backgroundColor: theme.colors.border,
           borderRadius: theme.borderRadius.sm,
@@ -52,7 +52,7 @@ export function StorageInfoSkeleton() {
         }}
       />
 
-      {/* Barre skeleton */}
+      {/* Barre skeleton - exactement la même structure que le composant réel */}
       <View
         style={{
           height: 48,

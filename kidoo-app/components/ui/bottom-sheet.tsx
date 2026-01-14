@@ -5,16 +5,31 @@
  * Simple wrapper autour de TrueSheet pour maintenir la compatibilité avec l'ancienne API
  */
 
-import React, { useMemo, useRef, useCallback, ReactNode } from 'react';
+import React, { useMemo, useRef, useCallback, ReactNode, createContext, useContext } from 'react';
 import { SheetDetent, TrueSheet } from '@lodev09/react-native-true-sheet';
 import { useTheme } from '@/hooks/use-theme';
 
 // Export du type pour utilisation externe
 export type BottomSheetModalRef = React.ElementRef<typeof TrueSheet>;
 
+// Contexte pour exposer la fonction close aux enfants
+const BottomSheetContext = createContext<{ close: () => void } | null>(null);
+
+/**
+ * Hook pour fermer le BottomSheet depuis l'intérieur
+ */
+export function useBottomSheetClose() {
+  const context = useContext(BottomSheetContext);
+  if (!context) {
+    throw new Error('useBottomSheetClose must be used within a BottomSheet');
+  }
+  return context.close;
+}
+
 export interface BottomSheetProps {
   children: ReactNode;
   onDismiss?: () => void;
+  onOpen?: () => void;
   enablePanDownToClose?: boolean;
   enableHandlePanningGesture?: boolean;
   backgroundStyle?: object;
@@ -22,6 +37,9 @@ export interface BottomSheetProps {
   detents?: SheetDetent[];
   scrollable?: boolean;
 }
+
+// Export du type des props sans 'ref' pour utilisation dans forwardRef
+export type BottomSheetPropsWithoutRef = Omit<BottomSheetProps, 'ref'>;
 
 /**
  * Hook pour utiliser le BottomSheet
@@ -53,11 +71,12 @@ export function useBottomSheet() {
  * Composant générique BottomSheet
  * Simple wrapper autour de TrueSheet
  */
-export const BottomSheet = React.forwardRef<BottomSheetModalRef, Omit<BottomSheetProps, 'ref'>>(
+export const BottomSheet = React.forwardRef<BottomSheetModalRef, BottomSheetPropsWithoutRef>(
   (
     {
       children,
       onDismiss,
+      onOpen,
       enablePanDownToClose = true,
       enableHandlePanningGesture = true,
       backgroundStyle,
@@ -68,6 +87,13 @@ export const BottomSheet = React.forwardRef<BottomSheetModalRef, Omit<BottomShee
     ref
   ) => {
     const theme = useTheme();
+
+    // Fonction pour fermer le sheet depuis l'intérieur
+    const close = useCallback(() => {
+      if (ref && 'current' in ref && ref.current) {
+        ref.current.dismiss();
+      }
+    }, [ref]);
 
 
 
@@ -106,23 +132,26 @@ export const BottomSheet = React.forwardRef<BottomSheetModalRef, Omit<BottomShee
     const defaultStyle = useMemo(() => ({
       padding: theme.spacing.xl,
       paddingTop: theme.spacing.md,
-      marginTop: theme.spacing.md,
+      marginTop: theme.spacing.md + 10,
     }), [theme.spacing.xl, theme.spacing.md]);
 
     return (
-      <TrueSheet
-        scrollable={scrollable}
-        ref={ref}
-        detents={detents}
-        onDidDismiss={onDismiss}
-        dismissible={enablePanDownToClose}
-        draggable={enableHandlePanningGesture}
-        backgroundColor={backgroundColor}
-        grabberOptions={grabberOptions}
-        style={defaultStyle}
-      >
-        {children}
-      </TrueSheet>
+      <BottomSheetContext.Provider value={{ close }}>
+        <TrueSheet
+          scrollable={scrollable}
+          ref={ref}
+          detents={detents}
+          onDidDismiss={onDismiss}
+          onDidPresent={onOpen}
+          dismissible={enablePanDownToClose}
+          draggable={enableHandlePanningGesture}
+          backgroundColor={backgroundColor}
+          grabberOptions={grabberOptions}
+          style={defaultStyle}
+        >
+          {children}
+        </TrueSheet>
+      </BottomSheetContext.Provider>
     );
   }
 );

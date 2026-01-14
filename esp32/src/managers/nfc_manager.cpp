@@ -109,12 +109,32 @@ bool readNFCTag(NFCTagData& tagData) {
   tagData.isValid = false;
   
   // Lire l'UID du tag
+  // Attendre jusqu'à 15 secondes pour détecter un tag
   uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
   uint8_t uidLength;
   
-  uint8_t success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength, 100);
+  unsigned long startTime = millis();
+  const unsigned long timeout = 15000; // 15 secondes
+  uint8_t success = 0;
+  
+  Serial.println("[NFC] Attente de detection d'un tag NFC (15 secondes max)...");
+  
+  // Boucle de détection avec timeout
+  while (millis() - startTime < timeout) {
+    // Essayer de détecter un tag (timeout de 500ms par tentative)
+    success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength, 500);
+    
+    if (success) {
+      Serial.println("[NFC] Tag detecte !");
+      break;
+    }
+    
+    // Attendre un peu avant de réessayer
+    delay(200);
+  }
   
   if (!success) {
+    Serial.println("[NFC] ERREUR: Aucun tag detecte apres 15 secondes");
     return false;
   }
   
@@ -125,7 +145,7 @@ bool readNFCTag(NFCTagData& tagData) {
   
   tagData.uidLength = uidLength;
   memcpy(tagData.uid, uid, uidLength);
-  tagData.uidString = formatUID(tagData.uid, tagData.uidLength);
+  tagData.uidString = formatUID(tagData.uid, uidLength);
   tagData.isValid = true;
   
   Serial.print("[NFC] Tag detecte - UID: ");

@@ -32,6 +32,7 @@ const MAPPING: IconMapping = {
   'eye.slash.fill': 'visibility-off',
   'xmark.circle.fill': 'cancel',
   'sun.max.fill': 'wb-sunny',
+  'moon.fill': 'nights-stay',
   'wifi': 'wifi',
   'tag.fill': 'local-offer',
 };

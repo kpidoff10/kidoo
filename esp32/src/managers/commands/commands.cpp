@@ -72,6 +72,12 @@ bool processBLECommand(JsonDocument& doc, String& bleBuffer) {
       bleBuffer = "";
     }
     return handled;
+  } else if (command == "TAG_ADD_SUCCESS") {
+    bool handled = handleTagAddSuccessCommand(doc);
+    if (handled) {
+      bleBuffer = "";
+    }
+    return handled;
   } else {
     // Commande inconnue
     JsonDocument errorDoc;

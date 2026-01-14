@@ -28,6 +28,9 @@ void setGreenProgressCircle(CRGB* leds, int numLeds);
 // Fonction pour l'effet orange pulsant (respiration) - indique le démarrage
 void setOrangeBreathing(CRGB* leds, int numLeds);
 
+// Fonction pour l'effet cercle orange progressif (indique le démarrage en cours)
+void setOrangeProgressCircle(CRGB* leds, int numLeds);
+
 // Fonction pour l'effet de transition avant le sommeil (fade out progressif)
 void setSleepTransition(CRGB* leds, int numLeds);
 

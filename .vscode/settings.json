@@ -1,44 +1,53 @@
 {
+  // Formateur par défaut global (Prettier)
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  
   // Formatage automatique à la sauvegarde
   "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  
+  // Actions automatiques à la sauvegarde
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  // Configuration spécifique par type de fichier
   "[typescript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
   },
   "[typescriptreact]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
   },
   "[javascript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
   },
   "[javascriptreact]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
   },
   "[json]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
   },
-  
-  // Désactiver les diagnostics TypeScript pour le dossier esp32
-  "typescript.tsserver.experimental.enableProjectDiagnostics": true,
-  "typescript.preferences.excludePackageJsonAutoImports": "on",
-  
-  // Désactiver les erreurs IntelliSense C++ si nécessaire (décommenter si besoin)
-  // "C_Cpp.errorSquiggles": "disabled",
-  
-  // Exclure esp32 des watchers de fichiers pour améliorer les performances
-  "files.watcherExclude": {
-    "**/esp32/**": true,
-    "**/.pio/**": true
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
   },
-  
-  // Exclure esp32 de l'indexation et de la recherche
-  "search.exclude": {
-    "**/esp32": true,
-    "**/.pio": true
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
   },
+
+  // Configuration Prettier
+  "prettier.requireConfig": false,
+  "prettier.useEditorConfig": true,
+  "prettier.enable": true,
+  "prettier.resolveGlobalModules": true,
   
-  // Exclure esp32 des vérifications de fichiers
-  "files.exclude": {
-    "**/.pio": true
-  }
+  // Debug Prettier (pour voir les erreurs dans la console)
+  "prettier.showNotifications": "onError",
+
+  // ESLint
+  "eslint.enable": true,
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ]
 }

@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Un tag avec ce tagId existe déjà',
+          errorCode: 'TAG_ID_ALREADY_EXISTS',
           field: 'tagId',
         },
         { status: 409 }

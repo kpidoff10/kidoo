@@ -1,11 +1,21 @@
 /**
  * Service pour gérer les Kidoos
  * Gère les appels API pour les opérations sur les Kidoos
+ * Invalide automatiquement le cache React Query après les mutations
  */
 
 import { apiPost, apiGet, apiPut, apiDelete, ApiException, type ApiResponse } from './api';
 import { API_CONFIG } from '@/config/api';
+import { queryClient } from '@/providers/QueryProvider';
 import type { CreateKidooInput, UpdateKidooInput } from '@/types/shared';
+
+// Query keys hiérarchiques pour les Kidoos (défini ici pour éviter la dépendance circulaire)
+export const kidooKeys = {
+  all: ['kidoos'] as const,
+  lists: () => [...kidooKeys.all, 'list'] as const,
+  details: () => [...kidooKeys.all, 'detail'] as const,
+  detail: (kidooId: string) => [...kidooKeys.details(), kidooId] as const,
+};
 
 /**
  * Type pour un Kidoo retourné par l'API
@@ -68,6 +78,14 @@ export async function createKidoo(
     );
 
     console.log('[KidooService] Création réussie:', result);
+    
+    // Invalider le cache React Query pour re-fetch la liste des Kidoos
+    if (result.success) {
+      queryClient.invalidateQueries({
+        queryKey: kidooKeys.lists(),
+      });
+    }
+    
     return result;
   } catch (error) {
     console.log('[KidooService] Exception lors de la création du Kidoo (gérée):', error);
@@ -206,6 +224,19 @@ export async function updateKidoo(
     );
 
     console.log('[KidooService] Mise à jour réussie:', result);
+    
+    // Invalider le cache React Query après mise à jour
+    if (result.success && result.data) {
+      // Invalider le Kidoo spécifique
+      queryClient.invalidateQueries({
+        queryKey: kidooKeys.detail(result.data.id),
+      });
+      // Invalider la liste des Kidoos
+      queryClient.invalidateQueries({
+        queryKey: kidooKeys.lists(),
+      });
+    }
+    
     return result;
   } catch (error) {
     console.error('[KidooService] Exception lors de la mise à jour du Kidoo:', error);
@@ -253,6 +284,19 @@ export async function deleteKidoo(
     );
 
     console.log('[KidooService] Suppression réussie:', result);
+    
+    // Invalider le cache React Query après suppression
+    if (result.success) {
+      // Invalider le Kidoo spécifique
+      queryClient.invalidateQueries({
+        queryKey: kidooKeys.detail(kidooId),
+      });
+      // Invalider la liste des Kidoos
+      queryClient.invalidateQueries({
+        queryKey: kidooKeys.lists(),
+      });
+    }
+    
     return result;
   } catch (error) {
     console.error('[KidooService] Exception lors de la suppression du Kidoo:', error);

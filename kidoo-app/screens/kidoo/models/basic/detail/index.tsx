@@ -1,106 +1,64 @@
-/**
- * Modale de détails pour le modèle Basic
- */
-
-import { useState } from 'react';
-import { useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
-import { updateKidoo, deleteKidoo } from '@/services/kidooService';
-import { KidooEditBluetoothProvider, useKidooEditBluetooth } from '../../kidoo-edit-bluetooth-context';
-import { useBottomSheet } from '@/components/ui/bottom-sheet';
-import { ActionsMenu, RenameSheet, DeleteSheet } from './components';
-import { StorageInfo, WifiConfigSheet } from '../../components';
-import type { Kidoo } from '@/services/kidooService';
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BasicKidooProvider } from "@/contexts/BasicKidooContext";
+import { KidooProvider } from "@/contexts/KidooContext";
+import { StorageInfo, WifiConfigSheet } from "../../components";
+import { ActionsMenu, DeleteSheet, RenameSheet } from "./_components";
+import { BrightnessModal } from "./brightness-modal";
+import { SleepModal } from "./sleep-modal";
+import { useBottomSheet } from "@/components/ui/bottom-sheet";
+import { ThemedView } from "@/components/themed-view";
+import { ThemedScrollView } from "@/components/themed-scroll-view";
 
 interface BasicDetailModalProps {
-  kidoo: Kidoo;
-  onEdit?: () => void;
-  onViewInfo?: () => void;
-  onKidooUpdated?: (updatedKidoo: Kidoo | null) => void;
+  kidooId: string;
 }
 
-function BasicDetailContent({
-  kidoo,
-  onEdit,
-  onViewInfo,
-  onKidooUpdated,
-}: BasicDetailModalProps) {
+export function BasicDetailModal({ kidooId }: BasicDetailModalProps) {
   const router = useRouter();
-  const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const renameSheet = useBottomSheet();
   const wifiSheet = useBottomSheet();
-  const [isDeleteSheetOpen, setIsDeleteSheetOpen] = useState(false);
-  
-  // Utiliser le contexte Bluetooth pour la connexion automatique
-  useKidooEditBluetooth();
+  const brightnessSheet = useBottomSheet();
+  const sleepSheet = useBottomSheet();
+  const deleteSheet = useBottomSheet();
 
-  const handleRename = async (newName: string) => {
-    if (!user?.id) {
-      throw new Error('Utilisateur non connecté');
-    }
-
-    const result = await updateKidoo(kidoo.id, { name: newName }, user.id);
-    if (result.success && result.data) {
-      renameSheet.dismiss();
-      onKidooUpdated?.(result.data);
-    } else {
-      throw new Error((result as { success: false; error: string }).error || 'Erreur lors du renommage');
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!user?.id) return;
-
-    const result = await deleteKidoo(kidoo.id, user.id);
-    if (result.success) {
-      setIsDeleteSheetOpen(false);
-      onKidooUpdated?.(null);
-    }
+  const handleTags = () => {
+    router.push(`/kidoo/${kidooId}/tags`);
   };
 
   return (
-    <>
-      <StorageInfo kidoo={kidoo} />
-      <ActionsMenu
-        kidoo={kidoo}
-        onRename={() => renameSheet.present()}
-        onEdit={onEdit}
-        onViewInfo={onViewInfo}
-        onWifiConfig={() => wifiSheet.present()}
-        onTags={() => {
-          // Rediriger vers la page des tags
-          router.push(`/kidoo/${kidoo.id}/tags`);
-        }}
-        onDelete={() => setIsDeleteSheetOpen(true)}
-      />
+    <KidooProvider kidooId={kidooId} autoConnect={true}>
+      <BasicKidooProvider>
+        <ThemedView>
+        <StorageInfo />
+          <ThemedScrollView
+            contentContainerStyle={{
+              paddingBottom: insets.bottom,
+            }}
+          >
+           
+            <ActionsMenu
+              onRename={() => renameSheet.present()}
+              onBrightness={() => brightnessSheet.present()}
+              onSleep={() => sleepSheet.present()}
+              onWifiConfig={() => wifiSheet.present()}
+              onTags={handleTags}
+              onDelete={() => deleteSheet.present()}
+            />
+          </ThemedScrollView>
 
-      <RenameSheet
-        ref={renameSheet.ref}
-        kidoo={kidoo}
-        onRename={handleRename}
-      />
+          <RenameSheet ref={renameSheet.ref} />
 
-      <WifiConfigSheet
-        ref={wifiSheet.ref}
-        kidoo={kidoo}
-      />
+          <BrightnessModal ref={brightnessSheet.ref} />
 
-      <DeleteSheet
-        kidoo={kidoo}
-        onDelete={handleDelete}
-        isOpen={isDeleteSheetOpen}
-        onDismiss={() => setIsDeleteSheetOpen(false)}
-      />
-    </>
-  );
-}
+          <SleepModal ref={sleepSheet.ref} />
 
-export function BasicDetailModal(props: BasicDetailModalProps) {
-  // Pas de badge pour le modèle Basic
-  // Envelopper le composant dans le provider Bluetooth pour activer la connexion automatique
-  return (
-    <KidooEditBluetoothProvider kidoo={props.kidoo} autoConnect={true}>
-      <BasicDetailContent {...props} />
-    </KidooEditBluetoothProvider>
+          <WifiConfigSheet ref={wifiSheet.ref} />
+
+          <DeleteSheet ref={deleteSheet.ref} />
+        </ThemedView>
+      </BasicKidooProvider>
+    </KidooProvider>
   );
 }

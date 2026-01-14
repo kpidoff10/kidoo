@@ -1,6 +1,7 @@
 #include "command.h"
 #include "../../ble_manager.h"
 #include "../../config_manager.h"
+#include "../../../core/task_manager.h"
 
 bool handleSleepTimeoutCommand(JsonDocument& doc) {
   Serial.println("[BLE] Commande SLEEP_TIMEOUT (JSON) recue");
@@ -24,20 +25,16 @@ bool handleSleepTimeoutCommand(JsonDocument& doc) {
   // Sauvegarder dans la configuration
   setConfigSleepTimeout(timeout);
   
-  // Sauvegarder la configuration sur la carte SD
-  bool configSaved = saveKidooConfigToSD();
-  if (configSaved) {
-    Serial.println("[BLE] Configuration de timeout sommeil sauvegardee avec succes sur la carte SD");
-  } else {
-    Serial.println("[BLE] ATTENTION: Impossible de sauvegarder la configuration sur la carte SD");
-  }
+  // Demander une sauvegarde asynchrone de la configuration (non bloquant)
+  requestConfigSave();
+  Serial.println("[BLE] Demande de sauvegarde de configuration ajoutee a la queue");
   
   // Créer la réponse JSON
   JsonDocument responseDoc;
   responseDoc["status"] = "success";
   responseDoc["message"] = "SLEEP_TIMEOUT_SET";
   responseDoc["timeout"] = timeout;
-  responseDoc["configSaved"] = configSaved;
+  responseDoc["configSaved"] = true; // La sauvegarde sera effectuée de manière asynchrone
   
   String response;
   serializeJson(responseDoc, response);

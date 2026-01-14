@@ -156,4 +156,12 @@ export class BasicKidooActions extends CommonKidooActions {
     );
   }
 
+  /**
+   * Envoyer la commande TAG_ADD_SUCCESS pour afficher l'effet de succès
+   * Hérite de CommonKidooActions
+   */
+  static async tagAddSuccess(): Promise<KidooActionResult> {
+    return super.tagAddSuccess();
+  }
+
 }

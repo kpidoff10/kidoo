@@ -15,6 +15,7 @@ export interface NFCWriteResult {
   tagId?: string; // UUID du tag créé dans la DB
   uid?: string; // UID physique du tag NFC
   error?: string;
+  errorCode?: string; // Code d'erreur pour l'internationalisation
 }
 
 export interface NFCReadResult {
@@ -78,7 +79,7 @@ class NFCManagerClass {
   /**
    * Générer un UUID v4
    */
-  private generateUUID(): string {
+  generateUUID(): string {
     // Utiliser crypto.randomUUID() si disponible (React Native 0.71+)
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
       return crypto.randomUUID();
@@ -109,6 +110,7 @@ class NFCManagerClass {
     kidooId: string,
     userId: string,
     blockNumber: number = 4,
+    tagName?: string,
     onProgress?: (state: 'creating' | 'writing' | 'updating' | 'written' | 'error', message?: string) => void
   ): Promise<NFCWriteResult> {
     if (!this.isAvailable()) {
@@ -122,7 +124,24 @@ class NFCManagerClass {
       const tagId = this.generateUUID();
       console.log('[NFCManager] UUID généré:', tagId);
 
-      // Étape 2: Écrire l'UUID sur le tag NFC
+      // Étape 2: Vérifier si le tagId existe déjà avant d'écrire sur le tag NFC
+      onProgress?.('creating', 'Vérification du tag...');
+      const { checkTagExists } = await import('./tagService');
+      const checkResult = await checkTagExists(tagId, userId);
+
+      if (!checkResult.success) {
+        const error = checkResult.error || 'Erreur lors de la vérification du tag';
+        onProgress?.('error', error);
+        return { success: false, error, errorCode: checkResult.errorCode };
+      }
+
+      if (checkResult.tagIdExists) {
+        const error = 'Un tag avec ce tagId existe déjà';
+        onProgress?.('error', error);
+        return { success: false, error, errorCode: checkResult.errorCode || 'TAG_ID_ALREADY_EXISTS' };
+      }
+
+      // Étape 3: Écrire l'UUID sur le tag NFC
       onProgress?.('writing', 'Écriture sur le tag NFC...');
       const writeResult = await this.writeTagIdToNFC(tagId, blockNumber, onProgress);
 
@@ -131,12 +150,31 @@ class NFCManagerClass {
         return writeResult;
       }
 
-      // Étape 3: Créer le tag dans la DB seulement après confirmation de l'ESP
+      // Étape 4: Vérifier si l'UID existe déjà pour ce Kidoo (si UID disponible)
+      if (writeResult.uid) {
+        onProgress?.('creating', 'Vérification de l\'UID...');
+        const uidCheckResult = await checkTagExists(tagId, userId, writeResult.uid, kidooId);
+
+        if (!uidCheckResult.success) {
+          const error = uidCheckResult.error || 'Erreur lors de la vérification de l\'UID';
+          onProgress?.('error', error);
+          return { success: false, error, errorCode: uidCheckResult.errorCode };
+        }
+
+        if (uidCheckResult.uidExists) {
+          const error = 'Un tag avec cet UID existe déjà pour ce Kidoo';
+          onProgress?.('error', error);
+          return { success: false, error, errorCode: uidCheckResult.errorCode || 'TAG_UID_ALREADY_EXISTS' };
+        }
+      }
+
+      // Étape 5: Créer le tag dans la DB seulement après confirmation de l'ESP
       onProgress?.('creating', 'Création du tag dans la base de données...');
       const createResult = await createTag(
         {
           tagId, // UUID généré par l'app et écrit sur le tag NFC
           kidooId,
+          name: tagName, // Nom du tag fourni par l'utilisateur
           // Pas d'UID à la création, il sera mis à jour après si fourni
         },
         userId
@@ -151,7 +189,7 @@ class NFCManagerClass {
       const createdTagId = createResult.data.id;
       console.log('[NFCManager] Tag créé dans la DB avec id:', createdTagId);
 
-      // Étape 4: Mettre à jour le tag dans la DB avec l'UID physique si fourni
+      // Étape 6: Mettre à jour le tag dans la DB avec l'UID physique si fourni
       if (writeResult.uid) {
         onProgress?.('updating', 'Mise à jour du tag avec l\'UID physique...');
         try {
@@ -160,11 +198,35 @@ class NFCManagerClass {
             console.log('[NFCManager] Tag mis à jour avec UID:', writeResult.uid);
           } else {
             console.error('[NFCManager] Erreur mise à jour tag:', updateResult.error);
-            // On continue même si la mise à jour échoue
+            // Si l'erreur indique que l'UID est déjà utilisé, on retourne cette erreur
+            const errorMessage = updateResult.error || '';
+            const errorCode = !updateResult.success ? updateResult.errorCode : undefined;
+            if (
+              errorCode === 'TAG_UID_ALREADY_EXISTS' ||
+              errorMessage.includes('existe déjà') ||
+              errorMessage.includes('already exists') ||
+              errorMessage.includes('déjà utilisé') ||
+              errorMessage.includes('duplicate')
+            ) {
+              onProgress?.('error', errorMessage);
+              return { success: false, error: errorMessage, errorCode: errorCode || 'TAG_UID_ALREADY_EXISTS' };
+            }
+            // Sinon, on continue même si la mise à jour échoue
           }
         } catch (err) {
           console.error('[NFCManager] Exception lors de la mise à jour tag:', err);
-          // On continue même si la mise à jour échoue
+          const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la mise à jour du tag';
+          // Si l'erreur indique que l'UID est déjà utilisé, on retourne cette erreur
+          if (
+            errorMessage.includes('existe déjà') ||
+            errorMessage.includes('already exists') ||
+            errorMessage.includes('déjà utilisé') ||
+            errorMessage.includes('duplicate')
+          ) {
+            onProgress?.('error', errorMessage);
+            return { success: false, error: errorMessage };
+          }
+          // Sinon, on continue même si la mise à jour échoue
         }
       }
 
@@ -189,7 +251,7 @@ class NFCManagerClass {
    * @param onProgress - Callback pour suivre la progression
    * @returns Résultat avec l'UID physique si fourni par l'ESP32
    */
-  private async writeTagIdToNFC(
+  async writeTagIdToNFC(
     tagId: string,
     blockNumber: number = 4,
     onProgress?: (state: 'creating' | 'writing' | 'updating' | 'written' | 'error', message?: string) => void
@@ -260,7 +322,11 @@ class NFCManagerClass {
     blockNumber: number = 4,
     onProgress?: (state: 'reading' | 'read' | 'error', message?: string) => void
   ): Promise<NFCReadResult> {
-    if (!this.isAvailable()) {
+    // Nettoyer le timeout précédent s'il existe
+    this.clearTimeout();
+
+    // Vérifier que le monitoring est actif (doit être démarré à la connexion)
+    if (!bleManager.isConnected()) {
       const error = 'Le Kidoo n\'est pas connecté';
       onProgress?.('error', error);
       return { success: false, error };
@@ -272,8 +338,11 @@ class NFCManagerClass {
 
         console.log('[NFCManager] Lecture du tag NFC');
         
-        // Lire le tag NFC
-        const response = await bleManager.readNFCTag(blockNumber);
+        // Lire le tag NFC avec un timeout de 15 secondes (comme pour l'écriture)
+        const response = await bleManager.readNFCTag(blockNumber, {
+          timeout: 15000,
+          timeoutErrorMessage: 'Timeout: Aucun tag NFC détecté après 15 secondes. Approchez le tag du Kidoo et réessayez.',
+        });
 
         // Traiter la réponse
         const { uid, data } = response;
@@ -297,9 +366,18 @@ class NFCManagerClass {
         });
       } catch (err) {
         console.error('[NFCManager] Erreur lecture NFC:', err);
+        
+        // Construire un message d'erreur plus détaillé
+        let errorMessage = err instanceof Error ? err.message : 'Erreur lors de la lecture du tag';
+        
+        // Ajouter des suggestions selon le type d'erreur
+        if (errorMessage.includes('timeout') || errorMessage.includes('délai')) {
+          errorMessage += '. Le tag NFC n\'a pas été détecté. Approchez-le du Kidoo.';
+        }
+
         resolve({
           success: false,
-          error: err instanceof Error ? err.message : 'Erreur lors de la lecture du tag',
+          error: errorMessage,
         });
       }
     });

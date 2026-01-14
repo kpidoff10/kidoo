@@ -14,7 +14,7 @@ int StateManager::wifiAPClients = 0;
 bool StateManager::configLoaded = false;
 unsigned long StateManager::lastActivityTime = 0;
 bool StateManager::inSleepTransition = false;
-bool StateManager::isInitializing = true;  // Par défaut, on est en initialisation
+bool StateManager::_isInitializing = true;  // Par défaut, on est en initialisation
 unsigned long StateManager::bootEndTime = 0;  // Timestamp de fin du boot
 
 void StateManager::init() {
@@ -30,7 +30,7 @@ void StateManager::init() {
   configLoaded = false;
   lastActivityTime = millis();
   inSleepTransition = false;
-  // Ne pas toucher à isInitializing ici - il est géré par BootManager
+  // Ne pas toucher à _isInitializing ici - il est géré par BootManager
 }
 
 Mode StateManager::getCurrentMode() {
@@ -138,7 +138,7 @@ void StateManager::resetForceModes() {
 
 void StateManager::resetSleepTimer(bool forceWake) {
   // Ne pas réinitialiser le timer pendant l'initialisation
-  if (isInitializing) {
+  if (_isInitializing) {
     return;
   }
   
@@ -157,7 +157,7 @@ void StateManager::resetSleepTimer(bool forceWake) {
 }
 
 void StateManager::setInitializing(bool initializing) {
-  isInitializing = initializing;
+  _isInitializing = initializing;
   if (!initializing) {
     // Quand l'initialisation est terminée, réinitialiser le timer pour démarrer le compteur
     unsigned long currentTime = millis();
@@ -167,9 +167,13 @@ void StateManager::setInitializing(bool initializing) {
   }
 }
 
+bool StateManager::isInitializing() {
+  return _isInitializing;
+}
+
 void StateManager::updateSleepTimer() {
   // Ne pas mettre à jour le timer pendant l'initialisation
-  if (isInitializing) {
+  if (_isInitializing) {
     inSleepTransition = false;
     return;
   }
@@ -207,7 +211,7 @@ void StateManager::updateSleepTimer() {
 
 bool StateManager::isSleeping() {
   // Ne jamais être en mode sommeil pendant l'initialisation
-  if (isInitializing) {
+  if (_isInitializing) {
     return false;
   }
   
@@ -226,7 +230,7 @@ bool StateManager::isSleeping() {
 
 bool StateManager::isInSleepTransition() {
   // Ne jamais être en transition vers le sommeil pendant l'initialisation
-  if (isInitializing) {
+  if (_isInitializing) {
     return false;
   }
   return inSleepTransition;

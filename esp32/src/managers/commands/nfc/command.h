@@ -10,6 +10,9 @@ bool handleReadNFCTagCommand(JsonDocument& doc);
 // Commande pour écrire sur un tag NFC
 bool handleWriteNFCTagCommand(JsonDocument& doc);
 
+// Commande pour afficher l'effet de succès lors de l'ajout d'un tag
+bool handleTagAddSuccessCommand(JsonDocument& doc);
+
 // Initialiser la tâche NFC (à appeler dans setup)
 void initNFCTask();
 

@@ -42,6 +42,7 @@ function isNetworkError(error: unknown): boolean {
 export interface ApiError {
   success: false;
   error: string;
+  errorCode?: string;
   field?: string;
 }
 
@@ -57,13 +58,17 @@ export type ApiResponse<T> = ApiSuccess<T> | ApiError;
  * Classe d'erreur personnalisée pour les erreurs API
  */
 export class ApiException extends Error {
+  public errorCode?: string;
+
   constructor(
     message: string,
     public status: number,
-    public field?: string
+    public field?: string,
+    errorCode?: string
   ) {
     super(message);
     this.name = 'ApiException';
+    this.errorCode = errorCode;
   }
 }
 
@@ -91,7 +96,8 @@ export async function apiGet<T>(
       throw new ApiException(
         errorData.error || 'Une erreur est survenue',
         response.status,
-        errorData.field
+        errorData.field,
+        errorData.errorCode
       );
     }
 
@@ -135,7 +141,8 @@ export async function apiPost<T>(
       throw new ApiException(
         errorData.error || 'Une erreur est survenue',
         response.status,
-        errorData.field
+        errorData.field,
+        errorData.errorCode
       );
     }
 
@@ -179,7 +186,8 @@ export async function apiPut<T>(
       throw new ApiException(
         errorData.error || 'Une erreur est survenue',
         response.status,
-        errorData.field
+        errorData.field,
+        errorData.errorCode
       );
     }
 
@@ -221,7 +229,8 @@ export async function apiDelete<T>(
       throw new ApiException(
         errorData.error || 'Une erreur est survenue',
         response.status,
-        errorData.field
+        errorData.field,
+        errorData.errorCode
       );
     }
 

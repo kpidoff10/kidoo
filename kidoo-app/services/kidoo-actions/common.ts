@@ -138,4 +138,14 @@ export class CommonKidooActions {
 
     return this.sendCommand(command);
   }
+
+  /**
+   * Envoyer la commande TAG_ADD_SUCCESS pour afficher l'effet de succès
+   * Commande commune à tous les modèles
+   */
+  static async tagAddSuccess(): Promise<KidooActionResult> {
+    return this.sendCommand({
+      command: 'TAG_ADD_SUCCESS',
+    });
+  }
 }

@@ -59,6 +59,7 @@ public:
   static bool isSleeping();
   static bool isInSleepTransition();
   static void setInitializing(bool initializing); // Indiquer que l'initialisation est en cours
+  static bool isInitializing(); // Vérifier si l'initialisation est en cours
   
   // Réinitialiser tous les flags de mode forcé
   static void resetForceModes();
@@ -76,7 +77,7 @@ private:
   static bool configLoaded;
   static unsigned long lastActivityTime;  // Dernière activité détectée
   static bool inSleepTransition;          // En transition vers le sommeil
-  static bool isInitializing;            // Flag pour indiquer que l'initialisation est en cours
+  static bool _isInitializing;            // Flag pour indiquer que l'initialisation est en cours
   static unsigned long bootEndTime;      // Timestamp de fin du boot (pour délai de grâce)
 };
 

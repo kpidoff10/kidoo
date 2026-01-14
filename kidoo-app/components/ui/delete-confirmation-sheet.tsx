@@ -76,9 +76,9 @@ export interface DeleteConfirmationSheetProps {
    */
   onSuccess?: () => void;
   /**
-   * Contrôle l'ouverture/fermeture du sheet
+   * Message d'erreur externe à afficher (optionnel)
    */
-  isOpen: boolean;
+  error?: string | null;
 }
 
 /**
@@ -99,7 +99,7 @@ export const DeleteConfirmationSheet = React.forwardRef<ThemedTrueSheetRef, Dele
     onConfirm,
     onCancel,
     onSuccess,
-    isOpen,
+    error: externalError,
   },
   ref
 ) => {
@@ -108,7 +108,10 @@ export const DeleteConfirmationSheet = React.forwardRef<ThemedTrueSheetRef, Dele
   const internalRef = useRef<ThemedTrueSheetRef>(null);
   const sheetRef = (ref as React.MutableRefObject<ThemedTrueSheetRef | null>) || internalRef;
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [internalError, setInternalError] = useState<string | null>(null);
+
+  // Utiliser l'erreur externe si fournie, sinon l'erreur interne
+  const error = externalError !== undefined ? externalError : internalError;
 
   const detents = useMemo(() => ['auto' as const], []);
 
@@ -127,32 +130,23 @@ export const DeleteConfirmationSheet = React.forwardRef<ThemedTrueSheetRef, Dele
     return formatted;
   }, [message, messageVariables]);
 
-  React.useEffect(() => {
-    if (isOpen) {
-      setError(null);
-      sheetRef.current?.present();
-    } else {
-      sheetRef.current?.dismiss();
-    }
-  }, [isOpen, sheetRef]);
-
   const handleConfirm = async () => {
     setIsLoading(true);
-    setError(null);
+    setInternalError(null);
 
     try {
       await onConfirm();
       onSuccess?.();
       onCancel();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error', 'Une erreur est survenue'));
+      setInternalError(err instanceof Error ? err.message : t('common.error', 'Une erreur est survenue'));
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDismiss = () => {
-    setError(null);
+    setInternalError(null);
     onCancel();
   };
 

@@ -8,14 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 import { AlertMessage } from '@/components/ui/alert-message';
-import { useKidooEditBluetooth } from '../kidoo-edit-bluetooth-context';
-import { BasicKidooActions } from '@/services/kidoo-actions/basic';
-import type { KidooActionResult } from '@/services/kidoo-actions/types';
+import { useKidoo } from '@/contexts/KidooContext';
 import { StorageInfoSkeleton } from './storage-info-skeleton';
-
-interface StorageInfoProps {
-  kidoo: { id: string; model?: string | null };
-}
 
 interface StorageData {
   freeBytes?: number;
@@ -31,18 +25,18 @@ interface StorageData {
   total?: number;
 }
 
-export function StorageInfo({ kidoo }: StorageInfoProps) {
+export function StorageInfo() {
   const { t } = useTranslation();
   const theme = useTheme();
-  const { isConnected } = useKidooEditBluetooth();
+  const { isConnected, kidooModel, getStorage, kidoo } = useKidoo();
   const [storage, setStorage] = useState<StorageData | null>(null);
   const [isLoading, setIsLoading] = useState(true); // Commencer en état de chargement
   const [error, setError] = useState<string | null>(null);
 
-  const isBasicModel = kidoo.model?.toLowerCase() === 'basic';
+  const isBasicModel = kidooModel?.toLowerCase() === 'basic' || kidoo.model?.toLowerCase() === 'basic';
 
   useEffect(() => {
-    const loadStorage = async () => {
+    const loadStorage = () => {
       // Ne charger que si connecté et que c'est un modèle Basic
       if (!isConnected || !isBasicModel) {
         setIsLoading(false);
@@ -52,24 +46,23 @@ export function StorageInfo({ kidoo }: StorageInfoProps) {
       setIsLoading(true);
       setError(null);
 
-      try {
-        const result: KidooActionResult = await BasicKidooActions.getStorage();
-        
-        if (result.success && result.data) {
-          const data = result.data as StorageData;
-          setStorage(data);
-        } else {
-          setError(result.error || t('kidoos.detail.storage.error', 'Erreur lors du chargement'));
-        }
-      } catch {
-        setError(t('kidoos.detail.storage.error', 'Erreur lors du chargement'));
-      } finally {
-        setIsLoading(false);
-      }
+      getStorage({
+        timeout: 5000,
+        timeoutErrorMessage: t('kidoos.detail.storage.error', 'Erreur lors du chargement'),
+      })
+        .then((data) => {
+          setStorage(data as StorageData);
+        })
+        .catch(() => {
+          setError(t('kidoos.detail.storage.error', 'Erreur lors du chargement'));
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
     };
 
     loadStorage();
-  }, [isConnected, kidoo.model, isBasicModel, t]);
+  }, [isConnected, kidooModel, kidoo.model, isBasicModel, getStorage, t]);
 
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';

@@ -13,10 +13,11 @@ import type {
   TypedBluetoothCommand,
   CommandResponse,
   SystemInfoResponse,
-  BrightnessResponse,
+  BrightnessGetResponse,
   WifiSetupResponse,
   NFCTagReadResponse,
   NFCTagWriteResponse,
+  StorageGetResponse,
 } from '@/types/bluetooth';
 import { BluetoothCommandType, BluetoothMessage, COMMAND_TO_MESSAGE, MESSAGE_TO_ERROR } from '@/types/bluetooth';
 
@@ -640,7 +641,7 @@ class BLEManagerClass {
   async getBrightness(options?: {
     timeout?: number;
     timeoutErrorMessage?: string;
-  }): Promise<BrightnessResponse> {
+  }): Promise<BrightnessGetResponse> {
     const commandJson = JSON.stringify({ command: 'GET_BRIGHTNESS' });
     const success = await this.sendCommand(commandJson);
     
@@ -657,10 +658,42 @@ class BLEManagerClass {
 
     // Vérifier que c'est bien une réponse de succès avec le champ brightness
     if (response.status === 'success' && response.message === 'BRIGHTNESS_GET' && typeof response.brightness === 'number') {
-      return response as BrightnessResponse;
+      return response as BrightnessGetResponse;
     }
 
     throw new Error('Réponse invalide pour BRIGHTNESS_GET');
+  }
+
+  /**
+   * Obtenir les informations de stockage de la carte SD
+   * Commande globale commune à tous les modèles
+   * @param options Options de timeout (optionnel)
+   * @returns Réponse avec les informations de stockage (totalBytes, freeBytes, etc.)
+   */
+  async getStorage(options?: {
+    timeout?: number;
+    timeoutErrorMessage?: string;
+  }): Promise<StorageGetResponse> {
+    const commandJson = JSON.stringify({ command: 'GET_STORAGE' });
+    const success = await this.sendCommand(commandJson);
+    
+    if (!success) {
+      throw new Error('Erreur lors de l\'envoi de la commande GET_STORAGE');
+    }
+
+    // Attendre la réponse avec message "STORAGE_GET"
+    const response = await this.waitForResponse({
+      expectedMessage: 'STORAGE_GET',
+      timeout: options?.timeout,
+      timeoutErrorMessage: options?.timeoutErrorMessage || 'Timeout: aucune réponse reçue pour STORAGE_GET',
+    });
+
+    // Vérifier que c'est bien une réponse de succès
+    if (response.status === 'success' && response.message === 'STORAGE_GET') {
+      return response as StorageGetResponse;
+    }
+
+    throw new Error('Réponse invalide pour GET_STORAGE');
   }
 
   /**

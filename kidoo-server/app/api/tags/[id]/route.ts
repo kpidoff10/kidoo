@@ -143,6 +143,7 @@ export async function PUT(
           {
             success: false,
             error: 'Un tag avec cet UID existe déjà pour ce Kidoo',
+            errorCode: 'TAG_UID_ALREADY_EXISTS',
             field: 'uid',
           },
           { status: 409 }

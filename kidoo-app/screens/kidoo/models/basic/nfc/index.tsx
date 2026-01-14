@@ -11,9 +11,9 @@ import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 import { FloatingActionButton } from '@/components/ui/floating-action-button';
 import { BottomSheetModalRef } from '@/components/ui/bottom-sheet';
-import { KidooEditBluetoothProvider, useKidooEditBluetooth } from '../../kidoo-edit-bluetooth-context';
+import { KidooProvider, useKidoo } from '@/contexts/KidooContext';
+import { NFCProvider, useNFC } from '@/contexts/NFCContext';
 import { NFCWriteSheet } from '@/components/ui/nfc/nfc-write-sheet';
-import { useAuth } from '@/contexts/AuthContext';
 import type { Kidoo } from '@/services/kidooService';
 import { ThemedView } from '@/components/themed-view';
 
@@ -21,16 +21,18 @@ export interface BasicNFCTagsProps {
   kidoo: Kidoo;
 }
 
-function BasicNFCTagsContent({ kidoo }: BasicNFCTagsProps) {
+function BasicNFCTagsContent(_props: BasicNFCTagsProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
   const nfcWriteSheetRef = useRef<BottomSheetModalRef>(null);
   
-  // Utiliser le contexte Bluetooth pour la connexion automatique
-  const { isConnected, isConnecting } = useKidooEditBluetooth();
+  // Utiliser le contexte Kidoo (infos + connexion BLE)
+  const { isConnected, isConnecting } = useKidoo();
+  
+  // Utiliser le contexte NFC (tags + fonctions)
+  const { tags } = useNFC();
 
   // Mettre à jour le titre de la navigation
   useEffect(() => {
@@ -46,7 +48,8 @@ function BasicNFCTagsContent({ kidoo }: BasicNFCTagsProps) {
 
   const handleTagWritten = useCallback((tagId: string, uid: string) => {
     console.log('[BasicNFCTags] Tag NFC écrit:', { tagId, uid });
-    // TODO: Recharger la liste des tags ou afficher le nouveau tag
+    // Le cache React Query sera automatiquement invalidé par tagService
+    // Les tags seront rechargés automatiquement
     nfcWriteSheetRef.current?.dismiss();
   }, []);
 
@@ -81,13 +84,23 @@ function BasicNFCTagsContent({ kidoo }: BasicNFCTagsProps) {
           <ThemedText style={{ opacity: 0.7, marginBottom: theme.spacing.md }}>
             {t('kidoos.edit.basic.notConnected', 'Le Kidoo n\'est pas connecté.')}
           </ThemedText>
-        ) : (
+        ) : tags.isLoading ? (
+          <ThemedText style={{ opacity: 0.7, marginBottom: theme.spacing.lg }}>
+            {t('common.loading', 'Chargement...')}
+          </ThemedText>
+        ) : tags.error ? (
+          <ThemedText style={{ opacity: 0.7, marginBottom: theme.spacing.lg }}>
+            {t('common.error', 'Erreur')}: {tags.error.message}
+          </ThemedText>
+        ) : !tags.data || tags.data.length === 0 ? (
           <ThemedText style={{ opacity: 0.7, marginBottom: theme.spacing.lg }}>
             {t('kidoos.tags.empty', 'Aucun tag enregistré. Appuyez sur + pour ajouter un tag NFC.')}
           </ThemedText>
+        ) : (
+          <ThemedText style={{ opacity: 0.7, marginBottom: theme.spacing.lg }}>
+            {tags.data.length} {t('kidoos.tags.count', 'tag(s)')}
+          </ThemedText>
         )}
-
-        {/* TODO: Liste des tags NFC */}
       </ScrollView>
 
       {/* Bouton flottant pour ajouter un tag */}
@@ -100,23 +113,22 @@ function BasicNFCTagsContent({ kidoo }: BasicNFCTagsProps) {
       )}
 
       {/* Sheet NFC Write */}
-      {user?.id && (
         <NFCWriteSheet
           ref={nfcWriteSheetRef}
-          kidooId={kidoo.id}
-          userId={user.id}
           onTagWritten={handleTagWritten}
         />
-      )}
     </ThemedView>
   );
 }
 
 export function BasicNFCTags(props: BasicNFCTagsProps) {
-  // Envelopper dans le provider Bluetooth pour activer la connexion automatique
+  // Envelopper dans le provider Kidoo (infos + connexion BLE automatique)
+  // Puis dans le provider NFC pour gérer les tags avec React Query
   return (
-    <KidooEditBluetoothProvider kidoo={props.kidoo} autoConnect={true}>
+    <KidooProvider kidooId={props.kidoo.id} autoConnect={true}>
+      <NFCProvider kidooId={props.kidoo.id}>
       <BasicNFCTagsContent {...props} />
-    </KidooEditBluetoothProvider>
+      </NFCProvider>
+    </KidooProvider>
   );
 }

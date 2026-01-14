@@ -4,6 +4,7 @@
 #include "core/boot_manager.h"
 #include "core/state_manager.h"
 #include "core/mode_manager.h"
+#include "core/task_manager.h"
 
 // Managers
 #include "managers/wifi_manager.h"
@@ -221,30 +222,39 @@ void loop() {
     lastBluetoothState = bluetoothConnected;
   }
   
-  // Déterminer le mode approprié
+  // Les LEDs sont maintenant gérées par la tâche FreeRTOS dédiée (ledTask)
+  // On ne fait plus rien ici pour les LEDs, elles tournent en continu dans leur propre tâche
+  
+  // On peut toujours vérifier les changements de mode pour le logging
   Mode newMode = ModeManager::determineMode();
   
-  // Vérifier si le mode a changé
-  if (newMode != StateManager::getCurrentMode()) {
-    Mode previousMode = StateManager::getCurrentMode();
-    StateManager::setMode(newMode);
-    
-    // Ne PAS réinitialiser le timer automatiquement quand on sort du mode sommeil
-    // Le timer doit être réinitialisé uniquement par des activités réelles (BLE, WiFi, etc.)
-    // Sinon, on crée une boucle : sommeil -> sortie -> réinit timer -> sommeil immédiat
+  // Vérifier si le mode a changé (pour le logging uniquement)
+  // Initialiser avec le mode actuel de StateManager pour éviter les faux changements au démarrage
+  static bool firstRun = true;
+  static Mode lastLoggedMode = MODE_RED;
+  if (firstRun) {
+    lastLoggedMode = StateManager::getCurrentMode();
+    firstRun = false;
+  }
+  
+  if (newMode != lastLoggedMode) {
+    Mode previousMode = lastLoggedMode;
+    Serial.print("[MODE] Changement de mode: ");
+    Serial.print(StateManager::getModeName(previousMode));
+    Serial.print(" -> ");
+    Serial.println(StateManager::getModeName(newMode));
     
     // Réinitialiser l'effet de transition si on entre dans le mode transition
     if (newMode == MODE_SLEEP_TRANSITION && previousMode != MODE_SLEEP_TRANSITION) {
       resetSleepTransition();
     }
     
-    // Logger le changement de mode
-    Serial.print("[MODE] Changement de mode: ");
-    Serial.print(StateManager::getModeName(previousMode));
-    Serial.print(" -> ");
-    Serial.println(StateManager::getModeName(newMode));
+    lastLoggedMode = newMode;
   }
   
-  // Appliquer le mode actuel
-  ModeManager::applyMode(StateManager::getCurrentMode());
+  // Mettre à jour le mode dans StateManager (utilisé par la tâche LED)
+  StateManager::setMode(newMode);
+  
+  // Petite pause pour permettre aux autres tâches de s'exécuter
+  delay(10);
 }

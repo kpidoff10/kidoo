@@ -165,6 +165,41 @@ void setOrangeBreathing(CRGB* leds, int numLeds) {
   LEDController::show();
 }
 
+// Fonction pour l'effet cercle orange progressif (indique le démarrage en cours)
+// Crée un cercle orange qui tourne en continu, similaire au cercle vert
+void setOrangeProgressCircle(CRGB* leds, int numLeds) {
+  static float position = 0.0f;  // Position de départ du cercle (0.0 à 1.0)
+  
+  // Incrémenter la position pour faire tourner le cercle
+  position += 0.02f;  // Vitesse de rotation (ajustable)
+  
+  // Boucler la position entre 0 et 1 pour une rotation infinie
+  if (position >= 1.0f) {
+    position -= 1.0f;
+  }
+  
+  // Taille du segment orange (25% du cercle)
+  float segmentSize = 0.25f;
+  int segmentLeds = (int)(segmentSize * numLeds);
+  
+  // Calculer la position de départ en nombre de LEDs
+  int startLed = (int)(position * numLeds);
+  
+  // Éteindre toutes les LEDs d'abord
+  for (int i = 0; i < numLeds; i++) {
+    leds[i] = CRGB::Black;
+  }
+  
+  // Allumer le segment orange qui tourne autour du cercle
+  // Orange = Rouge + Vert (sans bleu), proportions: R=255, G=102, B=0
+  for (int i = 0; i < segmentLeds; i++) {
+    int ledIndex = (startLed + i) % numLeds;  // Utiliser modulo pour boucler autour du cercle
+    leds[ledIndex] = CRGB(255, 102, 0);  // Orange vif
+  }
+  
+  LEDController::show();
+}
+
 // Variable statique globale pour réinitialiser l'effet de transition
 static bool sleepTransitionNeedsReset = false;
 

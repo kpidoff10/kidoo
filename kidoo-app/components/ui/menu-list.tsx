@@ -133,7 +133,7 @@ export function MenuList({
   const spacing = itemSpacing ?? defaultSpacing;
 
   return (
-    <View style={style}>
+    <View style={[{ paddingHorizontal: theme.spacing.xl }, style]}>
       {items.map((item, index) => (
         <React.Fragment key={item.id || index}>
           <MenuItemComponent

@@ -55,11 +55,6 @@ export default function KidooEditScreen() {
     router.back();
   };
 
-  const handleSave = (_updatedKidoo: Kidoo) => {
-    // Retourner aux détails avec le Kidoo mis à jour
-    router.back();
-  };
-
   console.log('kidoo', kidoo);
 
   return (
@@ -73,9 +68,8 @@ export default function KidooEditScreen() {
         <ErrorState error={error} />
       ) : kidoo ? (
         <KidooEditRouter
-          kidoo={kidoo}
+          kidooId={kidoo.id}
           onClose={handleClose}
-          onSave={handleSave}
         />
       ) : null}
     </ThemedView>

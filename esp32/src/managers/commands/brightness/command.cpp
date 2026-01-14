@@ -2,6 +2,7 @@
 #include "../../ble_manager.h"
 #include "../../config_manager.h"
 #include "../../../core/led_controller.h"
+#include "../../../core/task_manager.h"
 
 bool handleBrightnessCommand(JsonDocument& doc) {
   Serial.println("[BLE] Commande BRIGHTNESS (JSON) recue");
@@ -32,20 +33,16 @@ bool handleBrightnessCommand(JsonDocument& doc) {
   // Appliquer immédiatement la luminosité
   LEDController::setBrightnessPercent(percent);
   
-  // Sauvegarder la configuration sur la carte SD
-  bool configSaved = saveKidooConfigToSD();
-  if (configSaved) {
-    Serial.println("[BLE] Configuration de luminosite sauvegardee avec succes sur la carte SD");
-  } else {
-    Serial.println("[BLE] ATTENTION: Impossible de sauvegarder la configuration sur la carte SD");
-  }
+  // Demander une sauvegarde asynchrone de la configuration (non bloquant)
+  requestConfigSave();
+  Serial.println("[BLE] Demande de sauvegarde de configuration ajoutee a la queue");
   
   // Créer la réponse JSON
   JsonDocument responseDoc;
   responseDoc["status"] = "success";
   responseDoc["message"] = "BRIGHTNESS_SET";
   responseDoc["brightness"] = percent;
-  responseDoc["configSaved"] = configSaved;
+  responseDoc["configSaved"] = true; // La sauvegarde sera effectuée de manière asynchrone
   
   String response;
   serializeJson(responseDoc, response);

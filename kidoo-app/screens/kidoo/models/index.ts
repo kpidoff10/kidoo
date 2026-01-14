@@ -4,20 +4,14 @@
 
 // Routeurs
 export { KidooDetailRouter } from './kidoo-detail-router';
-export { KidooEditRouter } from './kidoo-edit-router';
-
-// Contexte Bluetooth
-export { KidooEditBluetoothProvider, useKidooEditBluetooth } from './kidoo-edit-bluetooth-context';
 
 // Composants partagés
 export { LoadingState, ErrorState } from './components';
 
 // Modales de détails
-export { BasicDetailModal } from './basic/detail';
 export { ClassicDetailModal } from './classic/detail';
 
 // Modales d'édition
-export { BasicEditModal } from './basic/edit';
 export { ClassicEditModal } from './classic/edit';
 
 // Ajoutez ici les nouveaux modèles au fur et à mesure :

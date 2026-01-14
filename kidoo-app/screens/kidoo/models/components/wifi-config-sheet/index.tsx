@@ -11,9 +11,9 @@ import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
 import { BottomSheet, type BottomSheetModalRef } from '@/components/ui/bottom-sheet';
-import { useKidooEditBluetooth } from '../../kidoo-edit-bluetooth-context';
-import { bleManager } from '@/services/bte';
+import { useKidoo } from '@/contexts/KidooContext';
 import { wifiService } from '@/services/wifiService';
+import { BluetoothCommandType } from '@/types/bluetooth';
 import {
   WifiConfigHeader,
   WifiConfigAlerts,
@@ -32,16 +32,15 @@ type WifiConfigFormData = z.infer<typeof wifiConfigSchema>;
 
 interface WifiConfigSheetProps {
   ref: React.RefObject<BottomSheetModalRef>;
-  kidoo: { id: string; name: string; wifiSSID?: string | null };
   onSuccess?: () => void;
   onDismiss?: () => void;
 }
 
 export const WifiConfigSheet = React.forwardRef<BottomSheetModalRef, Omit<WifiConfigSheetProps, 'ref'>>(
-  ({ kidoo, onSuccess, onDismiss }, ref) => {
+  ({ onSuccess, onDismiss }, ref) => {
     const { t } = useTranslation();
     const theme = useTheme();
-    const { isConnected } = useKidooEditBluetooth();
+    const { kidoo, isConnected, sendCommandAndWait } = useKidoo();
     const shouldLoadSSIDRef = useRef(true);
 
     // Initialiser react-hook-form avec validation Zod
@@ -105,9 +104,12 @@ export const WifiConfigSheet = React.forwardRef<BottomSheetModalRef, Omit<WifiCo
 
       try {
         // Configurer le WiFi
-        await bleManager.configureWiFi(
-          data.wifiSSID,
-          data.wifiPassword,
+        await sendCommandAndWait(
+          {
+            command: BluetoothCommandType.SETUP,
+            ssid: data.wifiSSID,
+            password: data.wifiPassword,
+          },
           {
             timeoutErrorMessage: t('kidoos.detail.wifi.errorTimeout', 'La configuration WiFi a pris trop de temps. Veuillez réessayer.'),
           }

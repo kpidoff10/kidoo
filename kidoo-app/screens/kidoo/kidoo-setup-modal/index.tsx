@@ -17,7 +17,7 @@ import { bleManager } from '@/services/bte';
 import { createKidoo } from '@/services/kidooService';
 import { useAuth } from '@/contexts/AuthContext';
 import { kidooSetupSchema, type KidooSetupInput } from '@/types/shared';
-import { StepIndicator } from './components/step-indicator';
+import { StepIndicatorProvider, StepIndicator, useStepIndicator } from '@/components/ui/step-indicator';
 import { ConnectionStep } from './components/connection-step';
 import { WifiConfigStep } from './components/wifi-config-step';
 import { FinalizationStep } from './components/finalization-step';
@@ -34,12 +34,12 @@ interface KidooSetupModalProps {
 
 const TOTAL_STEPS = 3;
 
-export const KidooSetupModal = React.forwardRef<ThemedTrueSheetRef, KidooSetupModalProps>(
+// Composant interne qui utilise le contexte
+const KidooSetupModalContent = React.forwardRef<ThemedTrueSheetRef, KidooSetupModalProps>(
   ({ device, onComplete, onClose }, ref) => {
     const { t } = useTranslation();
     const theme = useTheme();
-    
-    const [currentStep, setCurrentStep] = useState(1);
+    const { currentStep, setCurrentStep, markStepCompleted } = useStepIndicator();
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [isCreatingKidoo, setIsCreatingKidoo] = useState(false);
@@ -155,6 +155,7 @@ export const KidooSetupModal = React.forwardRef<ThemedTrueSheetRef, KidooSetupMo
 
           setCreateError(null);
           setIsCreatingKidoo(false);
+          markStepCompleted(3); // Marquer l'étape 3 comme complétée
 
           createdKidooDataRef.current = {
             id: result.data.id,
@@ -169,7 +170,7 @@ export const KidooSetupModal = React.forwardRef<ThemedTrueSheetRef, KidooSetupMo
       };
 
              createKidooOnServer();
-           }, [isSuccess, user?.id, device, deviceName, firmwareVersion, kidooModel, isCreatingKidoo]);
+           }, [isSuccess, user?.id, device, deviceName, firmwareVersion, kidooModel, isCreatingKidoo, markStepCompleted]);
 
     // Réinitialiser quand un nouveau device est sélectionné
     useEffect(() => {
@@ -217,11 +218,13 @@ export const KidooSetupModal = React.forwardRef<ThemedTrueSheetRef, KidooSetupMo
         if (currentStep === 1) {
           const isValid = await trigger('deviceName');
           if (isValid) {
+            markStepCompleted(1);
             setCurrentStep(2);
           }
         } else if (currentStep === 2) {
           const isValid = await trigger(['wifiSSID', 'wifiPassword']);
           if (isValid) {
+            markStepCompleted(2);
             setCurrentStep(3);
           }
         } else if (currentStep === TOTAL_STEPS) {
@@ -239,7 +242,7 @@ export const KidooSetupModal = React.forwardRef<ThemedTrueSheetRef, KidooSetupMo
       } catch (error) {
         console.error('[KidooSetupModal] Erreur dans handleNext():', error);
       }
-    }, [currentStep, trigger, isSuccess, isCreatingKidoo, ref]);
+    }, [currentStep, trigger, isSuccess, isCreatingKidoo, ref, markStepCompleted, setCurrentStep]);
 
     const handlePrevious = useCallback(() => {
       try {
@@ -249,7 +252,7 @@ export const KidooSetupModal = React.forwardRef<ThemedTrueSheetRef, KidooSetupMo
       } catch (error) {
         console.error('[KidooSetupModal] Erreur dans handlePrevious():', error);
       }
-    }, [currentStep]);
+    }, [currentStep, setCurrentStep]);
 
     const renderStepContent = () => {
       switch (currentStep) {
@@ -299,10 +302,13 @@ export const KidooSetupModal = React.forwardRef<ThemedTrueSheetRef, KidooSetupMo
         grabberOptions={{ color: theme.colors.border }}
       >
         {/* Step Indicator */}
-        <StepIndicator 
-          currentStep={currentStep} 
-          totalSteps={TOTAL_STEPS}
-          isStep3Completed={isSuccess}
+        <StepIndicator
+          icons={{
+            1: 'edit',
+            2: 'wifi',
+            3: 'check-circle',
+          }}
+          specificCompletedStep={isSuccess ? 3 : undefined}
         />
 
         {/* Step Content */}
@@ -340,6 +346,19 @@ export const KidooSetupModal = React.forwardRef<ThemedTrueSheetRef, KidooSetupMo
           />
         </View>
       </ThemedTrueSheet>
+    );
+  }
+);
+
+KidooSetupModalContent.displayName = 'KidooSetupModalContent';
+
+// Composant wrapper avec le provider
+export const KidooSetupModal = React.forwardRef<ThemedTrueSheetRef, KidooSetupModalProps>(
+  (props, ref) => {
+    return (
+      <StepIndicatorProvider totalSteps={TOTAL_STEPS} initialStep={1}>
+        <KidooSetupModalContent {...props} ref={ref} />
+      </StepIndicatorProvider>
     );
   }
 );

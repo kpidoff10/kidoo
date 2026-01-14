@@ -1,100 +1,93 @@
 /**
- * Composant générique pour écrire un identifiant sur un tag NFC
- * Utilise nfcManager pour gérer le workflow complet
+ * Composant pour écrire un tag NFC avec stepper en 3 étapes
+ * 1. Scan du tag (vérification si le tag existe)
+ * 2. Choix du nom
+ * 3. Création du tag et finalisation
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { View } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
 import { BottomSheet, type BottomSheetModalRef } from '@/components/ui/bottom-sheet';
-import { AlertMessage } from '@/components/ui/alert-message';
-import { nfcManager } from '@/services/nfcManager';
-import { NFCScanZone, NFCStatusText, NFCActions, type NFCState } from './components';
+import { Button } from '@/components/ui/button';
+import {
+  ScanStep,
+  NameStep,
+  FinalizationStep,
+} from './components';
+import { StepIndicatorProvider, StepIndicator, useStepIndicator } from '@/components/ui/step-indicator';
+import { NFCWriteProvider, useNFCWrite } from './NFCWriteContext';
+
+const TOTAL_STEPS = 3;
 
 export interface NFCWriteSheetProps {
-  kidooId: string;
-  userId: string;
   onTagWritten?: (tagId: string, uid: string) => void;
   onDismiss?: () => void;
 }
 
-export const NFCWriteSheet = React.forwardRef<BottomSheetModalRef, NFCWriteSheetProps>(
-  ({ kidooId, userId, onTagWritten, onDismiss }, ref) => {
+// Composant interne qui utilise le contexte
+const NFCWriteSheetContent = React.forwardRef<BottomSheetModalRef, NFCWriteSheetProps>(
+  (_props, ref) => {
     const { t } = useTranslation();
     const theme = useTheme();
-    const [state, setState] = useState<NFCState>('idle');
-    const [error, setError] = useState<string | null>(null);
-    const [tagUID, setTagUID] = useState<string | null>(null);
-    const [tagId, setTagId] = useState<string | null>(null);
+    const { currentStep } = useStepIndicator();
+    const {
+      isScanning,
+      isProcessing,
+      isSuccess,
+      error,
+      tagUID,
+      scannedUID,
+      form,
+      handleNext,
+      handlePrevious,
+      handleCancel,
+      setBottomSheetRef,
+    } = useNFCWrite();
 
-    // Nettoyer le monitoring au démontage
+    // Définir la ref du BottomSheet dans le contexte
     useEffect(() => {
-      return () => {
-        nfcManager.stopMonitoring();
-      };
-    }, []);
-
-    const handleStartWrite = useCallback(async () => {
-      if (!nfcManager.isAvailable()) {
-        setError(t('kidoos.nfc.errorNotConnected', 'Le Kidoo n\'est pas connecté'));
-        return;
+      if (ref && 'current' in ref) {
+        setBottomSheetRef(ref.current);
       }
+    }, [ref, setBottomSheetRef]);
 
-      // Réinitialiser complètement l'état avant de commencer une nouvelle écriture
-      nfcManager.stopMonitoring();
-      setState('idle');
-      setError(null);
-      setTagUID(null);
-      setTagId(null);
 
-      // Petit délai pour s'assurer que le monitoring précédent est bien arrêté
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Utiliser nfcManager pour gérer tout le workflow
-      const result = await nfcManager.writeTag(
-        kidooId,
-        userId,
-        4, // blockNumber
-        (progressState, message) => {
-          setState(progressState);
-          if (message) {
-            console.log('[NFCWriteSheet]', message);
-          }
-        }
-      );
-
-      if (result.success) {
-        setState('written');
-        setTagId(result.tagId || null);
-        setTagUID(result.uid || null);
-        
-        // Appeler le callback après un court délai
-        setTimeout(() => {
-          if (result.tagId && result.uid) {
-            onTagWritten?.(result.tagId, result.uid);
-          }
-          // Réinitialiser l'état après le callback pour permettre d'ajouter un autre tag
-          setTimeout(() => {
-            setState('idle');
-            setTagId(null);
-            setTagUID(null);
-          }, 500);
-        }, 1000);
-      } else {
-        setError(result.error || t('kidoos.nfc.errorWriteFailed', 'Erreur lors de l\'écriture sur le tag'));
-        setState('error');
+    const renderStepContent = () => {
+      switch (currentStep) {
+        case 1:
+          return (
+            <ScanStep
+              isScanning={isScanning}
+              isWriting={isProcessing}
+              error={error}
+              tagUID={scannedUID}
+            />
+          );
+        case 2:
+          return (
+            <NameStep
+              control={form.control}
+              errors={form.errors}
+              tagUID={scannedUID}
+            />
+          );
+        case 3:
+          const formData = form.control._formValues as { name: string };
+          return (
+            <FinalizationStep
+              isProcessing={isProcessing}
+              isSuccess={isSuccess}
+              error={error}
+              tagName={formData.name}
+              tagUID={tagUID || scannedUID}
+            />
+          );
+        default:
+          return null;
       }
-    }, [kidooId, userId, t, onTagWritten]);
-
-    const handleCancel = useCallback(() => {
-      nfcManager.stopMonitoring();
-      setState('idle');
-      setError(null);
-      setTagUID(null);
-      setTagId(null);
-      onDismiss?.();
-    }, [onDismiss]);
+    };
 
     return (
       <BottomSheet
@@ -102,30 +95,70 @@ export const NFCWriteSheet = React.forwardRef<BottomSheetModalRef, NFCWriteSheet
         onDismiss={handleCancel}
         detents={['auto']}
       >
-        <View style={{ gap: theme.spacing.xl }}>
-          {/* Zone de scan NFC avec animations */}
-          <NFCScanZone state={state} />
+        {/* Step Indicator */}
+        <StepIndicator
+          icons={{
+            1: 'nfc',
+            2: 'edit',
+            3: 'check-circle',
+          }}
+          specificCompletedStep={isSuccess ? 3 : undefined}
+        />
 
-          {/* Texte et description */}
-          <NFCStatusText state={state} tagId={tagId} tagUID={tagUID} />
+        {/* Step Content */}
+        <ScrollView
+          style={theme.components.setupStepContent}
+          contentContainerStyle={theme.components.setupStepContentScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          {renderStepContent()}
+        </ScrollView>
 
-          {/* Message d'erreur */}
-          {error && (
-            <AlertMessage
-              message={error}
-              type="error"
-              visible={true}
+        {/* Buttons */}
+        {!isSuccess && (
+          <View style={theme.components.setupStepButtons}>
+            {currentStep > 1 && (
+              <Button
+                label={t('kidoos.setup.buttons.previous', 'Précédent')}
+                onPress={handlePrevious}
+                variant="outline"
+                style={theme.components.setupStepButton}
+                disabled={isScanning || isProcessing}
             />
           )}
-
-          {/* Boutons */}
-          <NFCActions
-            state={state}
-            onStartWrite={handleStartWrite}
-            onCancel={handleCancel}
+            <Button
+              label={
+                currentStep === TOTAL_STEPS
+                  ? isProcessing
+                    ? t('kidoos.nfc.creating', 'Création...')
+                    : t('kidoos.setup.buttons.finish', 'Terminer')
+                  : currentStep === 1
+                    ? t('kidoos.nfc.scan', 'Scanner')
+                    : t('kidoos.setup.buttons.next', 'Suivant')
+              }
+              onPress={handleNext}
+              style={theme.components.setupStepButton}
+              disabled={isScanning || isProcessing}
+              loading={(isScanning || isProcessing) && currentStep !== 1}
           />
         </View>
+        )}
       </BottomSheet>
+    );
+  }
+);
+
+NFCWriteSheetContent.displayName = 'NFCWriteSheetContent';
+
+// Composant wrapper avec les providers
+export const NFCWriteSheet = React.forwardRef<BottomSheetModalRef, NFCWriteSheetProps>(
+  (props, ref) => {
+    return (
+      <StepIndicatorProvider totalSteps={TOTAL_STEPS} initialStep={1}>
+        <NFCWriteProvider onTagWritten={props.onTagWritten} onDismiss={props.onDismiss}>
+          <NFCWriteSheetContent {...props} ref={ref} />
+        </NFCWriteProvider>
+      </StepIndicatorProvider>
     );
   }
 );

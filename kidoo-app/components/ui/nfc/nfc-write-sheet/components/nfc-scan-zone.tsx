@@ -7,7 +7,7 @@ import { View, Animated, StyleSheet } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
-export type NFCState = 'idle' | 'creating' | 'writing' | 'updating' | 'written' | 'error';
+export type NFCState = 'idle' | 'naming' | 'creating' | 'writing' | 'updating' | 'written' | 'error';
 
 export interface NFCScanZoneProps {
   state: NFCState;
@@ -158,19 +158,27 @@ export function NFCScanZone({ state }: NFCScanZoneProps) {
           borderRadius: 60,
           backgroundColor: state === 'written' 
             ? theme.colors.successBackground 
-            : (state === 'creating' || state === 'writing')
-              ? theme.colors.infoBackground 
-              : theme.colors.surfaceSecondary,
+            : state === 'error'
+              ? theme.colors.errorBackground || '#fee2e2'
+              : (state === 'creating' || state === 'writing')
+                ? theme.colors.infoBackground 
+                : theme.colors.surfaceSecondary,
           borderWidth: 3,
           borderColor: state === 'written' 
             ? theme.colors.success 
-            : theme.colors.tint,
+            : state === 'error'
+              ? theme.colors.error || '#ef4444'
+              : theme.colors.tint,
         }}
       >
         <IconSymbol 
           name="tag.fill" 
           size={64} 
-          color={state === 'written' ? theme.colors.success : theme.colors.tint} 
+          color={state === 'written' 
+            ? theme.colors.success 
+            : state === 'error'
+              ? theme.colors.error || '#ef4444'
+              : theme.colors.tint} 
         />
       </Animated.View>
     </View>
