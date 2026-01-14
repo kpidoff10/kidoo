@@ -3,7 +3,6 @@
  * Trois sliders horizontaux pour Rouge, Vert et Bleu
  */
 
-import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useTranslation } from 'react-i18next';

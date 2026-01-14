@@ -2,7 +2,6 @@
  * Composant pour les boutons d'action NFC
  */
 
-import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';

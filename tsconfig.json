@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "skipLibCheck": true
+  },
+  "exclude": [
+    "esp32/**/*",
+    "**/node_modules/**",
+    "**/.pio/**"
+  ]
+}

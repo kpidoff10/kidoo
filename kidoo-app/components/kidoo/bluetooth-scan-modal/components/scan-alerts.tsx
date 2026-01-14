@@ -3,7 +3,6 @@
  * Affiche les messages d'alerte pour le scan Bluetooth
  */
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertMessage } from '@/components/ui/alert-message';
 

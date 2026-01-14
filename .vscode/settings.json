@@ -1,20 +1,44 @@
 {
-  "i18n-ally.localesPaths": ["kidoo-app/i18n/locales"],
-  "i18n-ally.keystyle": "nested",
-  "i18n-ally.defaultNamespace": "translation",
-  "i18n-ally.namespace": false,
-  "i18n-ally.pathMatcher": "{locale}.json",
-  "i18n-ally.enabledParsers": ["json"],
-  "i18n-ally.sourceLanguage": "fr",
-  "i18n-ally.displayLanguage": "fr",
-  "i18n-ally.enabledFrameworks": ["react", "general"],
-  "i18n-ally.extract.autoDetect": true,
-  "i18n-ally.fullReloadOnChanged": true,
-  "i18n-ally.usage.scanningIgnore": [
-    "node_modules/**",
-    "android/**",
-    "ios/**",
-    "esp32/**",
-    "src/**"
-  ],
+  // Formatage automatique à la sauvegarde
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  
+  // Désactiver les diagnostics TypeScript pour le dossier esp32
+  "typescript.tsserver.experimental.enableProjectDiagnostics": true,
+  "typescript.preferences.excludePackageJsonAutoImports": "on",
+  
+  // Désactiver les erreurs IntelliSense C++ si nécessaire (décommenter si besoin)
+  // "C_Cpp.errorSquiggles": "disabled",
+  
+  // Exclure esp32 des watchers de fichiers pour améliorer les performances
+  "files.watcherExclude": {
+    "**/esp32/**": true,
+    "**/.pio/**": true
+  },
+  
+  // Exclure esp32 de l'indexation et de la recherche
+  "search.exclude": {
+    "**/esp32": true,
+    "**/.pio": true
+  },
+  
+  // Exclure esp32 des vérifications de fichiers
+  "files.exclude": {
+    "**/.pio": true
+  }
 }

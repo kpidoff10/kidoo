@@ -13,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ThemedTrueSheet, ThemedTrueSheetRef } from '@/components/ui/themed-true-sheet';
 import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/button';
-import { bleManager } from '@/services/bleManager';
+import { bleManager } from '@/services/bte';
 import { createKidoo } from '@/services/kidooService';
 import { useAuth } from '@/contexts/AuthContext';
 import { kidooSetupSchema, type KidooSetupInput } from '@/types/shared';
@@ -85,7 +85,8 @@ export const KidooSetupModal = React.forwardRef<ThemedTrueSheetRef, KidooSetupMo
     const cleanupBLE = useCallback(async () => {
       try {
         bleManager.setCallbacks({});
-        bleManager.stopMonitoring();
+        // Ne plus appeler stopMonitoring() car le monitoring reste actif pendant la connexion
+        // Il sera arrêté automatiquement à la déconnexion
         
         if (bleManager.isConnected()) {
           await bleManager.disconnect();
@@ -188,11 +189,8 @@ export const KidooSetupModal = React.forwardRef<ThemedTrueSheetRef, KidooSetupMo
       }
       
       return () => {
-        try {
-          bleManager.stopMonitoring();
-        } catch (error) {
-          console.error('[KidooSetupModal] Erreur cleanup monitoring:', error);
-        }
+        // Le monitoring sera arrêté automatiquement à la déconnexion
+        // Pas besoin de l'arrêter manuellement ici
       };
     }, [device, reset]);
 

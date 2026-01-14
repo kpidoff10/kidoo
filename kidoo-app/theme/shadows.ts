@@ -2,7 +2,7 @@
  * Ombres standardisées de l'application
  */
 
-import { Platform, StyleSheet } from 'react-native';
+import { Platform } from 'react-native';
 
 export const shadows = {
   sm: Platform.select({

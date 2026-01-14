@@ -3,7 +3,7 @@
  * Fournit des fonctions pour effectuer des requêtes HTTP
  */
 
-import { API_CONFIG, getApiUrl } from '@/config/api';
+import { getApiUrl } from '@/config/api';
 
 /**
  * Callback pour notifier les erreurs réseau

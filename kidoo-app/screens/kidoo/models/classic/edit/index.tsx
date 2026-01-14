@@ -3,7 +3,6 @@
  * Utilise le contexte Bluetooth pour gérer la connexion automatique
  */
 
-import React from 'react';
 import { View, ScrollView, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';

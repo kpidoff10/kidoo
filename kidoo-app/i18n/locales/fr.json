@@ -166,7 +166,8 @@
           "errorSSIDRequired": "Le nom du réseau WiFi est requis",
           "errorNotConnected": "Le Kidoo n'est pas connecté",
           "errorSendFailed": "Erreur lors de l'envoi de la commande",
-          "errorConfigFailed": "Erreur lors de la configuration WiFi"
+          "errorConfigFailed": "Erreur lors de la configuration WiFi",
+          "errorTimeout": "La configuration WiFi a pris trop de temps. Veuillez réessayer."
         },
         "nfc": {
           "title": "Approcher un tag NFC",

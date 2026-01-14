@@ -4,21 +4,7 @@
  */
 
 import { apiPost, apiGet, apiPut, apiDelete, ApiException, type ApiResponse } from './api';
-import { API_CONFIG } from '@/config/api';
-import type { CreateTagInput, UpdateTagInput } from '@/types/shared';
-
-/**
- * Type pour un Tag retourné par l'API
- */
-export interface Tag {
-  id: string; // Identifiant unique écrit sur le tag NFC (UUID généré par Prisma)
-  uid: string; // UID du tag NFC (lecture seule, identifiant matériel du tag physique)
-  name: string | null;
-  kidooId: string;
-  userId: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { CreateTagInput, UpdateTagInput, Tag } from '@/types/shared';
 
 /**
  * Réponse de création d'un Tag

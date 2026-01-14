@@ -2,7 +2,7 @@
  * Composant de champ de mot de passe avec icône pour afficher/masquer
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View, Text, TextInput, TextInputProps, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';

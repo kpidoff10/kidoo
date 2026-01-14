@@ -2,7 +2,7 @@
  * Modale de détails pour le modèle Basic
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { updateKidoo, deleteKidoo } from '@/services/kidooService';

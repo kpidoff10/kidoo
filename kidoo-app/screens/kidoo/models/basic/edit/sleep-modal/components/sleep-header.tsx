@@ -3,7 +3,6 @@
  * Affiche le titre et la valeur actuelle du timeout
  */
 
-import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ThemedText } from '@/components/themed-text';

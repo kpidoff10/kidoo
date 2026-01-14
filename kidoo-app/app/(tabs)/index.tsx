@@ -1,39 +1,17 @@
-import { Platform, TouchableOpacity, Alert, View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useTranslation, Trans } from 'react-i18next';
-import { useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { useTheme } from '@/hooks/use-theme';
 
 import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/ui/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
 import { Header } from '@/components/themes/header';
 
 export default function HomeScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
-  const { user, logout } = useAuth();
-  const router = useRouter();
-
-  const handleLogout = () => {
-    Alert.alert(
-      t('auth.login.title'),
-      'Êtes-vous sûr de vouloir vous déconnecter ?',
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('auth.login.loginButton'),
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            router.replace('/(auth)/login');
-          },
-        },
-      ]
-    );
-  };
 
   const shortcut = Platform.select({
     ios: t('home.step1.shortcuts.ios'),

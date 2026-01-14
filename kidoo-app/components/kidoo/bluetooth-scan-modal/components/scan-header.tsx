@@ -3,7 +3,6 @@
  * En-tête de la modale de scan avec titre et bouton de scan
  */
 
-import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';

@@ -2,7 +2,6 @@
  * Composant pour afficher un état d'erreur
  */
 
-import React from 'react';
 import { View } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';

@@ -2,7 +2,6 @@
  * Composant pour le menu des fonctionnalités du Kidoo Basic
  */
 
-import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
@@ -14,7 +13,6 @@ interface BasicFeaturesMenuProps {
   onEffectsPress: () => void;
   onSleepPress: () => void;
   onColorsPress: () => void;
-  onSystemPress: () => void;
   onResetPress: () => void;
 }
 
@@ -23,7 +21,6 @@ export function BasicFeaturesMenu({
   onEffectsPress,
   onSleepPress,
   onColorsPress,
-  onSystemPress,
   onResetPress,
 }: BasicFeaturesMenuProps) {
   const { t } = useTranslation();

@@ -3,7 +3,6 @@
  * Bouton d'action flottant en bas à droite
  */
 
-import React from 'react';
 import { TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/use-theme';

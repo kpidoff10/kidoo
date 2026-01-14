@@ -3,7 +3,6 @@
  * Affiche la liste des appareils Kidoo
  */
 
-import React from 'react';
 import { View } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { KidooCard } from './kidoo-card';

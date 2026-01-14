@@ -3,7 +3,6 @@
  * En-tête de la modale de scan avec titre
  */
 
-import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';

@@ -2,7 +2,6 @@
  * Composant de lien pour naviguer entre les écrans d'authentification
  */
 
-import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 

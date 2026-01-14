@@ -3,7 +3,7 @@
  * Centralise la logique de détermination du titre actuel
  */
 
-import React, { createContext, useContext, useMemo, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useMemo, useCallback, ReactNode } from 'react';
 import { useSegments } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 

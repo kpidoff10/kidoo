@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { kidooId, name } = validationResult.data;
+    const { tagId, kidooId, name } = validationResult.data;
 
     // Vérifier que le Kidoo appartient à l'utilisateur
     const kidoo = await prisma.kidoo.findFirst({
@@ -59,16 +59,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Créer un tag temporaire avec un UID placeholder
-    // L'UID réel sera mis à jour après la lecture du tag NFC
-    // On utilise un UUID temporaire pour éviter les contraintes de base de données
-    const tempUID = `temp_${crypto.randomUUID()}`;
+    // Vérifier que le tagId n'existe pas déjà
+    const existingTag = await prisma.tag.findFirst({
+      where: {
+        tagId,
+      },
+    });
+
+    if (existingTag) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Un tag avec ce tagId existe déjà',
+          field: 'tagId',
+        },
+        { status: 409 }
+      );
+    }
 
     // Créer le nouveau tag
-    // L'id (UUID) sera généré automatiquement par Prisma et sera écrit sur le tag NFC
+    // Le tagId (UUID) est généré par l'app et écrit sur le tag NFC avant la création
+    // L'UID sera null jusqu'à ce que l'app lise le tag NFC et mette à jour le tag
     const newTag = await prisma.tag.create({
       data: {
-        uid: tempUID, // UID temporaire, sera remplacé par l'UID réel du tag NFC
+        tagId, // UUID généré par l'app et écrit sur le tag NFC
+        uid: null, // UID sera mis à jour par l'app après la lecture du tag NFC
         name: name || null,
         kidooId,
         userId,

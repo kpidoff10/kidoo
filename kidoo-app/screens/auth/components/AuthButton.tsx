@@ -3,7 +3,6 @@
  * Utilise le composant Button générique
  */
 
-import React from 'react';
 import { ViewStyle } from 'react-native';
 import { Button } from '@/components/ui/button';
 

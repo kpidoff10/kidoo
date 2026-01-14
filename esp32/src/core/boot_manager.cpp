@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include "boot_manager.h"
 #include "led_controller.h"
 #include "state_manager.h"

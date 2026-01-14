@@ -3,14 +3,13 @@
  * Composant générique pour afficher la valeur RSSI (force du signal Bluetooth) avec code couleur
  */
 
-import React from 'react';
-import { View, ViewStyle } from 'react-native';
+import { View, ViewStyle, TextStyle } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 
 interface RssiIndicatorProps {
   rssi: number | null;
-  style?: ViewStyle;
+  style?: TextStyle;
   containerStyle?: ViewStyle;
 }
 

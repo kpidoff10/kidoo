@@ -2,7 +2,7 @@
  * Composant pour le sheet de renommage d'un Kidoo
  */
 
-import React, { useState, useEffect, forwardRef } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { View, TextInput } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';

@@ -52,8 +52,9 @@ model Kidoo {
 }
 
 model Tag {
-  id          String   @id @default(uuid()) // Identifiant unique écrit sur le tag NFC (UUID généré par Prisma)
-  uid         String   // UID du tag NFC (lecture seule, identifiant matériel du tag physique)
+  id          String   @id @default(uuid()) // Clé primaire générée par Prisma
+  tagId       String?  @unique // UUID généré par l'app et écrit sur le tag NFC (nullable temporairement pour migration)
+  uid         String?  // UID du tag NFC (lecture seule, identifiant matériel du tag physique) - null jusqu'à la lecture du tag
   name        String?  // Nom optionnel pour le tag
   kidooId     String
   userId      String
@@ -67,6 +68,7 @@ model Tag {
   @@index([kidooId])
   @@index([userId])
   @@index([uid])
+  @@index([tagId])
 }
 
 model Account {

@@ -2,7 +2,7 @@
  * Écran de connexion
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   KeyboardAvoidingView,

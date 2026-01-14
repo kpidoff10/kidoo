@@ -7,7 +7,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { ScrollView } from 'react-native';
 import { BottomSheet, type BottomSheetModalRef } from '@/components/ui/bottom-sheet';
 import { kidooActionsService } from '@/services/kidooActionsService';
-import { bleManager } from '@/services/bleManager';
+import { bleManager } from '@/services/bte';
 import {
   ColorHeader,
   ColorPreview,

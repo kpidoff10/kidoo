@@ -4,7 +4,6 @@
  * Enveloppe les modales dans le contexte Bluetooth pour gérer la connexion
  */
 
-import React from 'react';
 import type { Kidoo } from '@/services/kidooService';
 import { BasicEditModal } from './basic/edit';
 import { ClassicEditModal } from './classic/edit';

@@ -3,7 +3,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { registerUser, checkEmailAvailability, type RegisterInput, type RegisterResponse, type CheckEmailResponse } from '@/services/authService';
+import { registerUser, checkEmailAvailability, type RegisterInput, type RegisterResponse, type RegisterError, type CheckEmailResponse } from '@/services/authService';
 
 // Query keys
 export const authKeys = {
@@ -30,8 +30,14 @@ export function useCheckEmail(email: string, enabled: boolean = false) {
 export function useRegister() {
   const queryClient = useQueryClient();
 
-  return useMutation<RegisterResponse, { success: false; error: string; field?: string }, RegisterInput>({
-    mutationFn: registerUser,
+  return useMutation<RegisterResponse, Error, RegisterInput>({
+    mutationFn: async (data: RegisterInput) => {
+      const result = await registerUser(data);
+      if ('success' in result && result.success === true) {
+        return result;
+      }
+      throw new Error((result as RegisterError).error);
+    },
     onSuccess: () => {
       // Invalider les queries d'authentification après inscription réussie
       queryClient.invalidateQueries({ queryKey: authKeys.all });

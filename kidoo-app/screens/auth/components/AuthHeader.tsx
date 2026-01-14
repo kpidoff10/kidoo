@@ -2,7 +2,6 @@
  * Composant d'en-tête pour les écrans d'authentification
  */
 
-import React from 'react';
 import { View, Text } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 

@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { bleManager, type BLEDevice } from '@/services/bleManager';
+import { bleManager, type BLEDevice } from '@/services/bte';
 import type { Kidoo } from '@/services/kidooService';
 
 interface KidooEditBluetoothContextValue {

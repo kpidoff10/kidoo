@@ -4,7 +4,7 @@
  * Utilise react-hook-form pour la gestion du formulaire
  */
 
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { View, ScrollView } from 'react-native';
 import { Controller, Control, UseFormSetValue, FieldErrors } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';

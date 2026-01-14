@@ -2,7 +2,6 @@
  * Composant pour le header de la modale d'édition Basic
  */
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';

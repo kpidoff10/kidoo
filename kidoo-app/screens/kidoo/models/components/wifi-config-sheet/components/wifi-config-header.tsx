@@ -2,7 +2,6 @@
  * En-tête de la modale de configuration WiFi
  */
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';

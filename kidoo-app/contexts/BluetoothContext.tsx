@@ -5,7 +5,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { fromByteArray, toByteArray } from 'base64-js';
-import { bluetoothService, type BluetoothConnectionResult } from '@/services/bluetoothService';
+import { bteService, type BluetoothConnectionResult } from '@/services/bte';
 import type { BluetoothResponse } from '@/types/bluetooth';
 
 interface BluetoothDevice {
@@ -56,7 +56,7 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
 
   const checkBluetoothState = useCallback(async () => {
     try {
-      const available = bluetoothService.isAvailable();
+      const available = bteService.isAvailable();
       setIsBluetoothAvailable(available);
 
       // Ne pas vérifier l'état activé/désactivé au démarrage pour éviter les erreurs natives
@@ -72,7 +72,7 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
 
   // Vérifier uniquement si le module est disponible au démarrage (pas l'état activé/désactivé)
   useEffect(() => {
-    const available = bluetoothService.isAvailable();
+    const available = bteService.isAvailable();
     setIsBluetoothAvailable(available);
     // Ne pas vérifier l'état activé/désactivé au démarrage pour éviter les erreurs natives
     // On vérifiera lors de la connexion
@@ -114,7 +114,7 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
         console.log('[BluetoothContext] 🔌 Pas de deviceRef, utilisation de disconnectFromDevice...');
         const deviceId = connectedDevice?.deviceId;
         if (deviceId) {
-      await bluetoothService.disconnectFromDevice(deviceId);
+      await bteService.disconnectFromDevice(deviceId);
         }
       }
     } catch (error: any) {
@@ -152,12 +152,12 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
         // Vérifier que le Bluetooth est disponible
         // Ne pas vérifier isEnabled() car cela cause des erreurs natives
         // L'erreur se produira lors de la tentative de connexion si le Bluetooth n'est pas activé
-        if (!bluetoothService.isAvailable()) {
+        if (!bteService.isAvailable()) {
           throw new Error('Bluetooth non disponible');
         }
 
         // Se connecter au device
-        const result = await bluetoothService.connectToDevice(device.deviceId, {
+        const result = await bteService.connectToDevice(device.deviceId, {
           timeout: 10000,
           autoConnect: false,
         });
@@ -204,7 +204,7 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
       // Déconnecter à la fermeture si connecté
       const deviceId = connectedDevice?.deviceId;
       if (deviceRef.current && deviceId) {
-        bluetoothService.disconnectFromDevice(deviceId);
+        bteService.disconnectFromDevice(deviceId);
       }
     };
   }, [connectedDevice?.deviceId]);

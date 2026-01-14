@@ -2,7 +2,6 @@
  * Composant pour afficher un état de chargement
  */
 
-import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';

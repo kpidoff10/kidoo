@@ -3,7 +3,6 @@
  * Affiche le statut du scan (en cours ou en attente)
  */
 
-import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';

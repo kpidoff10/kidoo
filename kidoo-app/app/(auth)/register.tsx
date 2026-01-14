@@ -2,14 +2,13 @@
  * Écran d'inscription
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Alert,
-  StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';

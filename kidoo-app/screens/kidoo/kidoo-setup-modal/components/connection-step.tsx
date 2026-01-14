@@ -3,8 +3,6 @@
  * Étape 1 : Connexion et nom du Kidoo
  * Utilise react-hook-form pour la gestion du formulaire
  */
-
-import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { Controller, Control } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';

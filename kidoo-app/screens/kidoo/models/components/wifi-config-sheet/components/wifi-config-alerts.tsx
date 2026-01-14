@@ -2,7 +2,6 @@
  * Messages d'alerte pour la configuration WiFi
  */
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
 import { AlertMessage } from '@/components/ui/alert-message';

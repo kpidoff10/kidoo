@@ -3,7 +3,6 @@
  * Affiche l'état vide de la liste de scan (aucun appareil trouvé ou en attente)
  */
 
-import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';

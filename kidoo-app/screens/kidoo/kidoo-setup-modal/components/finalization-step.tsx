@@ -3,15 +3,14 @@
  * Étape 3 : Connexion Bluetooth et configuration WiFi finale
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, ScrollView, ActivityIndicator } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 import { AlertMessage } from '@/components/ui/alert-message';
-import { bleManager, type BLEDevice } from '@/services/bleManager';
-import type { BluetoothResponse } from '@/types/bluetooth';
+import { bleManager, type BLEDevice } from '@/services/bte';
 
 interface FinalizationStepProps {
   deviceName: string;
@@ -45,17 +44,12 @@ export function FinalizationStep({
   const [wifiError, setWifiError] = useState<string | null>(null);
   
   const isMountedRef = useRef(true);
-  const stopMonitoringRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      // Arrêter le monitoring si actif
-      if (stopMonitoringRef.current) {
-        stopMonitoringRef.current();
-        stopMonitoringRef.current = null;
-      }
+      // Le monitoring est géré automatiquement par waitForResponse
     };
   }, []);
 
@@ -159,83 +153,32 @@ export function FinalizationStep({
     setWifiError(null);
 
     try {
-      console.log('[FinalizationStep] 🚀 Démarrage du monitoring...');
-      // Démarrer le monitoring des réponses
-      const stopMonitoring = await bleManager.startMonitoring((response: BluetoothResponse) => {
-        try {
-          console.log('[FinalizationStep] 🚀 Notification reçue:', response);
-          if (!isMountedRef.current) {
-            console.log('[FinalizationStep] 🚀 Composant démonté, ignore notification');
-            return;
-          }
-
-          const { status, message, firmwareVersion, model } = response;
-
-          // Récupérer la version du firmware si disponible
-          if (firmwareVersion && onFirmwareVersionChange) {
-            onFirmwareVersionChange(firmwareVersion);
-          }
-
-          // Récupérer le modèle si disponible
-          if (model && onModelChange) {
-            onModelChange(model);
-          }
-
-          if (status === 'success' || message === 'WIFI_OK') {
-            console.log('[FinalizationStep] 🚀 WiFi configuré avec succès');
-            if (isMountedRef.current) {
-              setWifiStatus('success');
-              setWifiError(null);
-            }
-            if (stopMonitoringRef.current) {
-              stopMonitoringRef.current();
-              stopMonitoringRef.current = null;
-            }
-          } else if (status === 'error' || message === 'WIFI_ERROR') {
-            console.log('[FinalizationStep] 🚀 Erreur WiFi:', response.error);
-            if (isMountedRef.current) {
-              setWifiStatus('error');
-              setWifiError(response.error || t('kidoos.setup.step3.wifiConnectionFailed', 'Échec de la connexion WiFi'));
-            }
-            if (stopMonitoringRef.current) {
-              stopMonitoringRef.current();
-              stopMonitoringRef.current = null;
-            }
-          }
-        } catch (error) {
-          console.error('[FinalizationStep] 🚀 Erreur dans callback notification:', error);
-        }
-      });
-
-      stopMonitoringRef.current = stopMonitoring;
-      console.log('[FinalizationStep] 🚀 Monitoring démarré');
-
-      // Attendre un peu que le monitoring soit prêt
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      // Envoyer la commande SETUP
-      const commandJson = JSON.stringify({
-        command: 'SETUP',
-        ssid: wifiSSID,
-        password: wifiPassword || '',
-      });
-
-      console.log('[FinalizationStep] 🚀 Envoi de la commande:', commandJson);
-      const success = await bleManager.sendCommand(commandJson);
-      console.log('[FinalizationStep] 🚀 Commande envoyée, success:', success);
+      // Configurer le WiFi
+      console.log('[FinalizationStep] 🚀 Configuration WiFi...');
+      const response = await bleManager.configureWiFi(wifiSSID, wifiPassword);
       
-      if (!success) {
-        throw new Error(t('kidoos.setup.step3.sendCommandFailed', 'Erreur lors de l\'envoi de la commande'));
+      console.log('[FinalizationStep] 🚀 Réponse reçue:', response);
+      
+      if (!isMountedRef.current) return;
+
+      // Récupérer la version du firmware si disponible
+      if (response.firmwareVersion && onFirmwareVersionChange) {
+        onFirmwareVersionChange(response.firmwareVersion);
       }
+
+      // Récupérer le modèle si disponible
+      if (response.model && onModelChange) {
+        onModelChange(response.model);
+      }
+
+      console.log('[FinalizationStep] 🚀 WiFi configuré avec succès');
+      setWifiStatus('success');
+      setWifiError(null);
     } catch (error: any) {
       console.error('[FinalizationStep] 🚀 Erreur dans configureWifi:', error);
       if (!isMountedRef.current) return;
       setWifiStatus('error');
       setWifiError(error?.message || t('kidoos.setup.step3.wifiConfigFailed', 'Erreur lors de la configuration WiFi'));
-      if (stopMonitoringRef.current) {
-        stopMonitoringRef.current();
-        stopMonitoringRef.current = null;
-      }
     }
   }, [wifiSSID, wifiPassword, t, onFirmwareVersionChange, onModelChange]);
 

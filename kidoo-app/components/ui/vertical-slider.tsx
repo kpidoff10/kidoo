@@ -84,7 +84,6 @@ export function VerticalSlider({
   onValueChange,
   onDraggingChange,
   panY,
-  isDragging = false,
   thumbIcon = 'circle.fill',
   marks,
   valueToY,
@@ -135,7 +134,7 @@ export function VerticalSlider({
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (evt, gestureState) => {
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
         // Capturer le geste si c'est principalement vertical (pour le slider)
         const { dy, dx } = gestureState;
         const absDy = Math.abs(dy);
@@ -155,7 +154,7 @@ export function VerticalSlider({
         clickedValue.current = null; // Réinitialiser
         
         // Obtenir la position Y relative à la zone de capture pour gérer les clics
-        touchAreaRef.current?.measure((x, y, width, height, pageX, pageY) => {
+        touchAreaRef.current?.measure((_x, _y, _width, _height, _pageX, pageY) => {
           const touchY = evt.nativeEvent.pageY - pageY;
           const clampedY = Math.max(0, Math.min(SLIDER_HEIGHT, touchY));
           
@@ -172,7 +171,7 @@ export function VerticalSlider({
           panY.setValue(clampedY);
         });
       },
-      onPanResponderMove: (evt, gestureState) => {
+      onPanResponderMove: (_evt, gestureState) => {
         const deltaY = gestureState.dy;
         const currentY = valueToYFunc(startValue.current) + deltaY;
         const clampedY = Math.max(0, Math.min(SLIDER_HEIGHT, currentY));
@@ -199,7 +198,7 @@ export function VerticalSlider({
           }, debounceDelay);
         }
       },
-      onPanResponderRelease: (evt, gestureState) => {
+      onPanResponderRelease: (_evt, gestureState) => {
         isDraggingRef.current = false;
         onDraggingChange(false);
         

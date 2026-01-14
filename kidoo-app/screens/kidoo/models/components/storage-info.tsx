@@ -2,7 +2,7 @@
  * Composant pour afficher les informations de stockage d'un Kidoo
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';

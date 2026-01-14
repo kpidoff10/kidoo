@@ -1,5 +1,5 @@
 /**
- * Service Bluetooth
+ * Service BTE (Bluetooth Low Energy)
  * Gère les fonctionnalités Bluetooth comme la connexion aux appareils
  */
 
@@ -15,14 +15,14 @@ try {
     BleManager = bleModule.BleManager;
     State = bleModule.State;
     bluetoothModuleAvailable = true;
-    console.log('Bluetooth disponible - BleManager initialisé');
+    console.log('[BTEService] Bluetooth disponible - BleManager initialisé');
   } else {
-    console.warn('Bluetooth module chargé mais BleManager non disponible');
+    console.warn('[BTEService] Bluetooth module chargé mais BleManager non disponible');
   }
 } catch (error: unknown) {
   const errorMessage = error instanceof Error ? error.message : String(error);
-  console.debug('Bluetooth non disponible - Erreur:', errorMessage);
-  console.debug('Mode Expo Go détecté ou module non lié');
+  console.debug('[BTEService] Bluetooth non disponible - Erreur:', errorMessage);
+  console.debug('[BTEService] Mode Expo Go détecté ou module non lié');
 }
 
 export interface BluetoothDevice {
@@ -107,7 +107,7 @@ async function getBluetoothState(): Promise<string | null> {
     manager.destroy();
     return state;
   } catch (error) {
-    console.error('Erreur lors de la récupération de l\'état Bluetooth:', error);
+    console.error('[BTEService] Erreur lors de la récupération de l\'état Bluetooth:', error);
     return null;
   }
 }
@@ -175,7 +175,7 @@ async function connectToDevice(
     }
   } catch (error: any) {
     const errorMessage = error?.message || 'Erreur de connexion Bluetooth';
-    console.error('Erreur lors de la connexion Bluetooth:', error);
+    console.error('[BTEService] Erreur lors de la connexion Bluetooth:', error);
     return {
       success: false,
       error: errorMessage,
@@ -192,68 +192,68 @@ async function connectToDevice(
  * Pour une meilleure gestion, passer directement le device object
  */
 async function disconnectFromDevice(deviceId: string): Promise<boolean> {
-  console.log('[bluetoothService] 🔌 disconnectFromDevice appelé pour:', deviceId);
+  console.log('[BTEService] 🔌 disconnectFromDevice appelé pour:', deviceId);
   
   if (!isAvailable()) {
-    console.log('[bluetoothService] 🔌 Bluetooth non disponible');
+    console.log('[BTEService] 🔌 Bluetooth non disponible');
     return false;
   }
 
   try {
     const manager = new BleManager();
-    console.log('[bluetoothService] 🔌 Manager créé');
+    console.log('[BTEService] 🔌 Manager créé');
     
     let disconnected = false;
     
     try {
-      console.log('[bluetoothService] 🔌 Tentative findDevices...');
+      console.log('[BTEService] 🔌 Tentative findDevices...');
       const device = await manager.findDevices([deviceId]);
       if (device && device.length > 0) {
-        console.log('[bluetoothService] 🔌 Device trouvé via findDevices');
+        console.log('[BTEService] 🔌 Device trouvé via findDevices');
         try {
           await device[0].cancelConnection();
           disconnected = true;
-          console.log('[bluetoothService] 🔌 Connexion annulée via findDevices');
+          console.log('[BTEService] 🔌 Connexion annulée via findDevices');
         } catch (cancelError: any) {
-          console.debug('[bluetoothService] 🔌 Erreur cancelConnection findDevices (ignorée):', cancelError?.message || String(cancelError));
+          console.debug('[BTEService] 🔌 Erreur cancelConnection findDevices (ignorée):', cancelError?.message || String(cancelError));
         }
       }
     } catch (findError: any) {
-      console.debug('[bluetoothService] 🔌 Erreur findDevices (ignorée):', findError?.message || String(findError));
+      console.debug('[BTEService] 🔌 Erreur findDevices (ignorée):', findError?.message || String(findError));
       // Si le device n'est pas trouvé, essayer directement
       try {
-        console.log('[bluetoothService] 🔌 Tentative getDevice...');
+        console.log('[BTEService] 🔌 Tentative getDevice...');
         const device = manager.getDevice(deviceId);
         if (device) {
-          console.log('[bluetoothService] 🔌 Device trouvé via getDevice');
+          console.log('[BTEService] 🔌 Device trouvé via getDevice');
           try {
             await device.cancelConnection();
             disconnected = true;
-            console.log('[bluetoothService] 🔌 Connexion annulée via getDevice');
+            console.log('[BTEService] 🔌 Connexion annulée via getDevice');
           } catch (cancelError: any) {
-            console.debug('[bluetoothService] 🔌 Erreur cancelConnection getDevice (ignorée):', cancelError?.message || String(cancelError));
+            console.debug('[BTEService] 🔌 Erreur cancelConnection getDevice (ignorée):', cancelError?.message || String(cancelError));
           }
         } else {
-          console.log('[bluetoothService] 🔌 Device non trouvé via getDevice');
+          console.log('[BTEService] 🔌 Device non trouvé via getDevice');
         }
       } catch (getError: any) {
-        console.debug('[bluetoothService] 🔌 Erreur getDevice (ignorée):', getError?.message || String(getError));
-        console.warn('[bluetoothService] 🔌 Device non trouvé pour déconnexion:', deviceId);
+        console.debug('[BTEService] 🔌 Erreur getDevice (ignorée):', getError?.message || String(getError));
+        console.warn('[BTEService] 🔌 Device non trouvé pour déconnexion:', deviceId);
       }
     }
     
     try {
-      console.log('[bluetoothService] 🔌 Destruction du manager...');
+      console.log('[BTEService] 🔌 Destruction du manager...');
       manager.destroy();
-      console.log('[bluetoothService] 🔌 Manager détruit');
+      console.log('[BTEService] 🔌 Manager détruit');
     } catch (destroyError: any) {
-      console.debug('[bluetoothService] 🔌 Erreur destroy manager (ignorée):', destroyError?.message || String(destroyError));
+      console.debug('[BTEService] 🔌 Erreur destroy manager (ignorée):', destroyError?.message || String(destroyError));
     }
     
-    console.log('[bluetoothService] 🔌 disconnectFromDevice terminé, disconnected:', disconnected);
+    console.log('[BTEService] 🔌 disconnectFromDevice terminé, disconnected:', disconnected);
     return disconnected;
   } catch (error: any) {
-    console.debug('[bluetoothService] 🔌 Erreur générale disconnectFromDevice (ignorée):', error?.message || String(error));
+    console.debug('[BTEService] 🔌 Erreur générale disconnectFromDevice (ignorée):', error?.message || String(error));
     return false;
   }
 }
@@ -279,7 +279,7 @@ async function isDeviceConnected(deviceId: string): Promise<boolean> {
     manager.destroy();
     return false;
   } catch (error) {
-    console.error('Erreur lors de la vérification de la connexion:', error);
+    console.error('[BTEService] Erreur lors de la vérification de la connexion:', error);
     return false;
   }
 }
@@ -287,7 +287,7 @@ async function isDeviceConnected(deviceId: string): Promise<boolean> {
 /**
  * Service Bluetooth exporté
  */
-export const bluetoothService: BluetoothService = {
+export const bteService: BluetoothService = {
   isAvailable,
   isEnabled,
   connectToDevice,

@@ -2,7 +2,7 @@
  * Modale de détails pour le modèle Classic
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View, TextInput } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';

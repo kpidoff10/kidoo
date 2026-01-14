@@ -6,8 +6,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { BottomSheet, type BottomSheetModalRef } from '@/components/ui/bottom-sheet';
-import { kidooActionsService } from '@/services/kidooActionsService';
-import { bleManager } from '@/services/bleManager';
+import { bleManager } from '@/services/bte';
 import { BrightnessHeader, BrightnessSlider } from './components';
 import type { Kidoo } from '@/services/kidooService';
 
@@ -45,24 +44,26 @@ export const BrightnessModal = React.forwardRef<BottomSheetModalRef, BrightnessM
 
       setIsLoadingBrightness(true);
       try {
-        const actions = kidooActionsService.forKidoo(kidoo);
-        const result = await actions.getBrightness();
+        const response = await bleManager.getBrightness({
+          timeout: 5000,
+          timeoutErrorMessage: 'Timeout: aucune réponse reçue pour BRIGHTNESS_GET',
+        });
 
-        if (result.success && (result as any).data && typeof (result as any).data.brightness === 'number') {
-          const currentBrightness = (result as any).data.brightness;
+        if (response.status === 'success' && typeof response.brightness === 'number') {
+          const currentBrightness = response.brightness;
           setBrightness(currentBrightness);
           // Mettre à jour la position du curseur
           const initialY = brightnessToY(currentBrightness);
           panY.setValue(initialY);
         } else {
-          console.error('[BrightnessModal] Erreur lors de la récupération de la luminosité:', result.error);
+          console.error('[BrightnessModal] Erreur lors de la récupération de la luminosité:', response.error);
         }
       } catch (error) {
         console.error('[BrightnessModal] Erreur lors du chargement de la luminosité:', error);
       } finally {
         setIsLoadingBrightness(false);
       }
-    }, [kidoo, panY]);
+    }, [panY]);
 
     // Charger la luminosité quand la modale s'ouvre ET que le Kidoo est connecté
     useEffect(() => {

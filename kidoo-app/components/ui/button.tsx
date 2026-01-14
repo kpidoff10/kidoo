@@ -3,7 +3,6 @@
  * Utilise les styles du thème centralisé
  */
 
-import React from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, TouchableOpacityProps, ViewStyle, TextStyle, View } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 

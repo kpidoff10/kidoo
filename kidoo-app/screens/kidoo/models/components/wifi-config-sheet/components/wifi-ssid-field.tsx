@@ -2,7 +2,6 @@
  * Champ de saisie pour le SSID WiFi
  */
 
-import React from 'react';
 import { View, TextInput } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
@@ -12,6 +11,7 @@ interface WifiSSIDFieldProps {
   value: string;
   onChangeText: (text: string) => void;
   onFocus?: () => void;
+  onBlur?: () => void;
   error?: string | null;
   editable?: boolean;
 }
@@ -20,6 +20,7 @@ export function WifiSSIDField({
   value,
   onChangeText,
   onFocus,
+  onBlur,
   error,
   editable = true,
 }: WifiSSIDFieldProps) {
@@ -35,6 +36,7 @@ export function WifiSSIDField({
         value={value}
         onChangeText={onChangeText}
         onFocus={onFocus}
+        onBlur={onBlur}
         placeholder={t('kidoos.setup.step2.wifiSSIDPlaceholder', 'Mon réseau WiFi')}
         autoCapitalize="none"
         autoComplete="off"
@@ -49,6 +51,11 @@ export function WifiSSIDField({
         }}
         editable={editable}
       />
+      {error && (
+        <ThemedText style={{ color: theme.colors.error, fontSize: theme.typography.fontSize.sm, marginTop: theme.spacing.xs }}>
+          {error}
+        </ThemedText>
+      )}
     </View>
   );
 }

@@ -2,7 +2,7 @@
  * Skeleton loader pour le composant StorageInfo
  */
 
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { View, Animated } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 

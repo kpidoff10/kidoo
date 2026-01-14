@@ -2,7 +2,6 @@
  * Composant pour le menu d'actions d'un Kidoo Basic
  */
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { MenuList, type MenuItem } from '@/components/ui/menu-list';
 import type { Kidoo } from '@/services/kidooService';

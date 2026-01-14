@@ -3,7 +3,6 @@
  * Utilise le contexte Bluetooth pour gérer la connexion automatique
  */
 
-import React from 'react';
 import { ScrollView } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { useBottomSheet } from '@/components/ui/bottom-sheet';
@@ -45,11 +44,6 @@ export function BasicEditModal({
     colorModal.present();
   };
 
-  const handleSystemPress = () => {
-    // TODO: Implémenter l'affichage des informations système
-    console.log('Informations système');
-  };
-
   const handleResetPress = () => {
     // TODO: Implémenter la réinitialisation
     console.log('Réinitialiser');
@@ -71,7 +65,6 @@ export function BasicEditModal({
         onEffectsPress={handleEffectsPress}
         onSleepPress={handleSleepPress}
         onColorsPress={handleColorsPress}
-        onSystemPress={handleSystemPress}
         onResetPress={handleResetPress}
       />
 

@@ -3,7 +3,6 @@
  * Affiche un cercle avec la couleur, la valeur hex et les valeurs RGB
  */
 
-import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';

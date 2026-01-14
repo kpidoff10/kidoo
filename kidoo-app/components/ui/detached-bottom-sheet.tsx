@@ -5,13 +5,13 @@
  * Simple wrapper autour de TrueSheet avec marges horizontales
  */
 
-import React, { useMemo, useRef, useCallback, ReactNode } from 'react';
+import { useMemo, useRef, useCallback, type ReactNode, type ElementRef } from 'react';
 import { ViewStyle } from 'react-native';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import { useTheme } from '@/hooks/use-theme';
 
 // Export du type pour utilisation externe
-export type DetachedBottomSheetModalRef = React.ElementRef<typeof TrueSheet>;
+export type DetachedBottomSheetModalRef = ElementRef<typeof TrueSheet>;
 
 export interface DetachedBottomSheetProps {
   children: ReactNode;
@@ -59,7 +59,9 @@ export function useDetachedBottomSheet() {
  * Composant DetachedBottomSheet
  * Simple wrapper autour de TrueSheet avec marges horizontales
  */
-export const DetachedBottomSheet = React.forwardRef<
+import { forwardRef } from 'react';
+
+export const DetachedBottomSheet = forwardRef<
   DetachedBottomSheetModalRef,
   Omit<DetachedBottomSheetProps, 'ref'>
 >(
@@ -70,12 +72,12 @@ export const DetachedBottomSheet = React.forwardRef<
       onDismiss,
       enablePanDownToClose = true,
       enableHandlePanningGesture = true,
-      enableDynamicSizing = false,
-      keyboardBehavior = 'interactive',
-      keyboardBlurBehavior = 'restore',
+      enableDynamicSizing: _enableDynamicSizing = false,
+      keyboardBehavior: _keyboardBehavior = 'interactive',
+      keyboardBlurBehavior: _keyboardBlurBehavior = 'restore',
       backgroundStyle,
       handleIndicatorStyle,
-      bottomInset,
+      bottomInset: _bottomInset,
       horizontalMargin,
       style,
     },

@@ -29,7 +29,7 @@ export default function ParallaxScrollView({ children, refreshing = false, onRef
           />
         ) : undefined
       }>
-      <ThemedView style={theme.components.parallaxContent}>{children}</ThemedView>
+      <ThemedView style={theme.components.parallaxContent as any}>{children}</ThemedView>
     </Animated.ScrollView>
   );
 }

@@ -3,7 +3,7 @@
  * Affiche un menu en haut de l'application avec une icône de profil
  */
 
-import React, { useMemo, useCallback, useRef, useEffect } from 'react';
+import { useMemo, useCallback, useRef, useEffect } from 'react';
 import { View, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';

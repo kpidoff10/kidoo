@@ -9,7 +9,10 @@ services/
 ├── api.ts                 # Service API générique (requêtes HTTP)
 ├── authService.ts         # Service d'authentification
 ├── wifiService.ts         # Service WiFi (récupération SSID, etc.)
-├── bluetoothService.ts    # Service Bluetooth (connexion aux appareils)
+├── bte/                   # Services BTE (Bluetooth Low Energy)
+│   ├── bleManager.ts     # Manager BLE avec état persistant (connexion, commandes, monitoring)
+│   ├── bteService.ts     # Service BLE bas niveau (stateless, connexion/déconnexion)
+│   └── index.ts          # Point d'entrée pour les services BTE
 ├── kidooActionsService.ts # Service pour les actions sur les Kidoos (BLE)
 ├── kidoo-actions/        # Actions spécifiques par modèle
 │   ├── types.ts          # Types partagés pour les actions
@@ -85,43 +88,77 @@ const unsubscribe = wifiService.addWifiListener((info) => {
 });
 ```
 
-### `bluetoothService.ts`
+### `bte/` - Services BTE (Bluetooth Low Energy)
 
-Service Bluetooth pour gérer les fonctionnalités Bluetooth, notamment la connexion aux appareils.
+Dossier contenant tous les services liés au Bluetooth Low Energy.
+
+#### `bte/bleManager.ts` - Manager BLE avec état persistant
+
+Manager haut niveau pour gérer les opérations BLE avec état persistant. Utilisé pour toutes les opérations de communication avec les Kidoos.
 
 **Exports :**
-- `bluetoothService.isAvailable()` - Vérifie si le Bluetooth est disponible
-- `bluetoothService.isEnabled()` - Vérifie si le Bluetooth est activé
-- `bluetoothService.connectToDevice(deviceId, options?)` - Se connecte à un appareil
-- `bluetoothService.disconnectFromDevice(deviceId)` - Se déconnecte d'un appareil
-- `bluetoothService.isDeviceConnected(deviceId)` - Vérifie si un appareil est connecté
-- `bluetoothService.getBluetoothState()` - Obtient l'état actuel du Bluetooth
+- `bleManager` - Instance singleton du manager
+- `bleManager.connect(device)` - Se connecter à un device (démarre le monitoring automatiquement)
+- `bleManager.disconnect()` - Se déconnecter du device
+- `bleManager.isConnected()` - Vérifier si un device est connecté
+- `bleManager.sendCommand(command)` - Envoyer une commande bas niveau
+- `bleManager.sendCommandAndWait(command, options?)` - Envoyer une commande typée et attendre la réponse
+- `bleManager.configureWiFi(ssid, password?, options?)` - Configurer le WiFi (fonction utilitaire)
+- `bleManager.writeNFCTag(blockNumber, data, options?)` - Écrire un tag NFC (fonction utilitaire)
+- `bleManager.readNFCTag(blockNumber, options?)` - Lire un tag NFC (fonction utilitaire)
+- `bleManager.waitForResponse(options)` - Attendre une réponse spécifique
+- Types : `BLEDevice`, `BluetoothConnectionResult`, `BLEManagerCallbacks`, `WaitForResponseOptions`
+
+**Exemple :**
+```typescript
+import { bleManager } from '@/services/bte';
+
+// Se connecter à un device
+const result = await bleManager.connect({
+  id: 'device-id',
+  name: 'Kidoo',
+  deviceId: 'device-id',
+});
+
+if (result.success) {
+  // Configurer le WiFi
+  await bleManager.configureWiFi('MonWiFi', 'password123');
+  
+  // Écrire un tag NFC
+  await bleManager.writeNFCTag(4, [1, 2, 3, 4]);
+}
+```
+
+#### `bte/bteService.ts` - Service BLE bas niveau (stateless)
+
+Service bas niveau pour les opérations BLE sans état. Utilisé principalement dans `BluetoothContext` pour vérifier la disponibilité.
+
+**Exports :**
+- `bteService.isAvailable()` - Vérifie si le Bluetooth est disponible
+- `bteService.isEnabled()` - Vérifie si le Bluetooth est activé
+- `bteService.connectToDevice(deviceId, options?)` - Se connecte à un appareil (stateless)
+- `bteService.disconnectFromDevice(deviceId)` - Se déconnecte d'un appareil
+- `bteService.isDeviceConnected(deviceId)` - Vérifie si un appareil est connecté
+- `bteService.getBluetoothState()` - Obtient l'état actuel du Bluetooth
+- Types : `BluetoothDevice`, `BluetoothService`, `BluetoothConnectionResult`
 
 **Note :** Nécessite `react-native-ble-plx` (inclus dans le projet)
 
 **Exemple :**
 ```typescript
-import { bluetoothService } from '@/services/bluetoothService';
+import { bteService } from '@/services/bte';
 
 // Vérifier si le Bluetooth est disponible
-const available = bluetoothService.isAvailable();
+const available = bteService.isAvailable();
 
-// Vérifier si le Bluetooth est activé
-const enabled = await bluetoothService.isEnabled();
-
-// Se connecter à un appareil
-const result = await bluetoothService.connectToDevice(deviceId, {
+// Se connecter à un appareil (stateless)
+const result = await bteService.connectToDevice(deviceId, {
   timeout: 5000,
   autoConnect: false,
 });
-
-if (result.success) {
-  console.log('Connecté avec succès');
-  // Utiliser result.device pour communiquer
-} else {
-  console.error('Erreur:', result.error);
-}
 ```
+
+**Recommandation :** Utilisez `bleManager` pour toutes les opérations de communication avec les Kidoos. Utilisez `bteService` uniquement pour vérifier la disponibilité du Bluetooth.
 
 ## Installation des dépendances
 
@@ -131,7 +168,7 @@ Pour utiliser `wifiService`, installez la dépendance :
 npm install @react-native-community/netinfo
 ```
 
-Pour utiliser `bluetoothService`, la dépendance `react-native-ble-plx` est déjà incluse dans le projet.
+Pour utiliser les services BTE (`bte/`), la dépendance `react-native-ble-plx` est déjà incluse dans le projet.
 
 ### `kidooActionsService.ts`
 
@@ -161,12 +198,15 @@ La classe `CommonKidooActions` fournit des méthodes communes utilisables par to
 - `setEffect(options)` - Définir un effet LED (rainbow, pulse, glossy, manual)
 - `configureSleepMode(options)` - Configurer le mode sommeil
 - `setColor(options)` - Définir une couleur RGB
-- `reset()` - Réinitialiser les paramètres par défaut
-- `getSystemInfo()` - Obtenir les informations système
+
+**Commandes globales (disponibles via `bleManager`) :**
+- `bleManager.getSystemInfo()` - Obtenir les informations système (version, modèle, etc.)
+- `bleManager.reset()` - Réinitialiser les paramètres par défaut
 
 **Exemple :**
 ```typescript
 import { kidooActionsService } from '@/services/kidooActionsService';
+import { bleManager } from '@/services/bte';
 
 // Obtenir les actions pour un Kidoo
 const actions = kidooActionsService.forKidoo(kidoo);
@@ -191,8 +231,17 @@ await actions.configureSleepMode({
 // Définir une couleur
 await actions.setColor({ r: 255, g: 0, b: 0 });
 
-// Réinitialiser
-await actions.reset();
+// Obtenir les informations système (via bleManager)
+try {
+  const systemInfo = await bleManager.getSystemInfo();
+  console.log('Version:', systemInfo.firmwareVersion);
+  console.log('Modèle:', systemInfo.model);
+} catch (error) {
+  console.error('Erreur:', error);
+}
+
+// Réinitialiser (via bleManager)
+await bleManager.reset();
 ```
 
 **Note :** Nécessite que le Kidoo soit connecté via Bluetooth (utilise `bleManager`).

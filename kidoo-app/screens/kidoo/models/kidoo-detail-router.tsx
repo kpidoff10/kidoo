@@ -3,7 +3,6 @@
  * Sélectionne automatiquement la bonne modale selon le modèle
  */
 
-import React from 'react';
 import type { Kidoo } from '@/services/kidooService';
 import { BasicDetailModal } from './basic/detail';
 import { ClassicDetailModal } from './classic/detail';

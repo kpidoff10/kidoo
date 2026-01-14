@@ -55,7 +55,7 @@ export default function KidooEditScreen() {
     router.back();
   };
 
-  const handleSave = (updatedKidoo: Kidoo) => {
+  const handleSave = (_updatedKidoo: Kidoo) => {
     // Retourner aux détails avec le Kidoo mis à jour
     router.back();
   };

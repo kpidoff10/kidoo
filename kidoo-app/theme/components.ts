@@ -24,8 +24,8 @@ export const createComponentStyles = (colorScheme: 'light' | 'dark') => {
       ...shadows.md,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
-      width: '100%',
-      alignSelf: 'stretch',
+      width: '100%' as const,
+      alignSelf: 'stretch' as const,
     },
 
     // Styles de bouton
@@ -335,7 +335,7 @@ export const createComponentStyles = (colorScheme: 'light' | 'dark') => {
     // Styles pour parallax scroll view
     parallaxContent: {
       flex: 1,
-      width: '100%',
+      width: '100%' as const,
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.md,
       paddingBottom: spacing.xxxl,

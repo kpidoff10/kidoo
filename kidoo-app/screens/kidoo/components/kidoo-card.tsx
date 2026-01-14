@@ -3,7 +3,6 @@
  * Affiche une carte pour un appareil Kidoo
  */
 
-import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
@@ -22,7 +21,8 @@ export function KidooCard({ kidoo, onPress }: KidooCardProps) {
 
   return (
     <TouchableOpacity
-      style={[theme.components.card, { marginBottom: theme.spacing.md }]}
+      // @ts-ignore - theme.components.card contient width: '100%' et alignSelf: 'stretch' qui sont valides en runtime mais TypeScript les rejette
+      style={[theme.components.card as any, { marginBottom: theme.spacing.md }]}
       onPress={onPress}
       activeOpacity={0.7}
       disabled={!onPress}

@@ -1,13 +1,21 @@
 /**
  * Actions communes à tous les modèles de Kidoo
+ * 
+ * Cette classe sert de wrapper autour de bleManager pour :
+ * - Vérifier automatiquement la connexion avant chaque commande
+ * - Standardiser le format de retour (KidooActionResult) pour toutes les actions
+ * - Convertir les exceptions en format d'erreur standardisé
+ * 
+ * Note: Les commandes globales (getSystemInfo, getBrightness, reset) sont disponibles
+ * directement via bleManager et ne nécessitent pas cette couche d'abstraction.
  */
 
-import { bleManager } from '@/services/bleManager';
-import type { BluetoothResponse } from '@/types/bluetooth';
+import { bleManager } from '@/services/bte';
 import type { KidooActionResult } from './types';
 
 /**
  * Classe de base pour les actions communes
+ * Wrapper autour de bleManager avec format de retour standardisé
  */
 export class CommonKidooActions {
   /**
@@ -72,68 +80,43 @@ export class CommonKidooActions {
       };
     }
 
-    return new Promise((resolve) => {
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-      let unsubscribe: (() => void) | null = null;
-
-      const cleanup = () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-        if (unsubscribe) {
-          unsubscribe();
-          unsubscribe = null;
-        }
-      };
-
-      // Configurer le timeout
-      timeoutId = setTimeout(() => {
-        cleanup();
-        resolve({
-          success: false,
-          error: `Timeout: aucune réponse reçue pour ${expectedMessage}`,
-        });
-      }, timeout);
-
-      // Démarrer le monitoring pour recevoir la réponse
-      bleManager.startMonitoring((response: BluetoothResponse) => {
-        // Vérifier si c'est la réponse attendue
-        if (response.message === expectedMessage) {
-          cleanup();
-
-          if (response.status === 'success') {
-            resolve({
-              success: true,
-              data: response as any,
-            } as KidooActionResult);
-          } else {
-            resolve({
-              success: false,
-              error: response.error || 'Erreur dans la réponse',
-            });
-          }
-        }
-      }).then((unsub) => {
-        unsubscribe = unsub;
-      }).catch((error) => {
-        cleanup();
-        resolve({
-          success: false,
-          error: `Erreur lors du démarrage du monitoring: ${error instanceof Error ? error.message : String(error)}`,
-        });
-      });
-
+    try {
       // Envoyer la commande
       const commandJson = JSON.stringify(command);
-      bleManager.sendCommand(commandJson).catch((error) => {
-        cleanup();
-        resolve({
+      const success = await bleManager.sendCommand(commandJson);
+      
+      if (!success) {
+        return {
           success: false,
-          error: `Erreur lors de l'envoi de la commande: ${error instanceof Error ? error.message : String(error)}`,
-        });
+          error: 'Erreur lors de l\'envoi de la commande',
+        };
+      }
+
+      // Attendre la réponse en utilisant waitForResponse
+      const response = await bleManager.waitForResponse({
+        expectedMessage, // String accepté maintenant
+        timeout,
+        timeoutErrorMessage: `Timeout: aucune réponse reçue pour ${expectedMessage}`,
       });
-    });
+
+      // Vérifier si c'est une réponse de succès
+      if (response.status === 'success' && response.message === expectedMessage) {
+        return {
+          success: true,
+          data: response as any,
+        } as KidooActionResult;
+      } else {
+        return {
+          success: false,
+          error: response.error || 'Erreur dans la réponse',
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue',
+      };
+    }
   }
 
   /**
@@ -154,52 +137,5 @@ export class CommonKidooActions {
     }
 
     return this.sendCommand(command);
-  }
-
-  /**
-   * Obtenir la luminosité actuelle des LEDs
-   * Commande commune à tous les modèles de Kidoo
-   * @returns Résultat avec la luminosité en pourcentage (10-100) dans data.brightness
-   */
-  static async getBrightness(): Promise<KidooActionResult> {
-    const result = await this.sendCommandAndWaitForResponse(
-      {
-        command: 'GET_BRIGHTNESS',
-      },
-      'BRIGHTNESS_GET',
-      5000
-    );
-
-    if (result.success && (result as any).data && typeof (result as any).data.brightness === 'number') {
-      return {
-        success: true,
-        data: {
-          brightness: (result as any).data.brightness,
-        },
-      } as KidooActionResult;
-    }
-
-    return result;
-  }
-
-  /**
-   * Obtenir les informations système
-   * Commande commune à tous les modèles de Kidoo
-   * @returns Résultat avec les informations système (version, modèle, etc.)
-   */
-  static async getSystemInfo(): Promise<KidooActionResult> {
-    return this.sendCommand({
-      command: 'VERSION',
-    });
-  }
-
-  /**
-   * Réinitialiser les paramètres par défaut
-   * Commande commune à tous les modèles de Kidoo
-   */
-  static async reset(): Promise<KidooActionResult> {
-    return this.sendCommand({
-      command: 'RESET',
-    });
   }
 }

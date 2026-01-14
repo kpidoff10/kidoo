@@ -7,8 +7,10 @@ import { z } from 'zod';
 /**
  * Schéma de validation pour créer un nouveau tag
  * Note: L'UID n'est pas requis à la création car il sera lu depuis le tag NFC
+ * Le tagId (UUID) doit être fourni par l'app (généré avant écriture sur le tag NFC)
  */
 export const createTagInputSchema = z.object({
+  tagId: z.string().uuid('Le tagId doit être un UUID valide'), // UUID généré par l'app et écrit sur le tag NFC
   kidooId: z.string().uuid('Le kidooId doit être un UUID valide'),
   name: z.string().max(100, 'Le nom est trop long').optional(),
 });

@@ -4,7 +4,6 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedTrueSheet, ThemedTrueSheetRef } from '@/components/ui/themed-true-sheet';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,7 +26,6 @@ export const BluetoothScanModal = React.forwardRef<
   BluetoothScanModalProps
 >(({ onDeviceSelect, onClose }, ref) => {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const { isDeveloperMode } = useAuth();
 
   const {

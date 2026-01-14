@@ -3,7 +3,6 @@
  * Affiche une sélection de couleurs communes avec indicateur de sélection
  */
 
-import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';

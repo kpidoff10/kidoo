@@ -3,7 +3,6 @@
  * Affiche le titre et la valeur actuelle de la luminosité
  */
 
-import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';

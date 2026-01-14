@@ -3,7 +3,7 @@
  * Affiche la liste des appareils Kidoo de l'utilisateur
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
@@ -113,14 +113,11 @@ export default function KidoosScreen() {
   // 3. La connexion sera réutilisée si on revient aux détails/édition
   // Si nécessaire, la déconnexion peut être gérée manuellement ou après inactivité
 
-  const handleSetupComplete = useCallback(
-    (device: { id: string; name: string; deviceId: string }) => {
-      // Recharger la liste des Kidoos après la création
-      loadKidoos();
-      setSelectedDevice(null);
-    },
-    [loadKidoos]
-  );
+  const handleSetupComplete = useCallback(() => {
+    // Recharger la liste des Kidoos après la création
+    loadKidoos();
+    setSelectedDevice(null);
+  }, [loadKidoos]);
 
   const handleSetupClose = useCallback(() => {
     setSelectedDevice(null);

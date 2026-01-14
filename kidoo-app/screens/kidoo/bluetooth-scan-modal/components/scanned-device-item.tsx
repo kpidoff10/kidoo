@@ -2,8 +2,6 @@
  * Composant ScannedDeviceItem
  * Affiche un appareil Kidoo scanné dans la liste
  */
-
-import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';

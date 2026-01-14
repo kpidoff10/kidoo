@@ -2,7 +2,6 @@
  * Boutons d'action pour la configuration WiFi
  */
 
-import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';

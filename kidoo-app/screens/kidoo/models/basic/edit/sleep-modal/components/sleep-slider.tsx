@@ -3,7 +3,6 @@
  * Utilise le composant générique VerticalSlider
  */
 
-import React from 'react';
 import { Animated } from 'react-native';
 import { VerticalSlider } from '@/components/ui/vertical-slider';
 import { kidooActionsService } from '@/services/kidooActionsService';

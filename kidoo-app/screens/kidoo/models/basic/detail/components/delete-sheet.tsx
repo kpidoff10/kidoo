@@ -2,7 +2,6 @@
  * Composant pour le sheet de confirmation de suppression d'un Kidoo
  */
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { DeleteConfirmationSheet } from '@/components/ui/delete-confirmation-sheet';
 import type { Kidoo } from '@/services/kidooService';

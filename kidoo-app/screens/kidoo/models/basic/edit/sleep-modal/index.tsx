@@ -7,7 +7,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { BottomSheet, type BottomSheetModalRef } from '@/components/ui/bottom-sheet';
 import { kidooActionsService } from '@/services/kidooActionsService';
-import { bleManager } from '@/services/bleManager';
+import { bleManager } from '@/services/bte';
 import { useKidooEditBluetooth } from '../../../kidoo-edit-bluetooth-context';
 import { SleepHeader, SleepSlider } from './components';
 import type { Kidoo } from '@/services/kidooService';

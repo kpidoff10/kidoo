@@ -166,7 +166,8 @@
           "errorSSIDRequired": "WiFi network name is required",
           "errorNotConnected": "Kidoo is not connected",
           "errorSendFailed": "Error sending command",
-          "errorConfigFailed": "Error configuring WiFi"
+          "errorConfigFailed": "Error configuring WiFi",
+          "errorTimeout": "WiFi configuration took too long. Please try again."
         },
         "nfc": {
           "title": "Approach an NFC tag",
