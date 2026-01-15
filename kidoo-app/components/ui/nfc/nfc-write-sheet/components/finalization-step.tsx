@@ -5,6 +5,7 @@
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/contexts/AuthContext';
 import { ThemedText } from '@/components/themed-text';
 import { NFCScanZone } from './nfc-scan-zone';
 import { AlertMessage } from '@/components/ui/alert-message';
@@ -26,6 +27,7 @@ export function FinalizationStep({
 }: FinalizationStepProps) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const { isDeveloperMode } = useAuth();
 
   return (
     <View style={{ gap: theme.spacing.xl }}>
@@ -48,7 +50,7 @@ export function FinalizationStep({
               ? t('kidoos.nfc.creatingDescription', 'Création de l\'identifiant unique...')
               : t('kidoos.nfc.finalizationDescription', 'Le tag "{{name}}" va être créé', { name: tagName })}
         </ThemedText>
-        {tagUID && (
+        {tagUID && isDeveloperMode && (
           <ThemedText style={{ textAlign: 'center', opacity: 0.5, fontSize: 12, marginTop: theme.spacing.xs }}>
             UID: {tagUID}
           </ThemedText>

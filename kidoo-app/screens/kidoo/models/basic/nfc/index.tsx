@@ -2,9 +2,9 @@
  * Écran de gestion des tags NFC pour le modèle Basic
  */
 
-import { useCallback, useRef, useEffect } from 'react';
-import { ScrollView } from 'react-native';
-import { useNavigation } from 'expo-router';
+import { useCallback, useRef, useEffect, useState } from 'react';
+import { View, RefreshControl } from 'react-native';
+import { useNavigation, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
@@ -12,10 +12,12 @@ import { ThemedText } from '@/components/themed-text';
 import { FloatingActionButton } from '@/components/ui/floating-action-button';
 import { BottomSheetModalRef } from '@/components/ui/bottom-sheet';
 import { KidooProvider, useKidoo } from '@/contexts/KidooContext';
-import { NFCProvider, useNFC } from '@/contexts/NFCContext';
 import { NFCWriteSheet } from '@/components/ui/nfc/nfc-write-sheet';
 import type { Kidoo } from '@/services/kidooService';
+import type { Tag } from '@/shared';
 import { ThemedView } from '@/components/themed-view';
+import { ThemedScrollView } from '@/components/themed-scroll-view';
+import { TagListItem, TagsCountCard } from './components';
 
 export interface BasicNFCTagsProps {
   kidoo: Kidoo;
@@ -28,11 +30,17 @@ function BasicNFCTagsContent(_props: BasicNFCTagsProps) {
   const insets = useSafeAreaInsets();
   const nfcWriteSheetRef = useRef<BottomSheetModalRef>(null);
   
-  // Utiliser le contexte Kidoo (infos + connexion BLE)
-  const { isConnected, isConnecting } = useKidoo();
+  // Utiliser le contexte Kidoo (infos + connexion BLE + tags)
+  const { isConnected, isConnecting, tagsQuery, kidooId } = useKidoo();
+  const router = useRouter();
   
-  // Utiliser le contexte NFC (tags + fonctions)
-  const { tags } = useNFC();
+  // Extraire les données des tags pour simplifier l'utilisation
+  const tags = tagsQuery.data?.success ? tagsQuery.data.data : [];
+  const isLoadingTags = tagsQuery.isLoading;
+  const tagsError = tagsQuery.error;
+  
+  // État pour le pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
 
   // Mettre à jour le titre de la navigation
   useEffect(() => {
@@ -53,29 +61,45 @@ function BasicNFCTagsContent(_props: BasicNFCTagsProps) {
     nfcWriteSheetRef.current?.dismiss();
   }, []);
 
+  const handleTagPress = useCallback((tag: Tag) => {
+    router.push(`/kidoo/${kidooId}/tags/${tag.id}/basic`);
+  }, [router, kidooId]);
+
+  // Fonction pour actualiser la liste des tags
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await tagsQuery.refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [tagsQuery]);
+
   // Calculer la position du bouton flottant pour qu'il soit au-dessus de la barre de navigation
-  // Dans une modale, la barre de navigation fait environ 50-60px de hauteur
-  // On ajoute cette hauteur aux insets pour positionner le bouton correctement
   const floatingButtonBottom = insets.bottom + theme.spacing.md;
-  
-  // Calculer le padding bottom pour éviter que le contenu soit masqué par le bouton flottant
-  const floatingButtonHeight = 56;
-  const scrollViewPaddingBottom = floatingButtonBottom + floatingButtonHeight + theme.spacing.md;
 
   return (
-    <ThemedView >
-      <ScrollView
-        style={{ flex: 1 }}
+    <ThemedView>
+      {/* Carte avec le nombre total de tags - Fixe en haut */}
+      {isConnected && !isConnecting && !isLoadingTags && !tagsError && tags.length > 0 && (
+        <TagsCountCard count={tags.length} />
+      )}
+
+      {/* ScrollView pour la liste des tags */}
+      <ThemedScrollView
         contentContainerStyle={{
           paddingHorizontal: theme.spacing.xl,
           paddingTop: theme.spacing.md,
-          paddingBottom: scrollViewPaddingBottom,
+          paddingBottom: insets.bottom + 80, // Espace pour le bouton flottant
         }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.tint}
+          />
+        }
       >
-        <ThemedText type="title" style={{ marginBottom: theme.spacing.md }}>
-          {t('kidoos.detail.actions.tags', 'Mes tags')}
-        </ThemedText>
-        
         {isConnecting ? (
           <ThemedText style={{ opacity: 0.7, marginBottom: theme.spacing.md }}>
             {t('kidoos.edit.basic.connecting', 'Connexion au Kidoo en cours...')}
@@ -84,24 +108,31 @@ function BasicNFCTagsContent(_props: BasicNFCTagsProps) {
           <ThemedText style={{ opacity: 0.7, marginBottom: theme.spacing.md }}>
             {t('kidoos.edit.basic.notConnected', 'Le Kidoo n\'est pas connecté.')}
           </ThemedText>
-        ) : tags.isLoading ? (
+        ) : isLoadingTags ? (
           <ThemedText style={{ opacity: 0.7, marginBottom: theme.spacing.lg }}>
             {t('common.loading', 'Chargement...')}
           </ThemedText>
-        ) : tags.error ? (
+        ) : tagsError ? (
           <ThemedText style={{ opacity: 0.7, marginBottom: theme.spacing.lg }}>
-            {t('common.error', 'Erreur')}: {tags.error.message}
+            {t('common.error', 'Erreur')}: {tagsError.message}
           </ThemedText>
-        ) : !tags.data || tags.data.length === 0 ? (
+        ) : tags.length === 0 ? (
           <ThemedText style={{ opacity: 0.7, marginBottom: theme.spacing.lg }}>
             {t('kidoos.tags.empty', 'Aucun tag enregistré. Appuyez sur + pour ajouter un tag NFC.')}
           </ThemedText>
         ) : (
-          <ThemedText style={{ opacity: 0.7, marginBottom: theme.spacing.lg }}>
-            {tags.data.length} {t('kidoos.tags.count', 'tag(s)')}
-          </ThemedText>
+          <View style={{ gap: 0 }}>
+            {tags.map((tag: Tag, index: number) => (
+              <View key={tag.id}>
+                <TagListItem tag={tag} onPress={handleTagPress} />
+                {index < tags.length - 1 && (
+                  <View style={theme.components.dividerThin} />
+                )}
+              </View>
+            ))}
+          </View>
         )}
-      </ScrollView>
+      </ThemedScrollView>
 
       {/* Bouton flottant pour ajouter un tag */}
       {isConnected && (
@@ -122,13 +153,10 @@ function BasicNFCTagsContent(_props: BasicNFCTagsProps) {
 }
 
 export function BasicNFCTags(props: BasicNFCTagsProps) {
-  // Envelopper dans le provider Kidoo (infos + connexion BLE automatique)
-  // Puis dans le provider NFC pour gérer les tags avec React Query
+  // Envelopper dans le provider Kidoo (infos + connexion BLE automatique + tags)
   return (
     <KidooProvider kidooId={props.kidoo.id} autoConnect={true}>
-      <NFCProvider kidooId={props.kidoo.id}>
       <BasicNFCTagsContent {...props} />
-      </NFCProvider>
     </KidooProvider>
   );
 }

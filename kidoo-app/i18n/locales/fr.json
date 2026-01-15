@@ -94,7 +94,11 @@
         "description": "Vous n'avez pas encore de Kidoo. Ajoutez votre premier appareil pour commencer."
       },
       "tags": {
-        "empty": "Aucun tag enregistré. Appuyez sur + pour ajouter un tag NFC."
+        "empty": "Aucun tag enregistré. Appuyez sur + pour ajouter un tag NFC.",
+        "tag": "tag",
+        "tags": "tags",
+        "count": "tag(s)",
+        "unnamed": "Tag sans nom"
       },
       "add": {
         "title": "Ajouter un Kidoo",
@@ -171,7 +175,7 @@
         },
         "nfc": {
           "title": "Approcher un tag NFC",
-          "description": "Approchez un tag NFC du lecteur NFC de votre Kidoo",
+          "description": "Approchez un tag NFC du lecteur NFC de votre Kidoo et gardez-le proche jusqu'à la prochaine étape",
           "tagDetected": "Tag détecté !",
           "tagUID": "UID: {{uid}}",
           "scanning": "En attente du tag...",
@@ -181,6 +185,39 @@
           "errorReadFailed": "Erreur lors de la lecture du tag",
           "errorSendFailed": "Erreur lors de l'envoi de la commande",
           "errorUnknown": "Une erreur est survenue"
+        },
+        "multimedia": {
+          "step1": {
+            "title": "Conditions d'utilisation",
+            "description": "Avant de continuer, veuillez lire et accepter les conditions suivantes.",
+            "terms": "Je comprends et j'accepte que :",
+            "terms1": "Je suis seul responsable des fichiers audio que j'envoie sur le Kidoo",
+            "terms2": "Les fichiers audio doivent être libres de droits ou j'en détiens les droits",
+            "terms3": "Je ne partagerai pas de contenu protégé par des droits d'auteur sans autorisation",
+            "accept": "J'accepte ces conditions"
+          },
+          "step2": {
+            "title": "Sélectionner un fichier audio",
+            "description": "Choisissez un fichier audio depuis votre téléphone",
+            "pickFile": "Choisir un fichier audio",
+            "picking": "Sélection en cours...",
+            "supportedFormats": "MP3, WAV, M4A, etc."
+          },
+          "step3": {
+            "title": "Découper l'audio (optionnel)",
+            "description": "Vous pouvez découper votre fichier audio pour ne garder qu'une partie",
+            "trimAudio": "Découper l'audio",
+            "trimDescription": "Sélectionnez la partie à garder",
+            "trimApplied": "Découpage appliqué",
+            "startTime": "Début",
+            "endTime": "Fin",
+            "removeTrim": "Supprimer le découpage",
+            "noFile": "Veuillez d'abord sélectionner un fichier audio à l'étape précédente",
+            "error": {
+              "title": "Fonctionnalité non disponible",
+              "message": "Le découpage audio nécessite un build natif. Veuillez utiliser \"npm run android\" ou \"npm run ios\" au lieu d'Expo Go."
+            }
+          }
         }
       },
       "edit": {

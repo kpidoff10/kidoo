@@ -23,9 +23,8 @@ import {
   useCreateTag as useCreateTagHook,
   useUpdateTag as useUpdateTagHook,
   useDeleteTag as useDeleteTagHook,
-  useCheckTagExists as useCheckTagExistsHook,
 } from '@/hooks/useTags';
-import type { CreateTagInput, UpdateTagInput } from '@/types/shared';
+import type { CreateTagInput, Tag, UpdateTagInput } from '@/types/shared';
 
 interface NFCContextValue {
   // kidooId du Context
@@ -33,7 +32,7 @@ interface NFCContextValue {
 
   // Tags du Kidoo (React Query)
   tags: {
-    data: any;
+    data: Tag[];
     isLoading: boolean;
     error: Error | null;
     refetch: () => void;
@@ -144,7 +143,7 @@ export function NFCProvider({ kidooId, children }: NFCProviderProps) {
   const value: NFCContextValue = {
     kidooId,
     tags: {
-      data: tagsQuery.data?.success ? tagsQuery.data.data : null,
+      data: tagsQuery.data?.success ? tagsQuery.data.data : [],
       isLoading: tagsQuery.isLoading,
       error: tagsQuery.error,
       refetch: () => tagsQuery.refetch(),

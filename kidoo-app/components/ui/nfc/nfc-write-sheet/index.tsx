@@ -43,6 +43,7 @@ const NFCWriteSheetContent = React.forwardRef<BottomSheetModalRef, NFCWriteSheet
       handleNext,
       handlePrevious,
       handleCancel,
+      handleOpen,
       setBottomSheetRef,
     } = useNFCWrite();
 
@@ -93,6 +94,7 @@ const NFCWriteSheetContent = React.forwardRef<BottomSheetModalRef, NFCWriteSheet
       <BottomSheet
         ref={ref}
         onDismiss={handleCancel}
+        onOpen={handleOpen}
         detents={['auto']}
       >
         {/* Step Indicator */}

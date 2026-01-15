@@ -94,7 +94,11 @@
         "description": "You don't have any Kidoos yet. Add your first device to get started."
       },
       "tags": {
-        "empty": "No tags registered. Press + to add an NFC tag."
+        "empty": "No tags registered. Press + to add an NFC tag.",
+        "tag": "tag",
+        "tags": "tags",
+        "count": "tag(s)",
+        "unnamed": "Unnamed tag"
       },
       "add": {
         "title": "Add a Kidoo",
@@ -171,7 +175,7 @@
         },
         "nfc": {
           "title": "Approach an NFC tag",
-          "description": "Approach an NFC tag to the NFC reader of your Kidoo",
+          "description": "Approach an NFC tag to the NFC reader of your Kidoo and keep it close until the next step",
           "tagDetected": "Tag detected!",
           "tagUID": "UID: {{uid}}",
           "scanning": "Waiting for tag...",
@@ -181,6 +185,39 @@
           "errorReadFailed": "Error reading tag",
           "errorSendFailed": "Error sending command",
           "errorUnknown": "An error occurred"
+        },
+        "multimedia": {
+          "step1": {
+            "title": "Terms of Use",
+            "description": "Before continuing, please read and accept the following conditions.",
+            "terms": "I understand and accept that:",
+            "terms1": "I am solely responsible for the audio files I send to the Kidoo",
+            "terms2": "Audio files must be free of rights or I hold the rights to them",
+            "terms3": "I will not share content protected by copyright without authorization",
+            "accept": "I accept these conditions"
+          },
+          "step2": {
+            "title": "Select an audio file",
+            "description": "Choose an audio file from your phone",
+            "pickFile": "Choose an audio file",
+            "picking": "Selecting...",
+            "supportedFormats": "MP3, WAV, M4A, etc."
+          },
+          "step3": {
+            "title": "Trim audio (optional)",
+            "description": "You can trim your audio file to keep only a portion",
+            "trimAudio": "Trim audio",
+            "trimDescription": "Select the portion to keep",
+            "trimApplied": "Trim applied",
+            "startTime": "Start",
+            "endTime": "End",
+            "removeTrim": "Remove trim",
+            "noFile": "Please first select an audio file in the previous step",
+            "error": {
+              "title": "Feature not available",
+              "message": "Audio trimming requires a native build. Please use \"npm run android\" or \"npm run ios\" instead of Expo Go."
+            }
+          }
         }
       },
       "edit": {

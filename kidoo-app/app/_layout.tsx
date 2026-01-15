@@ -112,6 +112,7 @@ function RootLayoutNav() {
         <Stack.Screen name="kidoo/[id]" options={{ presentation: 'modal', title: 'Détails du Kidoo' }} />
         <Stack.Screen name="kidoo/[id]/edit" options={{ presentation: 'modal', title: 'Modifier le Kidoo' }} />
         <Stack.Screen name="kidoo/[id]/tags" options={{ presentation: 'modal', title: 'Mes tags' }} />
+        <Stack.Screen name="kidoo/[id]/tags/[tagId]/basic" options={{ presentation: 'modal', title: 'Contenu du tag' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

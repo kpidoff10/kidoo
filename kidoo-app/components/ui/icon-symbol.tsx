@@ -35,6 +35,11 @@ const MAPPING: IconMapping = {
   'moon.fill': 'nights-stay',
   'wifi': 'wifi',
   'tag.fill': 'local-offer',
+  'music.note': 'music-note',
+  'mic.fill': 'mic',
+  'exclamationmark.triangle.fill': 'warning',
+  'info.circle.fill': 'info',
+  'scissors': 'content-cut',
 };
 
 /**

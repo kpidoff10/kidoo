@@ -6,6 +6,7 @@
 // Schémas
 export * from './schemas/auth';
 export * from './schemas/kidoo';
+export * from './schemas/multimedia';
 export * from './schemas/tag';
 
 // Types

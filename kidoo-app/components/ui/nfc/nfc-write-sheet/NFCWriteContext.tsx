@@ -46,6 +46,7 @@ interface NFCWriteContextValue {
   handleCreateTag: () => Promise<void>;
   handlePrevious: () => void;
   handleCancel: () => void;
+  handleOpen: () => void;
   handleNext: () => Promise<void>;
   setError: (error: string | null) => void;
   setBottomSheetRef: (ref: any) => void;
@@ -118,7 +119,7 @@ export function NFCWriteProvider({ onTagWritten, onDismiss, children }: NFCWrite
 
   // Réinitialiser l'état
   const reset = useCallback(() => {
-    resetSteps(); // Réinitialiser les étapes complétées
+    resetSteps(); // Réinitialiser les étapes complétées (remet currentStep à 1)
     setIsScanning(false);
     setIsProcessing(false);
     setIsSuccess(false);
@@ -129,6 +130,11 @@ export function NFCWriteProvider({ onTagWritten, onDismiss, children }: NFCWrite
     hasCreatedTagRef.current = false;
     resetForm({ name: '' });
   }, [resetSteps, resetForm]);
+
+  // Réinitialiser quand le BottomSheet s'ouvre
+  const handleOpen = useCallback(() => {
+    reset();
+  }, [reset]);
 
   // Étape 1 : Scanner le tag NFC
   const handleScanTag = useCallback(async () => {
@@ -351,6 +357,7 @@ export function NFCWriteProvider({ onTagWritten, onDismiss, children }: NFCWrite
     handleCreateTag,
     handlePrevious,
     handleCancel,
+    handleOpen,
     handleNext,
     setError,
     setBottomSheetRef,

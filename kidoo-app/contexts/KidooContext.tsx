@@ -27,6 +27,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { bleManager, type BLEDevice } from '@/services/bte';
 import { useKidooById, useUpdateKidoo, useDeleteKidoo } from '@/hooks/useKidoos';
+import { useTagsByKidoo } from '@/hooks/useTags';
 import { useAuth } from '@/contexts/AuthContext';
 import { CommonKidooActions } from '@/services/kidoo-actions/common';
 import { nfcManager, type NFCReadResult, type NFCWriteResult } from '@/services/nfcManager';
@@ -94,6 +95,12 @@ export interface KidooContextValue {
     blockNumber?: number,
     onProgress?: (state: 'creating' | 'writing' | 'updating' | 'written' | 'error', message?: string) => void
   ) => Promise<NFCWriteResult>;
+  
+  // Tags du Kidoo (query React Query)
+  tagsQuery: ReturnType<typeof useTagsByKidoo>;
+  
+  // Fonction de refresh pour actualiser le Kidoo et les données associées (tags, etc.)
+  refresh: () => Promise<void>;
 }
 
 const KidooContext = createContext<KidooContextValue | undefined>(undefined);
@@ -114,7 +121,10 @@ export function KidooProvider({ kidooId, children, autoConnect = false }: KidooP
   const hasConnectedRef = useRef(false);
 
   // Récupérer le Kidoo via React Query (seulement si userId est disponible)
-  const { data: kidooQuery, isLoading: isLoadingKidoo, error: kidooError } = useKidooById(kidooId, !!userId);
+  const { data: kidooQuery, isLoading: isLoadingKidoo, error: kidooError, refetch: refetchKidoo } = useKidooById(kidooId, !!userId);
+
+  // Récupérer les tags du Kidoo
+  const tagsQuery = useTagsByKidoo(kidooId, !!userId);
 
   // Hooks React Query pour les opérations CRUD
   const updateKidooMutation = useUpdateKidoo();
@@ -388,6 +398,11 @@ export function KidooProvider({ kidooId, children, autoConnect = false }: KidooP
     []
   );
 
+  // Fonction de refresh pour actualiser le Kidoo uniquement
+  const refresh = useCallback(async () => {
+    await refetchKidoo();
+  }, [refetchKidoo]);
+
   // Ne pas rendre les enfants si le Kidoo n'est pas chargé
   if (isLoadingKidoo || !kidoo) {
     return null; // Ou un composant de chargement si nécessaire
@@ -420,6 +435,8 @@ export function KidooProvider({ kidooId, children, autoConnect = false }: KidooP
     tagAddSuccess,
     readNFCTag,
     writeNFCTagId,
+    tagsQuery,
+    refresh,
   };
 
   return <KidooContext.Provider value={value}>{children}</KidooContext.Provider>;

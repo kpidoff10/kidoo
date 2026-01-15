@@ -135,6 +135,24 @@ export const BottomSheet = React.forwardRef<BottomSheetModalRef, BottomSheetProp
       marginTop: theme.spacing.md + 10,
     }), [theme.spacing.xl, theme.spacing.md]);
 
+    // Wrapper pour onDidPresent avec logs
+    const handleDidPresent = useCallback(() => {
+      console.log('[BottomSheet] ===== onDidPresent DÉBUT =====');
+      console.log('[BottomSheet] Sheet présenté avec succès');
+      if (onOpen) {
+        console.log('[BottomSheet] Appel de onOpen callback...');
+        try {
+          onOpen();
+          console.log('[BottomSheet] ✅ onOpen callback appelé avec succès');
+        } catch (error) {
+          console.error('[BottomSheet] ❌ Erreur dans onOpen callback:', error);
+        }
+      } else {
+        console.log('[BottomSheet] Pas de onOpen callback défini');
+      }
+      console.log('[BottomSheet] ===== onDidPresent FIN =====');
+    }, [onOpen]);
+
     return (
       <BottomSheetContext.Provider value={{ close }}>
         <TrueSheet
@@ -142,7 +160,7 @@ export const BottomSheet = React.forwardRef<BottomSheetModalRef, BottomSheetProp
           ref={ref}
           detents={detents}
           onDidDismiss={onDismiss}
-          onDidPresent={onOpen}
+          onDidPresent={handleDidPresent}
           dismissible={enablePanDownToClose}
           draggable={enableHandlePanningGesture}
           backgroundColor={backgroundColor}
