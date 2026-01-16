@@ -2,6 +2,24 @@
  * Types pour les Kidoos partagés entre le client et le serveur
  */
 
+/**
+ * Type pour la configuration Basic d'un Kidoo
+ */
+export interface KidooConfigBasic {
+  id: string;
+  kidooId: string;
+  brightness: number;
+  sleepTimeout: number;
+  storageTotalBytes: number | null;
+  storageFreeBytes: number | null;
+  storageUsedBytes: number | null;
+  storageFreePercent: number | null;
+  storageUsedPercent: number | null;
+  storageLastUpdated: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Kidoo {
   id: string;
   name: string;
@@ -16,6 +34,7 @@ export interface Kidoo {
   isSynced: boolean;
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
+  configBasic?: KidooConfigBasic | null;
 }
 
 // Les types CreateKidooInput et UpdateKidooInput sont maintenant dans schemas/kidoo.ts

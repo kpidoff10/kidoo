@@ -5,3 +5,4 @@
 
 export { bleManager, type BLEDevice, type BluetoothConnectionResult, type BLEManagerCallbacks, type WaitForResponseOptions } from './bleManager';
 export { bteService, type BluetoothDevice, type BluetoothService } from './bteService';
+export { setupResponseSyncMiddleware, clearSyncCache, type ResponseSyncMiddlewareOptions } from './responseSyncMiddleware';

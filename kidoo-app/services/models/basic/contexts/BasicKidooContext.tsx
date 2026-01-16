@@ -16,8 +16,10 @@
  */
 
 import React, { createContext, useContext, useCallback } from 'react';
-import { useKidoo, type KidooContextValue } from './KidooContext';
+import { useKidoo, type KidooContextValue } from '../../common/contexts/KidooContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { bleManager } from '@/services/bte';
+import { useResponseSyncMiddleware } from '@/hooks/use-response-sync-middleware';
 import {
   BasicBluetoothCommandType,
   type CommandResponse,
@@ -27,13 +29,7 @@ import {
   type SleepTimeoutCommand,
   type SleepConfigCommand,
 } from '@/types/bluetooth';
-import type {
-  BrightnessOptions,
-  ColorOptions,
-  SleepTimeoutOptions,
-  EffectOptions,
-  SleepModeOptions,
-} from '@/services/kidoo-actions/types';
+import type { BrightnessOptions, ColorOptions, EffectOptions, SleepModeOptions, SleepTimeoutOptions } from '@/services/models/basic/command';
 
 interface BasicKidooContextValue extends KidooContextValue {
   // Fonctions spécifiques au modèle Basic
@@ -56,12 +52,23 @@ interface BasicKidooProviderProps {
 export function BasicKidooProvider({ children }: BasicKidooProviderProps) {
   // Utiliser le Context Kidoo parent pour obtenir les fonctions de base
   const kidooContext = useKidoo();
+  const { user } = useAuth();
+  const userId = user?.id;
   // Destructurer les propriétés nécessaires pour avoir des références stables
-  const { isConnected, sendCommandAndWait } = kidooContext;
+  const { isConnected, sendCommandAndWait, kidoo } = kidooContext;
+  
+  // Activer le middleware de synchronisation automatique des réponses BLE
+  // Le middleware gère automatiquement la synchronisation de toutes les réponses BLE,
+  // y compris STORAGE_GET, BRIGHTNESS_SET, SLEEP_TIMEOUT_SET, etc.
+  useResponseSyncMiddleware({
+    kidoo,
+    userId,
+    isConnected,
+  });
 
   // Définir la luminosité
   const setBrightness = useCallback(
-    (brightness: BrightnessOptions): Promise<CommandResponse<BrightnessCommand>> => {
+    async (brightness: BrightnessOptions): Promise<CommandResponse<BrightnessCommand>> => {
       if (!isConnected) {
         throw new Error('Le Kidoo n\'est pas connecté');
       }
@@ -70,10 +77,15 @@ export function BasicKidooProvider({ children }: BasicKidooProviderProps) {
         throw new Error('La luminosité doit être entre 10 et 100');
       }
 
-      return sendCommandAndWait({
+      const response = await sendCommandAndWait({
         command: BasicBluetoothCommandType.BRIGHTNESS,
         percent: brightness.percent,
       });
+
+      // La synchronisation avec le serveur est maintenant gérée automatiquement
+      // via le listener de réponses dans useEffect
+
+      return response;
     },
     [isConnected, sendCommandAndWait]
   );
@@ -138,7 +150,7 @@ export function BasicKidooProvider({ children }: BasicKidooProviderProps) {
 
   // Définir le timeout de sommeil
   const setSleepTimeout = useCallback(
-    (timeout: SleepTimeoutOptions): Promise<CommandResponse<SleepTimeoutCommand>> => {
+    async (timeout: SleepTimeoutOptions): Promise<CommandResponse<SleepTimeoutCommand>> => {
       if (!isConnected) {
         throw new Error('Le Kidoo n\'est pas connecté');
       }
@@ -147,10 +159,15 @@ export function BasicKidooProvider({ children }: BasicKidooProviderProps) {
         throw new Error('Le timeout doit être entre 5000 et 300000 ms (5 secondes à 5 minutes)');
       }
 
-      return sendCommandAndWait({
+      const response = await sendCommandAndWait({
         command: BasicBluetoothCommandType.SLEEP_TIMEOUT,
         timeout: timeout.timeout,
       });
+
+      // La synchronisation avec le serveur est maintenant gérée automatiquement
+      // via le listener de réponses dans useEffect
+
+      return response;
     },
     [isConnected, sendCommandAndWait]
   );
@@ -203,6 +220,11 @@ export function BasicKidooProvider({ children }: BasicKidooProviderProps) {
   const reset = useCallback((): Promise<boolean> => {
     return bleManager.reset();
   }, []);
+
+  // Note: La synchronisation du stockage est maintenant gérée automatiquement par le middleware
+  // Quand getStorage() est appelé (par exemple depuis storage-info.tsx), l'ESP32 répond avec STORAGE_GET,
+  // et le middleware intercepte cette réponse et synchronise automatiquement avec le serveur.
+  // Plus besoin de synchronisation manuelle ici.
 
   // Créer la valeur du Context en combinant KidooContext + fonctions Basic
   const value: BasicKidooContextValue = {

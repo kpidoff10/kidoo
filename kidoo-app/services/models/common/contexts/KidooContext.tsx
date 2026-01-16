@@ -29,14 +29,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
 import { bleManager, type BLEDevice } from '@/services/bte';
-import { useKidooById, useUpdateKidoo, useDeleteKidoo } from '@/hooks/useKidoos';
+import { useKidooById, useUpdateKidoo, useDeleteKidoo } from '@/services/models/common/hooks/useKidoos';
 import { useTagsByKidoo } from '@/hooks/useTags';
 import { useAuth } from '@/contexts/AuthContext';
-import { CommonKidooActions } from '@/services/kidoo-actions/common';
+import { CommonKidooActions } from '@/services/models/common/command';
 import { nfcManager, type NFCReadResult, type NFCWriteResult } from '@/services/nfcManager';
-import type { Kidoo } from '@/services/kidooService';
 import type { TypedBluetoothCommand, CommandResponse, SystemInfoResponse, StorageGetResponse } from '@/types/bluetooth';
-import type { UpdateKidooInput } from '@/types/shared';
+import type { Kidoo, UpdateKidooInput } from '@/types/shared';
 import type { ApiResponse } from '@/services/api';
 
 // Réexporter les types NFC pour faciliter leur utilisation
@@ -125,7 +124,6 @@ export function KidooProvider({ kidooId, children, autoConnect = true }: KidooPr
   const hasShownOfflineToastRef = useRef(false);
   const lastConnectionAttemptRef = useRef<number>(0);
   const connectionRetryCountRef = useRef<number>(0);
-  const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Récupérer le Kidoo via React Query (seulement si userId est disponible)
   const { data: kidooQuery, isLoading: isLoadingKidoo, error: kidooError, refetch: refetchKidoo } = useKidooById(kidooId, !!userId);
@@ -174,6 +172,7 @@ export function KidooProvider({ kidooId, children, autoConnect = true }: KidooPr
     return () => clearInterval(interval);
   }, [t]);
 
+
   // Connexion automatique au montage avec retry intelligent
   useEffect(() => {
     if (!kidoo || !autoConnect || hasConnectedRef.current || isConnecting || bleManager.isConnected()) {
@@ -201,36 +200,6 @@ export function KidooProvider({ kidooId, children, autoConnect = true }: KidooPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kidoo, autoConnect, isConnecting, isConnected]);
 
-  // Scanner périodiquement pour détecter quand le device devient disponible (seulement si pas connecté)
-  useEffect(() => {
-    if (!kidoo || !autoConnect || bleManager.isConnected() || isConnecting) {
-      // Nettoyer l'interval si on est connecté
-      if (scanIntervalRef.current) {
-        clearInterval(scanIntervalRef.current);
-        scanIntervalRef.current = null;
-      }
-      return;
-    }
-
-    // Scanner toutes les 30 secondes pour détecter quand le device devient disponible
-    scanIntervalRef.current = setInterval(() => {
-      // Ne scanner que si on n'a pas fait de tentative récente
-      const now = Date.now();
-      const timeSinceLastAttempt = now - lastConnectionAttemptRef.current;
-      if (timeSinceLastAttempt >= 30000 && !isConnecting) {
-        console.log('[KidooContext] Scan périodique pour détecter le device');
-        connect();
-      }
-    }, 30000); // Scanner toutes les 30 secondes
-
-    return () => {
-      if (scanIntervalRef.current) {
-        clearInterval(scanIntervalRef.current);
-        scanIntervalRef.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kidoo, autoConnect, isConnecting, isConnected]);
 
   const connect = useCallback(async () => {
     if (!kidoo || isConnecting || bleManager.isConnected()) {
@@ -309,6 +278,50 @@ export function KidooProvider({ kidooId, children, autoConnect = true }: KidooPr
       setIsConnecting(false);
     }
   }, [kidoo, isConnecting, t]);
+
+  // Scanner en continu pour détecter automatiquement quand le device devient disponible
+  useEffect(() => {
+    if (!kidoo || !autoConnect) {
+      bleManager.stopContinuousScan();
+      return;
+    }
+
+    // Si déjà connecté, ne pas scanner
+    if (bleManager.isConnected() || isConnecting) {
+      bleManager.stopContinuousScan();
+      return;
+    }
+
+    console.log('[KidooContext] Démarrage du scan continu pour détecter le device:', kidoo.deviceId);
+    
+    // Démarrer le scan continu - se connectera automatiquement quand le device est détecté
+    const stopScan = bleManager.startContinuousScan(kidoo.deviceId, (deviceId) => {
+      console.log('[KidooContext] Device détecté, tentative de connexion automatique:', deviceId);
+      
+      // Vérifier à nouveau l'état actuel (pas celui de la closure)
+      const currentlyConnecting = isConnecting;
+      const currentlyConnected = bleManager.isConnected();
+      
+      console.log('[KidooContext] État actuel - isConnecting:', currentlyConnecting, 'isConnected:', currentlyConnected);
+      
+      // Vérifier qu'on n'est pas déjà en train de se connecter ou connecté
+      if (!currentlyConnecting && !currentlyConnected && kidoo) {
+        console.log('[KidooContext] Déclenchement de la connexion...');
+        // Utiliser setTimeout pour s'assurer que le callback est exécuté après l'arrêt du scan
+        setTimeout(() => {
+          connect();
+        }, 200);
+      } else {
+        console.log('[KidooContext] Connexion ignorée - déjà en cours ou connecté');
+      }
+    });
+
+    return () => {
+      console.log('[KidooContext] Arrêt du scan continu');
+      stopScan();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kidoo?.deviceId, autoConnect, isConnecting, isConnected, connect]);
 
   const disconnect = useCallback(async () => {
     try {
@@ -537,6 +550,7 @@ export function KidooProvider({ kidooId, children, autoConnect = true }: KidooPr
     },
     []
   );
+
 
   // Fonction de refresh pour actualiser le Kidoo uniquement
   const refresh = useCallback(async () => {

@@ -6,7 +6,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { BottomSheet, type BottomSheetModalRef } from '@/components/ui/bottom-sheet';
-import { useBasicKidoo } from '@/contexts/BasicKidooContext';
+import { useBasicKidoo } from '@/services/models/basic/contexts/BasicKidooContext';
 import { BrightnessHeader, BrightnessSlider } from './components';
 
 const MIN_BRIGHTNESS = 10; // Luminosité minimale (10%)

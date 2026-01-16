@@ -12,7 +12,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 import { BottomSheet, type BottomSheetModalRef } from '@/components/ui/bottom-sheet';
 import { AlertMessage } from '@/components/ui/alert-message';
-import { useKidoo } from '@/contexts/KidooContext';
+import { useKidoo } from '@/services/models/common/contexts/KidooContext';
 import { RenameActions } from './rename-actions';
 import { renameKidooSchema, type RenameKidooInput } from '@/types/shared';
 

@@ -3,7 +3,7 @@
  * Sélectionne automatiquement la bonne modale selon le modèle
  */
 
-import { useKidooById } from '@/hooks/useKidoos';
+import { useKidooById } from '@/services/models/common/hooks/useKidoos';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingState, ErrorState } from './components';
 import { ClassicDetailModal } from './classic/detail';

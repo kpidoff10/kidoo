@@ -16,7 +16,7 @@ import {
     type CreateTagError,
     type CheckTagExistsResponse,
     type CheckTagExistsError,
-  } from '@/services/tagService';
+  } from '@/services/models/basic/api/basic-api-tags';
 import type { CreateTagInput, UpdateTagInput, Tag } from '@/types/shared';
 import type { ApiResponse } from '@/services/api';
 

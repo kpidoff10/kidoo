@@ -4,25 +4,9 @@
  * Utilise le BLE Manager pour envoyer les commandes Bluetooth
  */
 
-import type { Kidoo } from './kidooService';
-import { BasicKidooActions } from './kidoo-actions';
+import { Kidoo } from "@/shared";
+import { BasicKidooActions } from "./models/basic/command";
 
-// Ré-exporter les types pour compatibilité
-export type {
-  KidooActionResult,
-  BrightnessOptions,
-  EffectOptions,
-  SleepModeOptions,
-  SleepTimeoutOptions,
-  ColorOptions,
-} from './kidoo-actions';
-
-// Ré-exporter BasicKidooActions pour compatibilité
-export { BasicKidooActions } from './kidoo-actions';
-
-/**
- * Factory pour obtenir les actions appropriées selon le modèle
- */
 export function getKidooActions(kidoo: Kidoo) {
   switch (kidoo.model.toLowerCase()) {
     case 'basic':

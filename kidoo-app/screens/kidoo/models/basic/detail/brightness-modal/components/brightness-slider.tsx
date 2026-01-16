@@ -5,7 +5,7 @@
 
 import { Animated } from 'react-native';
 import { VerticalSlider } from '@/components/ui/vertical-slider';
-import { useBasicKidoo } from '@/contexts/BasicKidooContext';
+import { useBasicKidoo } from '@/services/models/basic/contexts/BasicKidooContext';
 
 const MIN_BRIGHTNESS = 10; // Luminosité minimale (10%)
 const MAX_BRIGHTNESS = 100; // Luminosité maximale (100%)

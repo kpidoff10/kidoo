@@ -6,7 +6,7 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
-import { KidooProvider } from '@/contexts/KidooContext';
+import { KidooProvider } from '@/services/models/common/contexts/KidooContext';
 import { Kidoo } from '@/shared';
 
 interface ClassicDetailModalProps {

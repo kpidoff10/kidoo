@@ -79,6 +79,8 @@ class BLEManagerClass {
   private activeNotificationCallback: ((response: BluetoothResponse) => void) | null = null; // Callback actif pour les notifications
   private scanCache: Map<string, { available: boolean; timestamp: number }> = new Map(); // Cache des scans récents
   private readonly SCAN_CACHE_DURATION = 10000; // Cache valide pendant 10 secondes
+  private activeScanManager: any | null = null; // Manager utilisé pour le scan continu
+  private activeScanCallback: ((deviceId: string) => void) | null = null; // Callback pour le scan continu
 
   // UUIDs par défaut
   private readonly DEFAULT_SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
@@ -189,6 +191,96 @@ class BLEManagerClass {
     } else {
       this.scanCache.clear();
     }
+  }
+
+  /**
+   * Démarrer un scan continu pour détecter un device spécifique
+   * Appelle le callback automatiquement quand le device est détecté
+   * @param deviceId - ID du device à rechercher
+   * @param onDeviceFound - Callback appelé quand le device est trouvé
+   * @returns Fonction pour arrêter le scan
+   */
+  startContinuousScan(
+    deviceId: string,
+    onDeviceFound: (deviceId: string) => void
+  ): () => void {
+    if (!this.isAvailable()) {
+      console.log('[BLEManager] Bluetooth non disponible pour le scan continu');
+      return () => {}; // Retourner une fonction vide
+    }
+
+    // Arrêter le scan précédent s'il existe
+    this.stopContinuousScan();
+
+    try {
+      console.log('[BLEManager] Démarrage du scan continu pour:', deviceId);
+      
+      // Créer un nouveau manager pour le scan
+      const manager = new BleManager();
+      this.activeScanManager = manager;
+      this.activeScanCallback = onDeviceFound;
+      
+      // Démarrer le scan
+      manager.startDeviceScan(null, null, (error: any, scannedDevice: any) => {
+        if (error) {
+          // Ignorer les erreurs de scan individuelles
+          return;
+        }
+
+        if (scannedDevice && scannedDevice.id === deviceId) {
+          console.log('[BLEManager] Device détecté dans le scan continu:', deviceId);
+          
+          // Sauvegarder le callback avant d'arrêter le scan
+          const callback = this.activeScanCallback;
+          console.log('[BLEManager] Callback disponible:', !!callback);
+          
+          if (!callback) {
+            console.warn('[BLEManager] Aucun callback disponible pour le device détecté');
+            return;
+          }
+          
+          // Arrêter le scan
+          this.stopContinuousScan();
+          
+          // Appeler le callback après un court délai pour s'assurer que le scan est bien arrêté
+          console.log('[BLEManager] Appel du callback de détection du device dans 100ms');
+          setTimeout(() => {
+            console.log('[BLEManager] Exécution du callback de détection du device');
+            try {
+              callback(deviceId);
+              console.log('[BLEManager] Callback exécuté avec succès');
+            } catch (error) {
+              console.error('[BLEManager] Erreur lors de l\'exécution du callback:', error);
+            }
+          }, 100);
+        }
+      });
+
+      // Retourner la fonction pour arrêter le scan
+      return () => {
+        this.stopContinuousScan();
+      };
+    } catch (error) {
+      console.error('[BLEManager] Erreur lors du démarrage du scan continu:', error);
+      this.activeScanCallback = null;
+      this.activeScanManager = null;
+      return () => {}; // Retourner une fonction vide
+    }
+  }
+
+  /**
+   * Arrêter le scan continu
+   */
+  stopContinuousScan(): void {
+    if (this.activeScanManager) {
+      try {
+        this.activeScanManager.stopDeviceScan();
+      } catch (error) {
+        console.debug('[BLEManager] Erreur lors de l\'arrêt du scan continu:', error);
+      }
+      this.activeScanManager = null;
+    }
+    this.activeScanCallback = null;
   }
 
   /**

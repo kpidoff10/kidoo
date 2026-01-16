@@ -7,7 +7,7 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { useTheme } from '@/hooks/use-theme';
-import type { MultimediaFile } from '@/services/multimediaService';
+import type { MultimediaFile } from '@/services/models/basic/api/basic-api-multimedia';
 import { MultimediaListItem } from './multimedia-list-item';
 
 interface MultimediaListContentProps {

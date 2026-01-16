@@ -3,7 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, useColorScheme } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -11,7 +11,6 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { SafeToast } from '@/components/ui/toast';
 
 import '@/i18n/config';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';

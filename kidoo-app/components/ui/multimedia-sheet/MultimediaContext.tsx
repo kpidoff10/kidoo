@@ -11,7 +11,7 @@ import { useStepIndicator } from '@/components/ui/step-indicator';
 import { multimediaFormSchema, type MultimediaFormData } from '@/types/shared';
 import { apiUpload, type UploadProgress, type ApiResponse } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { multimediaKeys } from '@/services/multimediaService';
+import { multimediaKeys } from '@/services/models/basic/api/basic-api-multimedia';
 
 interface MultimediaContextValue {
   // État des étapes

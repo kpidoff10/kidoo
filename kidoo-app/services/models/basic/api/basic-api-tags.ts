@@ -4,7 +4,7 @@
  * Invalide automatiquement le cache React Query après les mutations
  */
 
-import { apiPost, apiGet, apiPut, apiDelete, ApiException, type ApiResponse } from './api';
+import { apiPost, apiGet, apiPut, apiDelete, ApiException, type ApiResponse } from '../../../api';
 import { queryClient } from '@/providers/QueryProvider';
 import type { CreateTagInput, UpdateTagInput, Tag } from '@/types/shared';
 

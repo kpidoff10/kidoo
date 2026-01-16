@@ -3,7 +3,7 @@
  * Gère les appels API pour les opérations sur les fichiers multimédias
  */
 
-import { apiGet, apiPut, apiDelete, apiPatch, type ApiResponse } from './api';
+import { apiGet, apiPut, apiDelete, apiPatch, type ApiResponse } from '../../../api';
 
 // Type pour un fichier multimédia
 export interface MultimediaFile {

@@ -6,7 +6,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { BottomSheet, type BottomSheetModalRef } from '@/components/ui/bottom-sheet';
-import { useBasicKidoo } from '@/contexts/BasicKidooContext';
+import { useBasicKidoo } from '@/services/models/basic/contexts/BasicKidooContext';
 import { SleepHeader, SleepSlider } from './components';
 
 const MIN_TIMEOUT = 5000; // Minimum 5 secondes

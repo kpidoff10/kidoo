@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BasicKidooProvider } from "@/contexts/BasicKidooContext";
-import { KidooProvider } from "@/contexts/KidooContext";
+import { BasicKidooProvider } from "@/services/models/basic/contexts/BasicKidooContext";
+import { KidooProvider } from "@/services/models/common/contexts/KidooContext";
 import { StorageInfo, WifiConfigSheet } from "../../components";
 import { ActionsMenu, DeleteSheet, RenameSheet } from "./_components";
 import { BrightnessModal } from "./brightness-modal";

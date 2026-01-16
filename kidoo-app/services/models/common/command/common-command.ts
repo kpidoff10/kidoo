@@ -1,29 +1,21 @@
 /**
- * Actions communes à tous les modèles de Kidoo
- * 
- * Cette classe sert de wrapper autour de bleManager pour :
- * - Vérifier automatiquement la connexion avant chaque commande
- * - Standardiser le format de retour (KidooActionResult) pour toutes les actions
- * - Convertir les exceptions en format d'erreur standardisé
- * 
- * Note: Les commandes globales (getSystemInfo, getBrightness, reset) sont disponibles
- * directement via bleManager et ne nécessitent pas cette couche d'abstraction.
+ * Méthodes utilitaires de base pour les actions communes
+ * Ces méthodes sont utilisées par toutes les actions communes
  */
 
 import { bleManager } from '@/services/bte';
-import type { KidooActionResult } from './types';
+import { KidooActionResult } from '@/types/type';
 
 /**
- * Classe de base pour les actions communes
- * Wrapper autour de bleManager avec format de retour standardisé
+ * Classe de base avec les méthodes utilitaires communes
  */
-export class CommonKidooActions {
+export class CommonBaseActions {
   /**
    * Vérifier si le Kidoo est connecté
    */
   protected static checkConnection(): boolean {
     if (!bleManager.isConnected()) {
-      console.error('[CommonKidooActions] Kidoo non connecté');
+      console.error('[CommonBaseActions] Kidoo non connecté');
       return false;
     }
     return true;
@@ -54,7 +46,7 @@ export class CommonKidooActions {
         };
       }
     } catch (error) {
-      console.error('[CommonKidooActions] Erreur:', error);
+      console.error('[CommonBaseActions] Erreur:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Erreur inconnue',
@@ -137,15 +129,5 @@ export class CommonKidooActions {
     }
 
     return this.sendCommand(command);
-  }
-
-  /**
-   * Envoyer la commande TAG_ADD_SUCCESS pour afficher l'effet de succès
-   * Commande commune à tous les modèles
-   */
-  static async tagAddSuccess(): Promise<KidooActionResult> {
-    return this.sendCommand({
-      command: 'TAG_ADD_SUCCESS',
-    });
   }
 }

@@ -14,7 +14,7 @@ import { ThemedTrueSheet, ThemedTrueSheetRef } from '@/components/ui/themed-true
 import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/button';
 import { bleManager } from '@/services/bte';
-import { createKidoo } from '@/services/kidooService';
+import { createKidoo } from '@/services/models/common/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { kidooSetupSchema, type KidooSetupInput } from '@/types/shared';
 import { StepIndicatorProvider, StepIndicator, useStepIndicator } from '@/components/ui/step-indicator';

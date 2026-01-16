@@ -8,7 +8,7 @@
  */
 
 import { bleManager } from './bte';
-import { createTag, updateTag } from './tagService';
+import { createTag, updateTag } from './models/basic/api/basic-api-tags';
 
 export interface NFCWriteResult {
   success: boolean;
@@ -126,7 +126,7 @@ class NFCManagerClass {
 
       // Étape 2: Vérifier si le tagId existe déjà avant d'écrire sur le tag NFC
       onProgress?.('creating', 'Vérification du tag...');
-      const { checkTagExists } = await import('./tagService');
+      const { checkTagExists } = await import('./models/basic/api/basic-api-tags');
       const checkResult = await checkTagExists(tagId, userId);
 
       if (!checkResult.success) {

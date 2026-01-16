@@ -14,11 +14,10 @@ import {
   kidooKeys,
   type CreateKidooResponse,
   type CreateKidooError,
-  type Kidoo,
-} from '@/services/kidooService';
-import type { CreateKidooInput, UpdateKidooInput } from '@/types/shared';
+} from '@/services/models/common/api';
+import type { CreateKidooInput, UpdateKidooInput, Kidoo } from '@/types/shared';
 import type { ApiResponse } from '@/services/api';
-import { useOptimisticMutation } from './useOptimisticMutation';
+import { useOptimisticMutation } from '../../../../hooks/useOptimisticMutation';
 
 // Réexporter kidooKeys pour compatibilité
 export { kidooKeys };

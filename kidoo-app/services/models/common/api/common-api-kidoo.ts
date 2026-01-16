@@ -1,40 +1,19 @@
 /**
- * Service pour gérer les Kidoos
- * Gère les appels API pour les opérations sur les Kidoos
- * Invalide automatiquement le cache React Query après les mutations
+ * API commune pour gérer les Kidoos
+ * Disponible pour tous les modèles de Kidoo
+ * 
+ * Gère les opérations CRUD communes :
+ * - create: Créer un Kidoo
+ * - get: Récupérer un ou plusieurs Kidoos
+ * - update: Mettre à jour un Kidoo
+ * - delete: Supprimer un Kidoo
  */
 
-import { apiPost, apiGet, apiPut, apiDelete, ApiException, type ApiResponse } from './api';
+import { apiPost, apiGet, apiPut, apiDelete, ApiException, type ApiResponse } from '@/services/api';
 import { API_CONFIG } from '@/config/api';
 import { queryClient } from '@/providers/QueryProvider';
-import type { CreateKidooInput, UpdateKidooInput } from '@/types/shared';
-
-// Query keys hiérarchiques pour les Kidoos (défini ici pour éviter la dépendance circulaire)
-export const kidooKeys = {
-  all: ['kidoos'] as const,
-  lists: () => [...kidooKeys.all, 'list'] as const,
-  details: () => [...kidooKeys.all, 'detail'] as const,
-  detail: (kidooId: string) => [...kidooKeys.details(), kidooId] as const,
-};
-
-/**
- * Type pour un Kidoo retourné par l'API
- */
-export interface Kidoo {
-  id: string;
-  name: string;
-  model: string; // Modèle du Kidoo (classic, mini, pro, etc.)
-  macAddress: string | null;
-  deviceId: string;
-  firmwareVersion: string | null;
-  lastConnected: string | null;
-  isConnected: boolean;
-  wifiSSID: string | null;
-  userId: string | null;
-  isSynced: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import { kidooKeys } from './common-api-keys';
+import type { CreateKidooInput, UpdateKidooInput, Kidoo } from '@/types/shared';
 
 /**
  * Réponse de création d'un Kidoo
@@ -65,7 +44,7 @@ export async function createKidoo(
   userId: string
 ): Promise<CreateKidooResponse | CreateKidooError> {
   try {
-    console.log('[KidooService] Tentative de création d\'un nouveau Kidoo:', API_CONFIG.endpoints.kidoos);
+    console.log('[CommonApiKidoo] Tentative de création d\'un nouveau Kidoo:', API_CONFIG.endpoints.kidoos);
     
     const result = await apiPost<CreateKidooResponse>(
       API_CONFIG.endpoints.kidoos,
@@ -77,7 +56,7 @@ export async function createKidoo(
       }
     );
 
-    console.log('[KidooService] Création réussie:', result);
+    console.log('[CommonApiKidoo] Création réussie:', result);
     
     // Invalider le cache React Query pour re-fetch la liste des Kidoos
     if (result.success) {
@@ -88,7 +67,7 @@ export async function createKidoo(
     
     return result;
   } catch (error) {
-    console.log('[KidooService] Exception lors de la création du Kidoo (gérée):', error);
+    console.log('[CommonApiKidoo] Exception lors de la création du Kidoo (gérée):', error);
     if (error instanceof ApiException) {
       return {
         success: false,
@@ -133,7 +112,7 @@ export async function getKidooById(
 
     return result;
   } catch (error) {
-    console.log('[KidooService] Exception lors de la récupération du Kidoo (gérée):', error);
+    console.log('[CommonApiKidoo] Exception lors de la récupération du Kidoo (gérée):', error);
     if (error instanceof ApiException) {
       return {
         success: false,
@@ -162,7 +141,7 @@ export async function getKidooById(
  */
 export async function getKidoos(userId: string): Promise<ApiResponse<Kidoo[]>> {
   try {
-    console.log('[KidooService] Tentative de récupération des Kidoos:', API_CONFIG.endpoints.kidoos);
+    console.log('[CommonApiKidoo] Tentative de récupération des Kidoos:', API_CONFIG.endpoints.kidoos);
     
     const result = await apiGet<ApiResponse<Kidoo[]>>(
       API_CONFIG.endpoints.kidoos,
@@ -173,10 +152,10 @@ export async function getKidoos(userId: string): Promise<ApiResponse<Kidoo[]>> {
       }
     );
 
-    console.log('[KidooService] Récupération réussie:', result);
+    console.log('[CommonApiKidoo] Récupération réussie:', result);
     return result;
   } catch (error) {
-    console.error('[KidooService] Exception lors de la récupération des Kidoos:', error);
+    console.error('[CommonApiKidoo] Exception lors de la récupération des Kidoos:', error);
     if (error instanceof ApiException) {
       return {
         success: false,
@@ -211,7 +190,7 @@ export async function updateKidoo(
   userId: string
 ): Promise<ApiResponse<Kidoo>> {
   try {
-    console.log('[KidooService] Tentative de mise à jour du Kidoo:', kidooId);
+    console.log('[CommonApiKidoo] Tentative de mise à jour du Kidoo:', kidooId);
     
     const result = await apiPut<ApiResponse<Kidoo>>(
       `${API_CONFIG.endpoints.kidoos}/${kidooId}`,
@@ -223,7 +202,7 @@ export async function updateKidoo(
       }
     );
 
-    console.log('[KidooService] Mise à jour réussie:', result);
+    console.log('[CommonApiKidoo] Mise à jour réussie:', result);
     
     // Invalider le cache React Query après mise à jour
     if (result.success && result.data) {
@@ -239,7 +218,7 @@ export async function updateKidoo(
     
     return result;
   } catch (error) {
-    console.error('[KidooService] Exception lors de la mise à jour du Kidoo:', error);
+    console.error('[CommonApiKidoo] Exception lors de la mise à jour du Kidoo:', error);
     if (error instanceof ApiException) {
       return {
         success: false,
@@ -272,7 +251,7 @@ export async function deleteKidoo(
   userId: string
 ): Promise<ApiResponse<null>> {
   try {
-    console.log('[KidooService] Tentative de suppression du Kidoo:', kidooId);
+    console.log('[CommonApiKidoo] Tentative de suppression du Kidoo:', kidooId);
     
     const result = await apiDelete<ApiResponse<null>>(
       `${API_CONFIG.endpoints.kidoos}/${kidooId}`,
@@ -283,7 +262,7 @@ export async function deleteKidoo(
       }
     );
 
-    console.log('[KidooService] Suppression réussie:', result);
+    console.log('[CommonApiKidoo] Suppression réussie:', result);
     
     // Invalider le cache React Query après suppression
     if (result.success) {
@@ -299,7 +278,7 @@ export async function deleteKidoo(
     
     return result;
   } catch (error) {
-    console.error('[KidooService] Exception lors de la suppression du Kidoo:', error);
+    console.error('[CommonApiKidoo] Exception lors de la suppression du Kidoo:', error);
     if (error instanceof ApiException) {
       return {
         success: false,

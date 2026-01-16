@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type BottomSheetModalRef } from '@/components/ui/bottom-sheet';
-import { useKidoo } from '@/contexts/KidooContext';
+import { useKidoo } from '@/services/models/common/contexts/KidooContext';
 import { DeleteConfirmationSheet } from '@/components/ui/delete-confirmation-sheet';
 
 interface DeleteSheetProps {

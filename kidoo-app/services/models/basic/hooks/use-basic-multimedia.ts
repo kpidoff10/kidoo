@@ -12,9 +12,9 @@ import {
   updateMultimediaFileStatus,
   multimediaKeys,
   type MultimediaFile,
-} from '@/services/multimediaService';
+} from '@/services/models/basic/api/basic-api-multimedia';
 import type { ApiResponse } from '@/services/api';
-import { useOptimisticMutation } from './useOptimisticMutation';
+import { useOptimisticMutation } from '../../../../hooks/useOptimisticMutation';
 
 // Réexporter multimediaKeys pour compatibilité
 export { multimediaKeys };
@@ -24,7 +24,7 @@ export { multimediaKeys };
  * @param tagId - ID du tag (UUID)
  * @param enabled - Active/désactive la requête (défaut: true)
  */
-export function useMultimediaByTag(tagId: string, enabled: boolean = true) {
+export function useBasicMultimediaByTag(tagId: string, enabled: boolean = true) {
   const { user } = useAuth();
 
   return useQuery<ApiResponse<MultimediaFile[]>>({
@@ -45,7 +45,7 @@ export function useMultimediaByTag(tagId: string, enabled: boolean = true) {
  * Hook pour réorganiser l'ordre des fichiers multimédias
  * @param tagId - ID du tag (UUID)
  */
-export function useReorderMultimedia(tagId: string) {
+export function useBasicMultimediaReorder(tagId: string) {
   const { user } = useAuth();
 
   return useOptimisticMutation<
@@ -97,7 +97,7 @@ export function useReorderMultimedia(tagId: string) {
  * Hook pour mettre à jour le statut d'un fichier multimédia (activer/désactiver)
  * @param tagId - ID du tag (UUID) pour invalider le cache après mise à jour
  */
-export function useUpdateMultimediaStatus(tagId: string) {
+export function useBasicMultimediaUpdateStatus(tagId: string) {
   const { user } = useAuth();
 
   return useOptimisticMutation<
@@ -139,7 +139,7 @@ export function useUpdateMultimediaStatus(tagId: string) {
  * Hook pour supprimer un fichier multimédia
  * @param tagId - ID du tag (UUID) pour invalider le cache après suppression
  */
-export function useDeleteMultimedia(tagId: string) {
+export function useBasicMultimediaDelete(tagId: string) {
   const { user } = useAuth();
 
   return useOptimisticMutation<

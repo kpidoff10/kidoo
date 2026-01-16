@@ -4,7 +4,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { MenuList, type MenuItem } from '@/components/ui/menu-list';
-import { useKidoo } from '@/contexts/KidooContext';
+import { useKidoo } from '@/services/models/common/contexts/KidooContext';
 
 interface ActionsMenuProps {
   onRename: () => void;
@@ -24,7 +24,7 @@ export function ActionsMenu({
   onDelete,
 }: ActionsMenuProps) {
   const { t } = useTranslation();
-  const { kidoo } = useKidoo();
+  const { kidoo, isConnected } = useKidoo();
 
   const menuItems: MenuItem[] = [
     {
@@ -59,9 +59,12 @@ export function ActionsMenu({
     {
       id: 'wifi',
       title: t('kidoos.detail.actions.wifi', 'Configurer le WiFi'),
-      subtitle: t('kidoos.detail.actions.wifiSubtitle', 'Changer le réseau WiFi'),
+      subtitle: isConnected
+        ? t('kidoos.detail.actions.wifiSubtitle', 'Changer le réseau WiFi')
+        : t('kidoos.detail.actions.wifiSubtitleDisabled', 'Connexion Bluetooth requise'),
       icon: 'wifi',
       onPress: onWifiConfig,
+      disabled: !isConnected,
     },
     {
       id: 'tags',

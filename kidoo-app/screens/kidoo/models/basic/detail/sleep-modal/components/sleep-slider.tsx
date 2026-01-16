@@ -5,7 +5,7 @@
 
 import { Animated } from 'react-native';
 import { VerticalSlider } from '@/components/ui/vertical-slider';
-import { useBasicKidoo } from '@/contexts/BasicKidooContext';
+import { useBasicKidoo } from '@/services/models/basic/contexts/BasicKidooContext';
 import { useEffect, useState } from 'react';
 
 const MIN_TIMEOUT = 5000; // Minimum 5 secondes

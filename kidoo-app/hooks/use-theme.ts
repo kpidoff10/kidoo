@@ -4,12 +4,12 @@
  */
 
 import { useMemo } from 'react';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { themeColors, staticColors } from '@/theme/colors';
 import { spacing, borderRadius, iconSize } from '@/theme/spacing';
 import { shadows } from '@/theme/shadows';
 import { typography } from '@/theme/typography';
 import { createComponentStyles } from '@/theme/components';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export function useTheme() {
   const colorScheme = useColorScheme() ?? 'light';

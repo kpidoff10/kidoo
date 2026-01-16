@@ -7,8 +7,8 @@ import { useEffect, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { ThemedView } from '@/components/themed-view';
-import { getKidooById } from '@/services/kidooService';
-import type { Kidoo } from '@/services/kidooService';
+import { getKidooById } from '@/services/models/common/api';
+import type { Kidoo } from '@/types/shared';
 import { LoadingState } from '@/screens/kidoo/models/components';
 import { BasicNFCTags } from '@/screens/kidoo/models/basic/nfc';
 

@@ -8,9 +8,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
-import { useKidoo } from '@/contexts/KidooContext';
+import { useKidoo } from '@/services/models/common/contexts/KidooContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { checkTagExists } from '@/services/tagService';
+import { checkTagExists } from '@/services/models/basic/api/basic-api-tags';
 import { useStepIndicator } from '@/components/ui/step-indicator';
 import { TagType } from '@/types/shared';
 
@@ -266,7 +266,7 @@ export function NFCWriteProvider({ onTagWritten, onDismiss, children }: NFCWrite
 
     try {
       // Créer le tag dans la DB avec le tagId déjà écrit sur le tag NFC
-      const { createTag } = await import('@/services/tagService');
+      const { createTag } = await import('@/services/models/basic/api/basic-api-tags');
       const createResult = await createTag(
         {
           tagId: writtenTagId,
@@ -289,7 +289,7 @@ export function NFCWriteProvider({ onTagWritten, onDismiss, children }: NFCWrite
 
       // Mettre à jour le tag avec l'UID physique si fourni
       if (tagUID) {
-        const { updateTag } = await import('@/services/tagService');
+        const { updateTag } = await import('@/services/models/basic/api/basic-api-tags');
         await updateTag(createdTagId, { uid: tagUID }, user.id);
       }
 

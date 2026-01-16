@@ -28,9 +28,12 @@ export async function GET(
     const { userId } = authResult;
     const { id } = await params;
 
-    // Récupérer le kidoo
+    // Récupérer le kidoo avec sa configuration Basic
     const kidoo = await prisma.kidoo.findUnique({
       where: { id },
+      include: {
+        configBasic: true,
+      },
     });
 
     if (!kidoo) {
@@ -54,12 +57,21 @@ export async function GET(
       );
     }
 
-    // Convertir les dates en ISO strings
+    // Convertir les dates en ISO strings et les BigInt en Number
     const kidooWithISOStrings = {
       ...kidoo,
       lastConnected: kidoo.lastConnected?.toISOString() || null,
       createdAt: kidoo.createdAt.toISOString(),
       updatedAt: kidoo.updatedAt.toISOString(),
+      configBasic: kidoo.configBasic ? {
+        ...kidoo.configBasic,
+        storageTotalBytes: kidoo.configBasic.storageTotalBytes ? Number(kidoo.configBasic.storageTotalBytes) : null,
+        storageFreeBytes: kidoo.configBasic.storageFreeBytes ? Number(kidoo.configBasic.storageFreeBytes) : null,
+        storageUsedBytes: kidoo.configBasic.storageUsedBytes ? Number(kidoo.configBasic.storageUsedBytes) : null,
+        createdAt: kidoo.configBasic.createdAt.toISOString(),
+        updatedAt: kidoo.configBasic.updatedAt.toISOString(),
+        storageLastUpdated: kidoo.configBasic.storageLastUpdated?.toISOString() || null,
+      } : null,
     };
 
     return NextResponse.json({

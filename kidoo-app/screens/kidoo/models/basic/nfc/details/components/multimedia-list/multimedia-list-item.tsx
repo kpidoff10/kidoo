@@ -9,7 +9,7 @@ import { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlis
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import type { MultimediaFile } from '@/services/multimediaService';
+import type { MultimediaFile } from '@/services/models/basic/api/basic-api-multimedia';
 import { decodeFileName, formatFileSize } from './utils';
 
 export interface MultimediaListItemProps extends RenderItemParams<MultimediaFile> {

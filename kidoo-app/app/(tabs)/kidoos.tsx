@@ -16,7 +16,7 @@ import { FloatingActionButton } from '@/components/ui/floating-action-button';
 import { BottomSheetModalRef } from '@/components/ui/bottom-sheet';
 import { AlertMessage } from '@/components/ui/alert-message';
 import { Button } from '@/components/ui/button';
-import { getKidoos } from '@/services/kidooService';
+import { getKidoos } from '@/services/models/common/api';
 import type { Kidoo } from '@/types/shared';
 
 export default function KidoosScreen() {

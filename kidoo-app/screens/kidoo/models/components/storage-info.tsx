@@ -2,67 +2,25 @@
  * Composant pour afficher les informations de stockage d'un Kidoo
  */
 
-import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 import { AlertMessage } from '@/components/ui/alert-message';
-import { useKidoo } from '@/contexts/KidooContext';
+import { useKidoo } from '@/services/models/common/contexts/KidooContext';
+import { useBasicGetStorage } from '@/services/models/basic/hooks/use-basic-get-storage';
 import { StorageInfoSkeleton } from './storage-info-skeleton';
 
-interface StorageData {
-  freeBytes?: number;
-  totalBytes?: number;
-  usedBytes?: number;
-  freeMB?: number;
-  totalMB?: number;
-  usedMB?: number;
-  freePercent?: number;
-  usedPercent?: number;
-  // Support pour l'ancien format
-  free?: number;
-  total?: number;
-}
-
 export function StorageInfo() {
+
   const { t } = useTranslation();
   const theme = useTheme();
-  const { isConnected, kidooModel, getStorage, kidoo } = useKidoo();
-  const [storage, setStorage] = useState<StorageData | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Commencer en état de chargement
-  const [error, setError] = useState<string | null>(null);
+  const { kidooModel, kidoo } = useKidoo();
+  
+  // Utiliser le hook qui gère automatiquement BLE ou DB
+  const { data: storage, isLoading, error } = useBasicGetStorage();
 
   const isBasicModel = kidooModel?.toLowerCase() === 'basic' || kidoo.model?.toLowerCase() === 'basic';
-
-  useEffect(() => {
-    const loadStorage = () => {
-      // Ne charger que si connecté et que c'est un modèle Basic
-      if (!isConnected || !isBasicModel) {
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-      setError(null);
-
-      getStorage({
-        timeout: 5000,
-        timeoutErrorMessage: t('kidoos.detail.storage.error', 'Erreur lors du chargement'),
-      })
-        .then((data) => {
-          setStorage(data as StorageData);
-        })
-        .catch(() => {
-          setError(t('kidoos.detail.storage.error', 'Erreur lors du chargement'));
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    };
-
-    loadStorage();
-  }, [isConnected, kidooModel, kidoo.model, isBasicModel, getStorage, t]);
 
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
@@ -75,9 +33,8 @@ export function StorageInfo() {
   const getStorageValues = () => {
     if (!storage) return null;
     
-    // Support pour le nouveau format (avec totalBytes, freeBytes, etc.)
-    const total = storage.totalBytes || storage.total || 0;
-    const free = storage.freeBytes || storage.free || 0;
+    const total = storage.totalBytes || 0;
+    const free = storage.freeBytes || 0;
     const used = storage.usedBytes || (total - free);
     const usedPercent = storage.usedPercent !== undefined 
       ? storage.usedPercent 
@@ -90,6 +47,9 @@ export function StorageInfo() {
   };
 
   const storageValues = getStorageValues();
+
+  // Convertir l'erreur en string pour l'affichage
+  const errorMessage = error ? (error instanceof Error ? error.message : String(error)) : null;
 
   const getBarColor = (freePercent: number): string => {
     if (freePercent < 20) {
@@ -113,7 +73,7 @@ export function StorageInfo() {
         marginBottom: theme.spacing.md,
       }}
     >
-      {isLoading || (!isConnected || !isBasicModel) ? (
+      {isLoading || !isBasicModel ? (
         <StorageInfoSkeleton />
       ) : (
         <>
@@ -127,10 +87,10 @@ export function StorageInfo() {
             {t('kidoos.detail.storage.title', 'Stockage')}
           </ThemedText>
 
-          {error ? (
+          {errorMessage ? (
             <AlertMessage
               type="error"
-              message={error}
+              message={errorMessage}
               style={{ marginTop: 0 }}
             />
           ) : storageValues ? (

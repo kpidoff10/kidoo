@@ -4,8 +4,8 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMultimediaByTag, useReorderMultimedia, useDeleteMultimedia, useUpdateMultimediaStatus } from '@/hooks/useMultimedia';
-import type { MultimediaFile } from '@/services/multimediaService';
+import { useBasicMultimediaByTag, useBasicMultimediaReorder, useBasicMultimediaDelete, useBasicMultimediaUpdateStatus } from '@/services/models/basic/hooks/use-basic-multimedia';
+import type { MultimediaFile } from '@/services/models/basic/api/basic-api-multimedia';
 import { DeleteConfirmationSheet, type DeleteConfirmationSheetRef } from '@/components/ui/delete-confirmation-sheet';
 import { MultimediaListLoading } from './multimedia-list-loading';
 import { MultimediaListError } from './multimedia-list-error';
@@ -19,10 +19,10 @@ export interface MultimediaListProps {
 
 export function MultimediaList({ tagId }: MultimediaListProps) {
   const { t } = useTranslation();
-  const { data, isLoading, error, refetch, isRefetching } = useMultimediaByTag(tagId);
-  const reorderMutation = useReorderMultimedia(tagId);
-  const deleteMutation = useDeleteMultimedia(tagId);
-  const updateStatusMutation = useUpdateMultimediaStatus(tagId);
+  const { data, isLoading, error, refetch, isRefetching } = useBasicMultimediaByTag(tagId);
+  const reorderMutation = useBasicMultimediaReorder(tagId);
+  const deleteMutation = useBasicMultimediaDelete(tagId);
+  const updateStatusMutation = useBasicMultimediaUpdateStatus(tagId);
   const deleteSheetRef = useRef<DeleteConfirmationSheetRef>(null);
   const [fileToDelete, setFileToDelete] = useState<MultimediaFile | null>(null);
 

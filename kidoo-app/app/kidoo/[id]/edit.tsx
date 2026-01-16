@@ -8,8 +8,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { ThemedView } from '@/components/themed-view';
-import { getKidooById } from '@/services/kidooService';
-import type { Kidoo } from '@/services/kidooService';
+import { getKidooById } from '@/services/models/common/api';
+import type { Kidoo } from '@/types/shared';
 import { LoadingState, ErrorState } from '@/screens/kidoo/models/components';
 import { KidooEditRouter } from '@/screens/kidoo/models';
 

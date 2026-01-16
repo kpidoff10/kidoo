@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/hooks/use-theme';
 import { BottomSheet, type BottomSheetModalRef } from '@/components/ui/bottom-sheet';
-import { useKidoo } from '@/contexts/KidooContext';
+import { useKidoo } from '@/services/models/common/contexts/KidooContext';
 import { wifiService } from '@/services/wifiService';
 import { BluetoothCommandType } from '@/types/bluetooth';
 import {

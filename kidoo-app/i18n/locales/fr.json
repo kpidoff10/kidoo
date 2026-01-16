@@ -144,6 +144,7 @@
             "infoSubtitleNoVersion": "Voir les détails",
             "wifi": "Configurer le WiFi",
             "wifiSubtitle": "Changer le réseau WiFi",
+            "wifiSubtitleDisabled": "Connexion Bluetooth requise",
             "tags": "Mes tags",
             "tagsSubtitle": "Gérer les tags NFC",
             "delete": "Supprimer",
