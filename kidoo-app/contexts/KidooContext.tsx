@@ -14,17 +14,20 @@
  *   kidoo, 
  *   kidooId, 
  *   isConnected, 
- *   connect, 
  *   disconnect,
  *   getSystemInfo,
  *   getStorage,
  *   updateKidoo,
  *   deleteKidoo 
  * } = useKidoo();
+ * 
+ * // Note: La connexion est automatique à l'initialisation du contexte
  * ```
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import Toast from 'react-native-toast-message';
 import { bleManager, type BLEDevice } from '@/services/bte';
 import { useKidooById, useUpdateKidoo, useDeleteKidoo } from '@/hooks/useKidoos';
 import { useTagsByKidoo } from '@/hooks/useTags';
@@ -54,8 +57,7 @@ export interface KidooContextValue {
   isConnected: boolean;
   isConnecting: boolean;
   bluetoothError: string | null;
-  connect: () => Promise<void>;
-  disconnect: () => Promise<void>;
+  disconnect: () => Promise<void>; // Permet une déconnexion manuelle si nécessaire
   // Envoyer une commande typée et attendre la réponse typée
   sendCommandAndWait: <T extends TypedBluetoothCommand>(
     command: T,
@@ -108,10 +110,11 @@ const KidooContext = createContext<KidooContextValue | undefined>(undefined);
 interface KidooProviderProps {
   kidooId: string;
   children: React.ReactNode;
-  autoConnect?: boolean; // Se connecter automatiquement au montage
+  autoConnect?: boolean; // Se connecter automatiquement au montage (défaut: true)
 }
 
-export function KidooProvider({ kidooId, children, autoConnect = false }: KidooProviderProps) {
+export function KidooProvider({ kidooId, children, autoConnect = true }: KidooProviderProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const userId = user?.id;
   const [isConnecting, setIsConnecting] = useState(false);
@@ -119,6 +122,10 @@ export function KidooProvider({ kidooId, children, autoConnect = false }: KidooP
   const [isConnected, setIsConnected] = useState(false);
   const [isSendingCommand, setIsSendingCommand] = useState(false);
   const hasConnectedRef = useRef(false);
+  const hasShownOfflineToastRef = useRef(false);
+  const lastConnectionAttemptRef = useRef<number>(0);
+  const connectionRetryCountRef = useRef<number>(0);
+  const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Récupérer le Kidoo via React Query (seulement si userId est disponible)
   const { data: kidooQuery, isLoading: isLoadingKidoo, error: kidooError, refetch: refetchKidoo } = useKidooById(kidooId, !!userId);
@@ -135,23 +142,95 @@ export function KidooProvider({ kidooId, children, autoConnect = false }: KidooP
 
   // Vérifier périodiquement l'état de connexion pour mettre à jour l'UI
   useEffect(() => {
+    let wasConnected = bleManager.isConnected();
+    
     const checkConnection = () => {
-      setIsConnected(bleManager.isConnected());
+      const connected = bleManager.isConnected();
+      setIsConnected(connected);
+      
+      // Si on passe de déconnecté à connecté, afficher un toast success
+      if (connected && !wasConnected && hasShownOfflineToastRef.current) {
+        Toast.show({
+          type: 'success',
+          text1: t('kidoos.status.connected', 'Kidoo connecté'),
+          text2: t('kidoos.config.online.message', 'La connexion Bluetooth est rétablie.'),
+          visibilityTime: 3000,
+          position: 'bottom',
+        });
+        hasShownOfflineToastRef.current = false;
+      }
+      
+      // Réinitialiser le flag de toast si on se connecte
+      if (connected) {
+        hasShownOfflineToastRef.current = false;
+      }
+      
+      wasConnected = connected;
     };
 
     checkConnection();
     const interval = setInterval(checkConnection, 500); // Vérifier toutes les 500ms
 
     return () => clearInterval(interval);
-  }, []);
+  }, [t]);
 
-  // Connexion automatique au montage (seulement si le Kidoo est chargé)
+  // Connexion automatique au montage avec retry intelligent
   useEffect(() => {
-    if (kidoo && autoConnect && !hasConnectedRef.current && !isConnecting && !bleManager.isConnected()) {
-      connect();
+    if (!kidoo || !autoConnect || hasConnectedRef.current || isConnecting || bleManager.isConnected()) {
+      return;
     }
+
+    // Éviter les tentatives trop fréquentes (minimum 10 secondes entre chaque tentative)
+    const now = Date.now();
+    const timeSinceLastAttempt = now - lastConnectionAttemptRef.current;
+    const minDelay = 10000; // 10 secondes minimum entre les tentatives
+
+    if (timeSinceLastAttempt < minDelay) {
+      return;
+    }
+
+    // Backoff exponentiel : augmenter le délai après chaque échec
+    const backoffDelay = Math.min(1000 * Math.pow(2, connectionRetryCountRef.current), 60000); // Max 60 secondes
+    if (timeSinceLastAttempt < backoffDelay) {
+      return;
+    }
+
+    console.log('[KidooContext] Tentative de connexion automatique');
+    lastConnectionAttemptRef.current = now;
+    connect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kidoo, autoConnect, isConnecting]);
+  }, [kidoo, autoConnect, isConnecting, isConnected]);
+
+  // Scanner périodiquement pour détecter quand le device devient disponible (seulement si pas connecté)
+  useEffect(() => {
+    if (!kidoo || !autoConnect || bleManager.isConnected() || isConnecting) {
+      // Nettoyer l'interval si on est connecté
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current);
+        scanIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Scanner toutes les 30 secondes pour détecter quand le device devient disponible
+    scanIntervalRef.current = setInterval(() => {
+      // Ne scanner que si on n'a pas fait de tentative récente
+      const now = Date.now();
+      const timeSinceLastAttempt = now - lastConnectionAttemptRef.current;
+      if (timeSinceLastAttempt >= 30000 && !isConnecting) {
+        console.log('[KidooContext] Scan périodique pour détecter le device');
+        connect();
+      }
+    }, 30000); // Scanner toutes les 30 secondes
+
+    return () => {
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current);
+        scanIntervalRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kidoo, autoConnect, isConnecting, isConnected]);
 
   const connect = useCallback(async () => {
     if (!kidoo || isConnecting || bleManager.isConnected()) {
@@ -173,15 +252,63 @@ export function KidooProvider({ kidooId, children, autoConnect = false }: KidooP
       if (result.success) {
         hasConnectedRef.current = true;
         setBluetoothError(null);
+        
+        // Afficher un toast success si on avait affiché le warning avant
+        if (hasShownOfflineToastRef.current) {
+          Toast.show({
+            type: 'success',
+            text1: t('kidoos.status.connected', 'Kidoo connecté'),
+            text2: t('kidoos.config.online.message', 'La connexion Bluetooth est rétablie.'),
+            visibilityTime: 3000,
+            position: 'bottom',
+          });
+        }
+        
+        // Réinitialiser les flags si on se connecte avec succès
+        hasShownOfflineToastRef.current = false;
+        connectionRetryCountRef.current = 0; // Réinitialiser le compteur de retry
+        lastConnectionAttemptRef.current = 0; // Réinitialiser le timestamp
       } else {
-        setBluetoothError(result.error || 'Erreur lors de la connexion Bluetooth');
+        const errorMessage = result.error || 'Erreur lors de la connexion Bluetooth';
+        setBluetoothError(errorMessage);
+        
+        // Incrémenter le compteur de retry pour le backoff exponentiel
+        connectionRetryCountRef.current += 1;
+        
+      // Afficher le toast warning si la connexion échoue et qu'on ne l'a pas déjà affiché
+      if (!hasShownOfflineToastRef.current) {
+        Toast.show({
+          type: 'warning',
+          text1: t('kidoos.config.offline.title', 'Kidoo non connecté'),
+          text2: t('kidoos.config.offline.message', 'Les informations sauvegardées seront envoyées au Kidoo une fois qu\'il sera connecté en Bluetooth.'),
+          visibilityTime: 4000,
+          position: 'bottom',
+        });
+        hasShownOfflineToastRef.current = true;
+      }
       }
     } catch (err) {
-      setBluetoothError(err instanceof Error ? err.message : 'Erreur lors de la connexion Bluetooth');
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la connexion Bluetooth';
+      setBluetoothError(errorMessage);
+      
+      // Incrémenter le compteur de retry pour le backoff exponentiel
+      connectionRetryCountRef.current += 1;
+      
+        // Afficher le toast warning si la connexion échoue et qu'on ne l'a pas déjà affiché
+        if (!hasShownOfflineToastRef.current) {
+          Toast.show({
+            type: 'warning',
+            text1: t('kidoos.config.offline.title', 'Kidoo non connecté'),
+            text2: t('kidoos.config.offline.message', 'Les informations sauvegardées seront envoyées au Kidoo une fois qu\'il sera connecté en Bluetooth.'),
+            visibilityTime: 4000,
+            position: 'bottom',
+          });
+          hasShownOfflineToastRef.current = true;
+        }
     } finally {
       setIsConnecting(false);
     }
-  }, [kidoo, isConnecting]);
+  }, [kidoo, isConnecting, t]);
 
   const disconnect = useCallback(async () => {
     try {
@@ -230,6 +357,19 @@ export function KidooProvider({ kidooId, children, autoConnect = false }: KidooP
       if (!kidoo) {
         throw new Error('Kidoo non chargé');
       }
+      
+      // Si pas de connexion Bluetooth, afficher un message warning
+      if (!bleManager.isConnected() && !hasShownOfflineToastRef.current) {
+        Toast.show({
+          type: 'warning',
+          text1: t('kidoos.config.offline.title', 'Kidoo non connecté'),
+          text2: t('kidoos.config.offline.message', 'Les informations sauvegardées seront envoyées au Kidoo une fois qu\'il sera connecté en Bluetooth.'),
+          visibilityTime: 4000,
+          position: 'bottom',
+        });
+        hasShownOfflineToastRef.current = true;
+      }
+      
       try {
         const result = await updateKidooMutation.mutateAsync({
           kidooId: kidoo.id,
@@ -241,7 +381,7 @@ export function KidooProvider({ kidooId, children, autoConnect = false }: KidooP
         throw error;
       }
     },
-    [kidoo, updateKidooMutation]
+    [kidoo, updateKidooMutation, t]
   );
 
   // Fonction pour supprimer le Kidoo
@@ -422,7 +562,6 @@ export function KidooProvider({ kidooId, children, autoConnect = false }: KidooP
     isConnected,
     isConnecting,
     bluetoothError,
-    connect,
     disconnect,
     sendCommandAndWait,
     getSystemInfo,

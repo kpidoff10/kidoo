@@ -18,6 +18,7 @@ import {
 } from '@/services/kidooService';
 import type { CreateKidooInput, UpdateKidooInput } from '@/types/shared';
 import type { ApiResponse } from '@/services/api';
+import { useOptimisticMutation } from './useOptimisticMutation';
 
 // Réexporter kidooKeys pour compatibilité
 export { kidooKeys };
@@ -72,7 +73,12 @@ export function useCreateKidoo() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  return useMutation<CreateKidooResponse, CreateKidooError, CreateKidooInput>({
+  return useOptimisticMutation<
+    CreateKidooResponse,
+    CreateKidooError,
+    CreateKidooInput,
+    { previousData: ApiResponse<Kidoo[]> | undefined }
+  >({
     mutationFn: async (data: CreateKidooInput) => {
       if (!user?.id) {
         throw new Error('Utilisateur non connecté');
@@ -81,19 +87,14 @@ export function useCreateKidoo() {
       if (result.success) {
         return result;
       }
-      throw result; // React Query gère les erreurs automatiquement
+      throw result;
     },
-    onMutate: async (variables) => {
-      // Annuler les requêtes en cours pour éviter les conflits
-      await queryClient.cancelQueries({ queryKey: kidooKeys.lists() });
-
-      // Sauvegarder l'état précédent pour rollback
-      const previousData = queryClient.getQueryData<ApiResponse<Kidoo[]>>(
-        kidooKeys.lists()
-      );
-
+    queryKey: kidooKeys.lists(),
+    optimisticUpdate: (variables, previousData) => {
+      const previous = previousData as ApiResponse<Kidoo[]> | undefined;
+      
       // Mise à jour optimiste : créer un Kidoo temporaire avec les données fournies
-      if (previousData?.success && previousData.data) {
+      if (previous?.success && previous.data) {
         const tempKidoo: Kidoo = {
           id: `temp-${Date.now()}`, // ID temporaire
           name: variables.name,
@@ -110,26 +111,17 @@ export function useCreateKidoo() {
           updatedAt: new Date().toISOString(),
         };
 
-        queryClient.setQueryData<ApiResponse<Kidoo[]>>(
-          kidooKeys.lists(),
-          {
-            ...previousData,
-            data: [...previousData.data, tempKidoo],
-          }
-        );
+        return {
+          ...previous,
+          data: [...previous.data, tempKidoo],
+        };
       }
-
-      return { previousData };
+      
+      return previous;
     },
-    onError: (_err, _variables, context) => {
-      // Rollback en cas d'erreur
-      if (context?.previousData) {
-        queryClient.setQueryData(kidooKeys.lists(), context.previousData);
-      }
-    },
-    onSuccess: (data) => {
+    onSettled: (data) => {
       // Remplacer le Kidoo temporaire par le Kidoo réel retourné par le serveur
-      if (data.success) {
+      if (data?.success) {
         const previousData = queryClient.getQueryData<ApiResponse<Kidoo[]>>(
           kidooKeys.lists()
         );
@@ -148,12 +140,6 @@ export function useCreateKidoo() {
         }
       }
     },
-    onSettled: () => {
-      // Re-fetch pour s'assurer que les données sont à jour
-      queryClient.invalidateQueries({
-        queryKey: kidooKeys.lists(),
-      });
-    },
   });
 }
 
@@ -164,7 +150,12 @@ export function useUpdateKidoo() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  return useMutation<ApiResponse<Kidoo>, ApiResponse<null>, { kidooId: string; data: UpdateKidooInput }>({
+  return useMutation<
+    ApiResponse<Kidoo>,
+    ApiResponse<null>,
+    { kidooId: string; data: UpdateKidooInput },
+    { previousDetail: ApiResponse<Kidoo> | undefined; previousList: ApiResponse<Kidoo[]> | undefined }
+  >({
     mutationFn: async ({ kidooId, data }) => {
       if (!user?.id) {
         throw new Error('Utilisateur non connecté');
@@ -173,7 +164,7 @@ export function useUpdateKidoo() {
       if (result.success) {
         return result;
       }
-      throw result; // React Query gère les erreurs automatiquement
+      throw result;
     },
     onMutate: async ({ kidooId, data }) => {
       // Annuler les requêtes en cours pour éviter les conflits
@@ -240,7 +231,12 @@ export function useDeleteKidoo() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  return useMutation<ApiResponse<null>, ApiResponse<null>, string>({
+  return useMutation<
+    ApiResponse<null>,
+    ApiResponse<null>,
+    string,
+    { previousDetail: ApiResponse<Kidoo> | undefined; previousList: ApiResponse<Kidoo[]> | undefined }
+  >({
     mutationFn: async (kidooId: string) => {
       if (!user?.id) {
         throw new Error('Utilisateur non connecté');
@@ -249,7 +245,7 @@ export function useDeleteKidoo() {
       if (result.success) {
         return result;
       }
-      throw result; // React Query gère les erreurs automatiquement
+      throw result;
     },
     onMutate: async (kidooId) => {
       // Annuler les requêtes en cours pour éviter les conflits

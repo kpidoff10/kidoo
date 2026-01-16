@@ -122,6 +122,15 @@
         "connected": "Connected",
         "disconnected": "Disconnected"
       },
+      "config": {
+        "offline": {
+          "title": "Kidoo not connected",
+          "message": "The saved information will be sent to the Kidoo once it is connected via Bluetooth."
+        },
+        "online": {
+          "message": "Bluetooth connection restored."
+        }
+      },
         "detail": {
           "title": "Kidoo Details",
           "description": "Manage your Kidoo and its settings",

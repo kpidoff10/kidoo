@@ -15,6 +15,7 @@ enum TagType {
   SOUND
 }
 
+
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
@@ -43,7 +44,7 @@ model Kidoo {
   firmwareVersion String?
   lastConnected  DateTime?
   isConnected    Boolean  @default(false)
-  wifiSSID       String?
+  wifiSSID       String?  // Lecture seule, pour affichage uniquement (modification via Bluetooth uniquement)
   userId         String?
   isSynced       Boolean  @default(false)
   createdAt      DateTime @default(now())
@@ -51,6 +52,7 @@ model Kidoo {
 
   user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   tags         Tag[]
+  configBasic  KidooConfigBasic? // Configuration spécifique au modèle Basic (relation 1:1)
 
   @@map("kidoos")
   @@index([userId])
@@ -143,4 +145,29 @@ model MultimediaFile {
   @@index([userId])
   @@index([createdAt])
   @@index([tagId, order]) // Index composite pour trier par tag et ordre
+}
+
+// Configuration spécifique au modèle Basic
+// Note: Les configurations WiFi ne sont PAS stockées ici (restent sur le device, modifiables uniquement via Bluetooth)
+// Note: sleepTransitionMs est géré nativement par l'ESP32, pas stocké en base
+// Note: Les configurations LED (couleur et effet) ne sont PAS stockées ici (envoyées uniquement via Bluetooth en temps réel)
+model KidooConfigBasic {
+  id                String    @id @default(uuid())
+  kidooId           String    @unique // Relation 1:1 avec Kidoo
+  brightness        Int       @default(100) // Luminosité (10-100)
+  sleepTimeout      Int       @default(30000) // Timeout de sommeil en ms (5000-300000)
+  // Données de stockage (dernières valeurs reçues de l'ESP32)
+  storageTotalBytes BigInt?   // Espace total en bytes (null si non disponible)
+  storageFreeBytes  BigInt?   // Espace libre en bytes (null si non disponible)
+  storageUsedBytes  BigInt?   // Espace utilisé en bytes (null si non disponible)
+  storageFreePercent Int?     // Pourcentage d'espace libre (0-100, null si non disponible)
+  storageUsedPercent Int?     // Pourcentage d'espace utilisé (0-100, null si non disponible)
+  storageLastUpdated DateTime? // Date de dernière mise à jour des données de stockage
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  kidoo             Kidoo     @relation(fields: [kidooId], references: [id], onDelete: Cascade)
+
+  @@map("kidoo_config_basic")
+  @@index([kidooId])
 }

@@ -77,6 +77,8 @@ class BLEManagerClass {
   private monitoringUnsubscribed = false;
   private isDisconnecting = false; // Flag pour ignorer les callbacks pendant la déconnexion
   private activeNotificationCallback: ((response: BluetoothResponse) => void) | null = null; // Callback actif pour les notifications
+  private scanCache: Map<string, { available: boolean; timestamp: number }> = new Map(); // Cache des scans récents
+  private readonly SCAN_CACHE_DURATION = 10000; // Cache valide pendant 10 secondes
 
   // UUIDs par défaut
   private readonly DEFAULT_SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
@@ -105,6 +107,91 @@ class BLEManagerClass {
   }
 
   /**
+   * Vérifier si un device est disponible (scannable)
+   * Utilise un cache pour éviter les scans répétés
+   * @param deviceId - ID du device à vérifier
+   * @param manager - Instance du BleManager
+   * @param timeout - Timeout en ms (défaut: 5000)
+   * @returns true si le device est trouvé, false sinon
+   */
+  private async isDeviceAvailable(deviceId: string, manager: any, timeout: number = 5000): Promise<boolean> {
+    // Vérifier le cache d'abord
+    const cached = this.scanCache.get(deviceId);
+    const now = Date.now();
+    if (cached && (now - cached.timestamp) < this.SCAN_CACHE_DURATION) {
+      console.log('[BLEManager] Utilisation du cache de scan pour:', deviceId, cached.available ? 'disponible' : 'non disponible');
+      return cached.available;
+    }
+
+    return new Promise((resolve) => {
+      let found = false;
+      const timeoutId = setTimeout(() => {
+        try {
+          manager.stopDeviceScan();
+        } catch (_e) {
+          // Ignorer les erreurs d'arrêt du scan
+        }
+        if (!found) {
+          console.log('[BLEManager] Device non trouvé dans le scan:', deviceId);
+          // Mettre en cache le résultat
+          this.scanCache.set(deviceId, { available: false, timestamp: now });
+          resolve(false);
+        }
+      }, timeout);
+
+      try {
+        // Démarrer le scan directement
+        manager.startDeviceScan(null, null, (error: any, scannedDevice: any) => {
+          if (found) {
+            return; // Déjà trouvé, ignorer les autres résultats
+          }
+
+          if (error) {
+            // Ignorer les erreurs de scan individuelles
+            return;
+          }
+
+          if (scannedDevice && scannedDevice.id === deviceId) {
+            found = true;
+            clearTimeout(timeoutId);
+            try {
+              manager.stopDeviceScan();
+            } catch (_e) {
+              // Ignorer les erreurs d'arrêt du scan
+            }
+            console.log('[BLEManager] Device trouvé dans le scan:', deviceId);
+            // Mettre en cache le résultat
+            this.scanCache.set(deviceId, { available: true, timestamp: now });
+            resolve(true);
+          }
+        });
+      } catch (error) {
+        clearTimeout(timeoutId);
+        try {
+          manager.stopDeviceScan();
+        } catch (_e) {
+          // Ignorer les erreurs d'arrêt du scan
+        }
+        console.debug('[BLEManager] Erreur lors du scan:', error);
+        // Mettre en cache le résultat (non disponible)
+        this.scanCache.set(deviceId, { available: false, timestamp: now });
+        resolve(false);
+      }
+    });
+  }
+
+  /**
+   * Invalider le cache de scan pour un device (appelé après une connexion réussie)
+   */
+  private invalidateScanCache(deviceId?: string): void {
+    if (deviceId) {
+      this.scanCache.delete(deviceId);
+    } else {
+      this.scanCache.clear();
+    }
+  }
+
+  /**
    * Se connecter à un device
    */
   async connect(device: BLEDevice): Promise<BluetoothConnectionResult> {
@@ -123,19 +210,35 @@ class BLEManagerClass {
 
     this.isConnecting = true;
 
+    let manager: any = null;
+
     try {
       if (!this.isAvailable()) {
-        throw new Error('Bluetooth non disponible');
+        this.isConnecting = false;
+        return { success: false, error: 'Bluetooth non disponible' };
       }
 
-      const manager = new BleManager();
+      manager = new BleManager();
 
       // Vérifier l'état du Bluetooth
       const state = await manager.state();
       if (state !== State.PoweredOn) {
         manager.destroy();
-        throw new Error('Bluetooth non activé');
+        this.isConnecting = false;
+        return { success: false, error: 'Bluetooth non activé' };
       }
+
+      console.log('[BLEManager] Vérification de la disponibilité du device:', device.deviceId);
+
+      // Vérifier si le device est disponible avant de tenter la connexion
+      const isAvailable = await this.isDeviceAvailable(device.deviceId, manager, 5000);
+      if (!isAvailable) {
+        manager.destroy();
+        this.isConnecting = false;
+        return { success: false, error: 'Device non disponible ou hors de portée' };
+      }
+
+      console.log('[BLEManager] Device disponible, tentative de connexion:', device.deviceId);
 
       // Se connecter au device
       const bleDevice = await manager.connectToDevice(device.deviceId, {
@@ -150,7 +253,8 @@ class BLEManagerClass {
       const isConnected = bleDevice.isConnected;
       if (!isConnected) {
         manager.destroy();
-        throw new Error('Échec de la connexion');
+        this.isConnecting = false;
+        return { success: false, error: 'Échec de la connexion' };
       }
 
       // Demander un MTU plus grand (512 bytes)
@@ -166,17 +270,51 @@ class BLEManagerClass {
       this.deviceInfo = device;
       this.isConnecting = false;
 
+      // Invalider le cache de scan pour ce device (connexion réussie)
+      this.invalidateScanCache(device.deviceId);
+
       // Démarrer le monitoring automatiquement après la connexion
       await this.startPersistentMonitoring();
 
       if (!this.isDisconnecting) {
-        this.callbacks.onConnected?.(device);
+        try {
+          this.callbacks.onConnected?.(device);
+        } catch (callbackError) {
+          console.error('[BLEManager] Erreur dans callback onConnected:', callbackError);
+        }
       }
       return { success: true, device: bleDevice };
     } catch (error: any) {
       this.isConnecting = false;
-      const errorMessage = error?.message || 'Erreur de connexion Bluetooth';
-      this.callbacks.onError?.(errorMessage);
+      
+      // Nettoyer le manager si créé
+      if (manager) {
+        try {
+          manager.destroy();
+        } catch (destroyError) {
+          console.debug('[BLEManager] Erreur lors de la destruction du manager:', destroyError);
+        }
+      }
+      
+      // Extraire le message d'erreur de manière sécurisée
+      let errorMessage = 'Erreur de connexion Bluetooth';
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.reason) {
+        errorMessage = error.reason;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      // Appeler le callback d'erreur de manière sécurisée
+      try {
+        this.callbacks.onError?.(errorMessage);
+      } catch (callbackError) {
+        console.error('[BLEManager] Erreur dans le callback onError:', callbackError);
+      }
+      
       return {
         success: false,
         error: errorMessage,

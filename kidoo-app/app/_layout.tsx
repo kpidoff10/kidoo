@@ -8,6 +8,7 @@ import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { SafeToast } from '@/components/ui/toast';
 
 import '@/i18n/config';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -205,6 +206,7 @@ export default function RootLayout() {
             </BluetoothProvider>
           </AuthProvider>
         </QueryProvider>
+        <SafeToast />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
