@@ -5,9 +5,8 @@
 
 import { useRef, useCallback } from 'react';
 import { ThemedView } from '@/components/themed-view';
-import { useTheme } from '@/hooks/use-theme';
 import { BottomSheetModalRef } from '@/components/ui/bottom-sheet';
-import { MultimediaInfoCard, FloatingActionMenu } from './components';
+import { MultimediaInfoCard, FloatingActionMenu, MultimediaList } from './components';
 import { MultimediaSheet } from '@/components/ui/multimedia-sheet';
 
 export interface TagDetailsProps {
@@ -16,7 +15,6 @@ export interface TagDetailsProps {
 }
 
 export function TagDetails({ kidooId: _kidooId, tagId: _tagId }: TagDetailsProps) {
-  const theme = useTheme();
   const multimediaSheetRef = useRef<BottomSheetModalRef>(null);
 
   const handleMultimediaPress = useCallback(() => {
@@ -46,13 +44,14 @@ export function TagDetails({ kidooId: _kidooId, tagId: _tagId }: TagDetailsProps
   };
 
   return (
-    <ThemedView style={{ flex: 1, padding: theme.spacing.xl }}>
+    <ThemedView style={{ flex: 1 }}>
       <MultimediaInfoCard />
+      <MultimediaList tagId={_tagId} />
       <FloatingActionMenu
         onMultimediaPress={handleMultimediaPress}
         onMicrophonePress={handleMicrophonePress}
       />
-      <MultimediaSheet ref={multimediaSheetRef} />
+      <MultimediaSheet ref={multimediaSheetRef} tagId={_tagId} kidooId={_kidooId} />
     </ThemedView>
   );
 }

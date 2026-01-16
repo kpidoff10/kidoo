@@ -187,6 +187,16 @@
           "errorUnknown": "Une erreur est survenue"
         },
         "multimedia": {
+          "loading": "Chargement des fichiers...",
+          "error": "Erreur lors du chargement des fichiers",
+          "empty": "Aucun fichier multimédia pour ce tag",
+          "emptyDescription": "Ajoutez un fichier audio en utilisant le bouton +",
+          "files": "Fichiers multimédias",
+          "delete": {
+            "title": "Supprimer le fichier",
+            "message": "Êtes-vous sûr de vouloir supprimer \"{{fileName}}\" ? Cette action est irréversible.",
+            "error": "Erreur lors de la suppression"
+          },
           "step1": {
             "title": "Conditions d'utilisation",
             "description": "Avant de continuer, veuillez lire et accepter les conditions suivantes.",
@@ -201,7 +211,8 @@
             "description": "Choisissez un fichier audio depuis votre téléphone",
             "pickFile": "Choisir un fichier audio",
             "picking": "Sélection en cours...",
-            "supportedFormats": "MP3, WAV, M4A, etc."
+            "supportedFormats": "MP3, WAV, M4A, etc.",
+            "uploading": "Upload en cours..."
           },
           "step3": {
             "title": "Découper l'audio (optionnel)",

@@ -6,14 +6,19 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
 import { useStepIndicator } from '@/components/ui/step-indicator';
 import { multimediaFormSchema, type MultimediaFormData } from '@/types/shared';
+import { apiUpload, type UploadProgress, type ApiResponse } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { multimediaKeys } from '@/services/multimediaService';
 
 interface MultimediaContextValue {
   // État des étapes
   isProcessing: boolean;
   isSuccess: boolean;
   error: string | null;
+  uploadProgress: UploadProgress | null;
 
   // Formulaire
   form: {
@@ -35,21 +40,28 @@ interface MultimediaContextValue {
   handleOpen: () => void;
   handleFinish: () => Promise<void>;
   setError: (error: string | null) => void;
+  setBottomSheetRef: (ref: { dismiss: () => void } | null) => void;
 }
 
 const MultimediaContext = createContext<MultimediaContextValue | undefined>(undefined);
 
 interface MultimediaProviderProps {
   onDismiss?: () => void;
+  tagId?: string; // ID du tag pour lier le fichier multimédia
+  kidooId?: string; // ID du Kidoo pour le chemin de sauvegarde
   children: ReactNode;
 }
 
-export function MultimediaProvider({ onDismiss, children }: MultimediaProviderProps) {
+export function MultimediaProvider({ onDismiss, tagId, kidooId, children }: MultimediaProviderProps) {
   const { currentStep, setCurrentStep, resetSteps } = useStepIndicator();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
+  const [bottomSheetRef, setBottomSheetRef] = useState<{ dismiss: () => void } | null>(null);
 
   // Initialiser react-hook-form
   const {
@@ -88,6 +100,7 @@ export function MultimediaProvider({ onDismiss, children }: MultimediaProviderPr
     setIsProcessing(false);
     setIsSuccess(false);
     setError(null);
+    setUploadProgress(null);
     resetForm({ acceptTerms: false, audioFile: undefined, trimStart: undefined, trimEnd: undefined, title: '' });
   }, [resetSteps, resetForm]);
 
@@ -116,7 +129,7 @@ export function MultimediaProvider({ onDismiss, children }: MultimediaProviderPr
       return;
     }
 
-    if (currentStep < 3) {
+    if (currentStep < 2) { // Step 3 temporairement désactivé
       setCurrentStep(currentStep + 1);
     }
   }, [currentStep, setCurrentStep, trigger]);
@@ -142,34 +155,81 @@ export function MultimediaProvider({ onDismiss, children }: MultimediaProviderPr
       return;
     }
 
+    // Vérifier que l'utilisateur est connecté
+    if (!user?.id) {
+      setError('Vous devez être connecté pour uploader un fichier');
+      return;
+    }
+
+    // Vérifier que kidooId et tagId sont présents
+    if (!kidooId || !tagId) {
+      setError('Kidoo ID et Tag ID sont requis pour l\'upload');
+      return;
+    }
+
+    // Récupérer le fichier audio
+    const audioFile = watch('audioFile');
+    if (!audioFile || !audioFile.uri) {
+      setError('Aucun fichier audio sélectionné');
+      return;
+    }
+
     setIsProcessing(true);
     setError(null);
+    setUploadProgress(null);
 
     try {
-      // TODO: Implémenter la logique de sauvegarde du contenu multimédia
-      console.log('[Multimedia] Finalisation...');
+      console.log('[Multimedia] Début de l\'upload...', { fileName: audioFile.name, tagId, kidooId, userId: user.id });
 
-      // Simuler un traitement
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Upload du fichier avec suivi de progression
+      const response = await apiUpload<ApiResponse<{ url: string; path: string; fileName: string; size: number; mimeType: string; tagId: string | null }>>(
+        '/api/multimedia/upload',
+        audioFile.uri,
+        audioFile.name,
+        audioFile.mimeType || 'audio/mpeg',
+        user.id, // Passer userId pour l'authentification
+        { tagId, kidooId }, // Passer tagId et kidooId pour le chemin de sauvegarde
+        (progress) => {
+          setUploadProgress(progress);
+          console.log('[Multimedia] Progression:', progress.percentage + '%');
+        },
+        audioFile.size // Passer la taille réelle du fichier pour un calcul de pourcentage correct
+      );
 
-      setIsSuccess(true);
-      setIsProcessing(false);
+      if (response.success) {
+        console.log('[Multimedia] Upload réussi:', response.data);
+        setIsSuccess(true);
+        setIsProcessing(false);
 
-      // Fermer après un court délai
-      setTimeout(() => {
-        reset();
-        onDismiss?.();
-      }, 1500);
+        // Invalider le cache des multimédias pour ce tag pour rafraîchir la liste
+        if (tagId) {
+          queryClient.invalidateQueries({
+            queryKey: multimediaKeys.byTag(tagId),
+          });
+        }
+
+        // Fermer la sheet via la ref
+        bottomSheetRef?.dismiss();
+        // Réinitialiser après la fermeture pour la prochaine ouverture
+        setTimeout(() => {
+          reset();
+        }, 100);
+      } else {
+        throw new Error(response.error || 'Erreur lors de l\'upload');
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+      console.error('[Multimedia] Erreur lors de l\'upload:', err);
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue lors de l\'upload');
       setIsProcessing(false);
+      setUploadProgress(null);
     }
-  }, [trigger, reset, onDismiss]);
+  }, [trigger, reset, watch, tagId, kidooId, user, bottomSheetRef, queryClient]);
 
   const value: MultimediaContextValue = {
     isProcessing,
     isSuccess,
     error,
+    uploadProgress,
     form: {
       control,
       errors,
@@ -185,6 +245,7 @@ export function MultimediaProvider({ onDismiss, children }: MultimediaProviderPr
     handleOpen,
     handleFinish,
     setError,
+    setBottomSheetRef,
   };
 
   return <MultimediaContext.Provider value={value}>{children}</MultimediaContext.Provider>;

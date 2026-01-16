@@ -9,6 +9,12 @@ datasource db {
   provider = "postgresql"
 }
 
+enum TagType {
+  MUSIC
+  STORY
+  SOUND
+}
+
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
@@ -23,6 +29,7 @@ model User {
   sessions      Session[]
   kidoos        Kidoo[]
   tags          Tag[]
+  multimediaFiles MultimediaFile[]
 
   @@map("users")
 }
@@ -56,6 +63,7 @@ model Tag {
   tagId       String?  @unique // UUID généré par l'app et écrit sur le tag NFC (nullable temporairement pour migration)
   uid         String?  // UID du tag NFC (lecture seule, identifiant matériel du tag physique) - null jusqu'à la lecture du tag
   name        String?  // Nom optionnel pour le tag
+  type        TagType? // Type du tag (enum: MUSIC, STORY, SOUND)
   kidooId     String
   userId      String
   createdAt   DateTime @default(now())
@@ -63,12 +71,14 @@ model Tag {
 
   kidoo       Kidoo    @relation(fields: [kidooId], references: [id], onDelete: Cascade)
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  multimediaFiles MultimediaFile[]
 
   @@map("tags")
   @@index([kidooId])
   @@index([userId])
   @@index([uid])
   @@index([tagId])
+  @@index([type])
 }
 
 model Account {
@@ -108,4 +118,29 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+model MultimediaFile {
+  id          String   @id @default(uuid())
+  tagId       String   // ID du tag associé
+  userId      String   // ID de l'utilisateur qui a uploadé le fichier
+  url         String   // URL publique du fichier (Cloudflare R2)
+  path        String   // Chemin dans le bucket (ex: kidooId/tagId/filename)
+  fileName    String   // Nom du fichier
+  originalName String  // Nom original du fichier uploadé
+  size        Int      // Taille du fichier en octets
+  mimeType    String   // Type MIME du fichier (ex: audio/mpeg)
+  order       Int      @default(0) // Ordre d'affichage dans la liste (pour réorganisation)
+  disabled    Boolean  @default(false) // Indique si le fichier est désactivé (en pause)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tag         Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("multimedia_files")
+  @@index([tagId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([tagId, order]) // Index composite pour trier par tag et ordre
 }

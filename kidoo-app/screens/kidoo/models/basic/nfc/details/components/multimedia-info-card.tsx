@@ -14,7 +14,6 @@ export function MultimediaInfoCard() {
     <View
       style={{
         backgroundColor: theme.colors.surfaceSecondary,
-        borderRadius: theme.spacing.md,
         padding: theme.spacing.xl,
         alignItems: 'center',
         gap: theme.spacing.md,

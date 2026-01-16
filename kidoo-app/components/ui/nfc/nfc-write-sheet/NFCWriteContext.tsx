@@ -12,8 +12,9 @@ import { useKidoo } from '@/contexts/KidooContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { checkTagExists } from '@/services/tagService';
 import { useStepIndicator } from '@/components/ui/step-indicator';
+import { TagType } from '@/types/shared';
 
-// Schéma de validation pour le nom du tag
+// Schéma de validation pour le nom du tag (le type est déterminé automatiquement selon le modèle)
 const tagNameSchema = z.object({
   name: z.string().min(1, 'Le nom est requis').max(100, 'Le nom est trop long'),
 });
@@ -240,6 +241,13 @@ export function NFCWriteProvider({ onTagWritten, onDismiss, children }: NFCWrite
     }
   }, [trigger, markStepCompleted, setCurrentStep]);
 
+  // Fonction pour déterminer le type de tag selon le modèle du Kidoo
+  const getTagTypeByModel = useCallback((model: string): TagType => {
+    // Pour tous les modèles, utiliser SOUND par défaut
+    // TODO: Ajouter d'autres logiques selon les modèles si nécessaire
+    return TagType.SOUND;
+  }, []);
+
   // Étape 3 : Créer le tag dans la DB (l'écriture est déjà faite à l'étape 1)
   const handleCreateTag = useCallback(async () => {
     if (!user?.id || !kidoo.id || hasCreatedTagRef.current || !writtenTagId) {
@@ -248,6 +256,9 @@ export function NFCWriteProvider({ onTagWritten, onDismiss, children }: NFCWrite
 
     const formData = control._formValues as TagNameFormData;
     const tagName = formData.name;
+    
+    // Déterminer automatiquement le type selon le modèle du Kidoo
+    const tagType = getTagTypeByModel(kidoo.model || 'basic');
 
     setIsProcessing(true);
     setError(null);
@@ -261,6 +272,7 @@ export function NFCWriteProvider({ onTagWritten, onDismiss, children }: NFCWrite
           tagId: writtenTagId,
           kidooId: kidoo.id,
           name: tagName,
+          type: tagType,
         },
         user.id
       );
@@ -310,7 +322,7 @@ export function NFCWriteProvider({ onTagWritten, onDismiss, children }: NFCWrite
       setIsProcessing(false);
       hasCreatedTagRef.current = false;
     }
-  }, [user?.id, kidoo.id, control, onTagWritten, writtenTagId, tagUID, markStepCompleted, tagAddSuccess]);
+  }, [user?.id, kidoo.id, kidoo.model, control, onTagWritten, writtenTagId, tagUID, markStepCompleted, tagAddSuccess, getTagTypeByModel]);
 
   // Navigation entre les étapes
   const handleNext = useCallback(async () => {

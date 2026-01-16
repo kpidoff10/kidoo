@@ -40,6 +40,12 @@ const MAPPING: IconMapping = {
   'exclamationmark.triangle.fill': 'warning',
   'info.circle.fill': 'info',
   'scissors': 'content-cut',
+  'trash.fill': 'delete',
+  'trash': 'delete',
+  'line.horizontal.3': 'drag-handle',
+  'arrow.up.circle.fill': 'upload',
+  'pause.circle.fill': 'pause-circle-filled',
+  'play.circle.fill': 'play-circle-filled',
 };
 
 /**

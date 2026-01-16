@@ -39,6 +39,9 @@ void nfcTask(void* parameter) {
       NFCTagData tagData;
       bool success = writeNFCTag(cmdData.writeData, tagData);
       
+      // Reprendre la détection continue après l'écriture (succès ou échec)
+      resumeNFCDetection();
+      
       // Envoyer la réponse
       if (!success) {
         JsonDocument errorDoc;
@@ -98,6 +101,9 @@ void initNFCTask() {
 bool handleReadNFCTagCommand(JsonDocument& doc) {
   Serial.println("[BLE] Commande READ_NFC_TAG recue");
   
+  // Mettre en pause la détection continue pendant la lecture
+  pauseNFCDetection();
+  
   // Vérifier si le module NFC est disponible
   if (!isNFCAvailable()) {
     JsonDocument errorDoc;
@@ -108,6 +114,8 @@ bool handleReadNFCTagCommand(JsonDocument& doc) {
     serializeJson(errorDoc, errorResponse);
     sendBLEData(errorResponse.c_str());
     Serial.println("[BLE] Erreur: Module NFC non disponible");
+    // Reprendre la détection en cas d'erreur
+    resumeNFCDetection();
     return false;
   }
   
@@ -117,6 +125,9 @@ bool handleReadNFCTagCommand(JsonDocument& doc) {
   // Lire le tag
   NFCTagData tagData;
   bool success = readNFCTag(tagData);
+  
+  // Reprendre la détection continue après la lecture (succès ou échec)
+  resumeNFCDetection();
   
   if (!success) {
     JsonDocument errorDoc;
@@ -156,6 +167,9 @@ bool handleReadNFCTagCommand(JsonDocument& doc) {
 bool handleWriteNFCTagCommand(JsonDocument& doc) {
   Serial.println("[BLE] Commande WRITE_NFC_TAG recue");
   
+  // Mettre en pause la détection continue pendant l'écriture
+  pauseNFCDetection();
+  
   // Vérifier si le module NFC est disponible
   if (!isNFCAvailable()) {
     JsonDocument errorDoc;
@@ -165,7 +179,9 @@ bool handleWriteNFCTagCommand(JsonDocument& doc) {
     String errorResponse;
     serializeJson(errorDoc, errorResponse);
     sendBLEData(errorResponse.c_str());
-    Serial.println("[BLE] Erreur: Module NFC non disponible");
+      Serial.println("[BLE] Erreur: Module NFC non disponible");
+      // Reprendre la détection en cas d'erreur
+      resumeNFCDetection();
     return false;
   }
   
@@ -179,6 +195,8 @@ bool handleWriteNFCTagCommand(JsonDocument& doc) {
     serializeJson(errorDoc, errorResponse);
     sendBLEData(errorResponse.c_str());
     Serial.println("[BLE] Erreur: Parametres manquants");
+    // Reprendre la détection en cas d'erreur
+    resumeNFCDetection();
     return false;
   }
   
@@ -199,6 +217,8 @@ bool handleWriteNFCTagCommand(JsonDocument& doc) {
     serializeJson(errorDoc, errorResponse);
     sendBLEData(errorResponse.c_str());
     Serial.println("[BLE] Erreur: Tableau de donnees vide");
+    // Reprendre la détection en cas d'erreur
+    resumeNFCDetection();
     return false;
   }
   
@@ -227,6 +247,8 @@ bool handleWriteNFCTagCommand(JsonDocument& doc) {
     String errorResponse;
     serializeJson(errorDoc, errorResponse);
     sendBLEData(errorResponse.c_str());
+    // Reprendre la détection en cas d'erreur
+    resumeNFCDetection();
     return false;
   }
   
@@ -245,10 +267,14 @@ bool handleWriteNFCTagCommand(JsonDocument& doc) {
     String errorResponse;
     serializeJson(errorDoc, errorResponse);
     sendBLEData(errorResponse.c_str());
+    // Reprendre la détection en cas d'erreur
+    resumeNFCDetection();
     return false;
   }
   
   Serial.println("[BLE] Commande NFC envoyee a la tache (traitement asynchrone)");
+  
+  // Note: La détection sera reprise dans la tâche NFC après l'écriture
   
   // Retourner true immédiatement car le traitement est asynchrone
   // La réponse sera envoyée par la tâche NFC

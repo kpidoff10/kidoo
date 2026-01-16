@@ -187,6 +187,11 @@
           "errorUnknown": "An error occurred"
         },
         "multimedia": {
+          "loading": "Loading files...",
+          "error": "Error loading files",
+          "empty": "No multimedia files for this tag",
+          "emptyDescription": "Add an audio file using the + button",
+          "files": "Multimedia files",
           "step1": {
             "title": "Terms of Use",
             "description": "Before continuing, please read and accept the following conditions.",
@@ -201,7 +206,8 @@
             "description": "Choose an audio file from your phone",
             "pickFile": "Choose an audio file",
             "picking": "Selecting...",
-            "supportedFormats": "MP3, WAV, M4A, etc."
+            "supportedFormats": "MP3, WAV, M4A, etc.",
+            "uploading": "Uploading..."
           },
           "step3": {
             "title": "Trim audio (optional)",

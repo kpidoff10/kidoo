@@ -47,15 +47,15 @@ export function ScanStep({ isScanning, isWriting, error, tagUID }: ScanStepProps
           {error
             ? t('kidoos.nfc.errorTitle', 'Erreur')
             : isProcessing || !tagUID
-              ? t('kidoos.nfc.processing', 'Traitement en cours...')
-              : t('kidoos.nfc.tagDetected', 'Tag détecté')}
+            ? t('kidoos.nfc.processing', 'Traitement en cours...')
+            : t('kidoos.nfc.tagDetected', 'Tag détecté')}
         </ThemedText>
         <ThemedText style={{ textAlign: 'center', opacity: 0.7, fontSize: 15 }}>
           {error
             ? t('kidoos.nfc.description', 'Approchez un tag NFC du lecteur NFC de votre Kidoo')
             : isProcessing || !tagUID
               ? t('kidoos.nfc.description', 'Approchez un tag NFC du lecteur NFC de votre Kidoo')
-              : t('kidoos.nfc.tagDetectedSuccess', 'Tag détecté avec succès. Vous pouvez continuer.')}
+            : t('kidoos.nfc.tagDetectedSuccess', 'Tag détecté avec succès. Vous pouvez continuer.')}
         </ThemedText>
         {tagUID && !error && isDeveloperMode && (
           <ThemedText style={{ textAlign: 'center', opacity: 0.5, fontSize: 12, marginTop: theme.spacing.xs }}>

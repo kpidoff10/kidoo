@@ -62,7 +62,13 @@ function BasicNFCTagsContent(_props: BasicNFCTagsProps) {
   }, []);
 
   const handleTagPress = useCallback((tag: Tag) => {
-    router.push(`/kidoo/${kidooId}/tags/${tag.id}/basic`);
+    // Utiliser tag.tagId (UUID) au lieu de tag.id (clé primaire) car la route serveur attend l'UUID
+    // tag.tagId ne devrait jamais être null pour un tag créé, mais on vérifie quand même
+    if (!tag.tagId) {
+      console.error('[BasicNFCTags] Tag sans tagId (UUID), impossible de naviguer vers les détails');
+      return;
+    }
+    router.push(`/kidoo/${kidooId}/tags/${tag.tagId}/basic`);
   }, [router, kidooId]);
 
   // Fonction pour actualiser la liste des tags

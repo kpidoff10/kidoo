@@ -13,4 +13,5 @@ export * from './schemas/tag';
 export * from './types/api'; // Exporte depuis types/api/index.ts qui gère tous les exports
 export * from './types/kidoo';
 export * from './types/tag';
+export * from './types/tag-type'; // Exporte TagType et TAG_TYPES
 export * from './types/user';

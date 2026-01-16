@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { tagId, kidooId, name } = validationResult.data;
+    const { tagId, kidooId, name, type } = validationResult.data;
 
     // Vérifier que le Kidoo appartient à l'utilisateur
     const kidoo = await prisma.kidoo.findFirst({
@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
         tagId, // UUID généré par l'app et écrit sur le tag NFC
         uid: null, // UID sera mis à jour par l'app après la lecture du tag NFC
         name: name || null,
+        type: type || null, // Type du tag (ex: "MUSIC")
         kidooId,
         userId,
       },

@@ -239,3 +239,143 @@ bool writeNFCTag(const NFCWriteData& writeData, NFCTagData& tagData) {
   
   return true;
 }
+
+// Variables pour la détection continue
+static NFCEventCallback nfcEventCallback = nullptr;
+static bool nfcDetectionActive = false;
+static bool nfcDetectionPaused = false; // Flag pour la pause (sans perdre l'état)
+static String lastDetectedUID = "";
+static unsigned long lastNFCCheckTime = 0;
+static const unsigned long NFC_CHECK_INTERVAL = 300; // Vérifier toutes les 300ms
+static int noTagCount = 0; // Compteur pour confirmer la disparition d'un tag
+static const int NO_TAG_CONFIRM_COUNT = 3; // Confirmer après 3 lectures consécutives sans tag
+
+void startNFCDetection(NFCEventCallback callback) {
+  nfcEventCallback = callback;
+  nfcDetectionActive = true;
+  nfcDetectionPaused = false;
+  lastDetectedUID = "";
+  lastNFCCheckTime = 0;
+  noTagCount = 0;
+  Serial.println("[NFC] Detection continue de tags demarree");
+}
+
+void stopNFCDetection() {
+  nfcDetectionActive = false;
+  nfcDetectionPaused = false;
+  lastDetectedUID = "";
+  noTagCount = 0;
+  Serial.println("[NFC] Detection continue de tags arretee");
+}
+
+void pauseNFCDetection() {
+  if (nfcDetectionActive && !nfcDetectionPaused) {
+    nfcDetectionPaused = true;
+    Serial.println("[NFC] Detection continue de tags mise en pause");
+  } else if (!nfcDetectionActive) {
+    Serial.println("[NFC] ATTENTION: Tentative de pause mais detection non active");
+  } else if (nfcDetectionPaused) {
+    Serial.println("[NFC] ATTENTION: Detection deja en pause");
+  }
+}
+
+void resumeNFCDetection() {
+  if (nfcDetectionActive && nfcDetectionPaused) {
+    nfcDetectionPaused = false;
+    // Réinitialiser l'état pour éviter de déclencher des événements immédiats
+    // après une opération d'écriture/lecture (le tag peut avoir été retiré pendant l'opération)
+    lastDetectedUID = "";
+    noTagCount = 0;
+    lastNFCCheckTime = millis(); // Réinitialiser le timer pour éviter une lecture immédiate
+    Serial.println("[NFC] Detection continue de tags reprise (etat reinitialise)");
+  }
+}
+
+void updateNFCDetection() {
+  // Vérifier si la détection est active et non en pause
+  // Vérification en premier pour éviter toute opération NFC si en pause
+  if (nfcDetectionPaused) {
+    return; // En pause, ne rien faire
+  }
+  
+  if (!nfcDetectionActive || !nfcEventCallback) {
+    return;
+  }
+  
+  // Vérifier si le module NFC est disponible
+  if (!isNFCAvailable()) {
+    return;
+  }
+  
+  // Vérifier si on doit faire une lecture (toutes les 300ms)
+  unsigned long currentTime = millis();
+  if (currentTime - lastNFCCheckTime < NFC_CHECK_INTERVAL) {
+    return;
+  }
+  lastNFCCheckTime = currentTime;
+  
+  // Essayer de lire un tag (timeout court de 100ms pour ne pas bloquer)
+  uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+  uint8_t uidLength;
+  uint8_t success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength, 100);
+  
+  String currentUID = "";
+  if (success && uidLength > 0) {
+    // Formater l'UID
+    currentUID = formatUID(uid, uidLength);
+  }
+  
+  // Détecter les transitions d'état
+  if (currentUID.length() > 0) {
+    // Un tag est présent
+    if (lastDetectedUID.length() == 0) {
+      // Transition : aucun tag -> tag présent (TAG_PLACED)
+      NFCEvent event;
+      event.type = NFC_EVENT_TAG_PLACED;
+      event.uid = currentUID;
+      
+      Serial.print("[NFC] Tag pose - UID: ");
+      Serial.println(currentUID);
+      
+      nfcEventCallback(event);
+      lastDetectedUID = currentUID;
+      noTagCount = 0;
+    } else if (lastDetectedUID != currentUID) {
+      // Transition : tag différent (TAG_CHANGED)
+      NFCEvent event;
+      event.type = NFC_EVENT_TAG_CHANGED;
+      event.uid = currentUID;
+      
+      Serial.print("[NFC] Tag change - Ancien UID: ");
+      Serial.print(lastDetectedUID);
+      Serial.print(" -> Nouveau UID: ");
+      Serial.println(currentUID);
+      
+      nfcEventCallback(event);
+      lastDetectedUID = currentUID;
+      noTagCount = 0;
+    }
+    // Si le même tag est toujours présent, ne rien faire
+  } else {
+    // Aucun tag détecté
+    if (lastDetectedUID.length() > 0) {
+      // Un tag était présent avant, incrémenter le compteur
+      noTagCount++;
+      
+      // Confirmer la disparition après plusieurs lectures consécutives
+      if (noTagCount >= NO_TAG_CONFIRM_COUNT) {
+        // Transition : tag présent -> aucun tag (TAG_REMOVED)
+        NFCEvent event;
+        event.type = NFC_EVENT_TAG_REMOVED;
+        event.uid = lastDetectedUID;
+        
+        Serial.print("[NFC] Tag retire - UID: ");
+        Serial.println(lastDetectedUID);
+        
+        nfcEventCallback(event);
+        lastDetectedUID = "";
+        noTagCount = 0;
+      }
+    }
+  }
+}

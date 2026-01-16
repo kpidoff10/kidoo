@@ -137,7 +137,10 @@ export const DeleteConfirmationSheet = React.forwardRef<ThemedTrueSheetRef, Dele
     try {
       await onConfirm();
       onSuccess?.();
-      onCancel();
+      // Ne pas appeler onCancel() ici car onDidDismiss sera appelé automatiquement
+      // et appellera handleDismiss qui appellera onCancel()
+      // Fermer le sheet manuellement
+      sheetRef.current?.dismiss();
     } catch (err) {
       setInternalError(err instanceof Error ? err.message : t('common.error', 'Une erreur est survenue'));
     } finally {

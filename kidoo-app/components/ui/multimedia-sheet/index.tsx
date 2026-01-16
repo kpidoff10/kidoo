@@ -10,12 +10,15 @@ import { BottomSheet, type BottomSheetModalRef } from '@/components/ui/bottom-sh
 import { Button } from '@/components/ui/button';
 import { StepIndicatorProvider, StepIndicator, useStepIndicator } from '@/components/ui/step-indicator';
 import { MultimediaProvider, useMultimedia } from './MultimediaContext';
-import { MultimediaStep1, MultimediaStep2, MultimediaStep3 } from './components';
+import { MultimediaStep1, MultimediaStep2 } from './components';
+// import { MultimediaStep3 } from './components'; // Temporairement désactivé
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 2; // Step 3 (découpage) temporairement désactivé
 
 export interface MultimediaSheetProps {
   onDismiss?: () => void;
+  tagId?: string; // ID du tag pour lier le fichier multimédia
+  kidooId?: string; // ID du Kidoo pour le chemin de sauvegarde
 }
 
 // Composant interne qui utilise le contexte
@@ -24,8 +27,23 @@ const MultimediaSheetContent = React.forwardRef<BottomSheetModalRef, MultimediaS
     const { t } = useTranslation();
     const theme = useTheme();
     const { currentStep } = useStepIndicator();
-    const { handleNext, handlePrevious, handleOpen, handleFinish, isProcessing, acceptTerms, form } = useMultimedia();
-    const selectedFile = form.control._formValues?.audioFile;
+    const { handleNext, handlePrevious, handleOpen, handleFinish, isProcessing, acceptTerms, form, setBottomSheetRef } = useMultimedia();
+    const selectedFile = form.watch('audioFile');
+    
+    // Créer une ref pour le BottomSheet
+    const sheetRef = React.useRef<BottomSheetModalRef>(null);
+    
+    // Synchroniser la ref externe avec la ref interne
+    React.useImperativeHandle(ref, () => sheetRef.current as BottomSheetModalRef, []);
+    
+    // Définir la ref du BottomSheet dans le contexte
+    React.useEffect(() => {
+      if (sheetRef.current) {
+        setBottomSheetRef(sheetRef.current);
+      } else {
+        setBottomSheetRef(null);
+      }
+    }, [setBottomSheetRef]);
 
     const handleDismiss = () => {
       props.onDismiss?.();
@@ -45,8 +63,7 @@ const MultimediaSheetContent = React.forwardRef<BottomSheetModalRef, MultimediaS
         return <MultimediaStep1 />;
         case 2:
         return <MultimediaStep2 />;
-        case 3:
-        return <MultimediaStep3 />;
+        // case 3: return <MultimediaStep3 />; // Temporairement désactivé
         default:
         return null;
       }
@@ -54,7 +71,7 @@ const MultimediaSheetContent = React.forwardRef<BottomSheetModalRef, MultimediaS
 
     return (
       <BottomSheet
-        ref={ref}
+        ref={sheetRef}
         onOpen={handleOpen}
         onDismiss={handleDismiss}
         detents={['auto']}
@@ -63,8 +80,8 @@ const MultimediaSheetContent = React.forwardRef<BottomSheetModalRef, MultimediaS
         <StepIndicator
           icons={{
             1: 'music-note',
-            2: 'edit',
-            3: 'check-circle',
+            2: 'check-circle',
+            // 3: 'check-circle', // Temporairement désactivé
           }}
         />
 
@@ -110,7 +127,7 @@ export const MultimediaSheet = React.forwardRef<BottomSheetModalRef, MultimediaS
   (props, ref) => {
     return (
       <StepIndicatorProvider totalSteps={TOTAL_STEPS} initialStep={1}>
-        <MultimediaProvider onDismiss={props.onDismiss}>
+        <MultimediaProvider onDismiss={props.onDismiss} tagId={props.tagId} kidooId={props.kidooId}>
           <MultimediaSheetContent {...props} ref={ref} />
         </MultimediaProvider>
       </StepIndicatorProvider>

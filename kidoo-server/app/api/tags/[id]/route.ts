@@ -155,6 +155,7 @@ export async function PUT(
     const updateData: {
       uid?: string | null;
       name?: string | null;
+      type?: string | null;
     } = {};
 
     if (validationResult.data.uid !== undefined) {
@@ -162,6 +163,9 @@ export async function PUT(
     }
     if (validationResult.data.name !== undefined) {
       updateData.name = validationResult.data.name;
+    }
+    if (validationResult.data.type !== undefined) {
+      updateData.type = validationResult.data.type;
     }
 
     // Mettre à jour le tag

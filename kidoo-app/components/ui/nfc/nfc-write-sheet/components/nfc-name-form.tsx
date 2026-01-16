@@ -52,6 +52,7 @@ export function NameStep({ control, errors, tagUID }: NameStepProps) {
           )}
         />
       </View>
+
     </View>
   );
 }

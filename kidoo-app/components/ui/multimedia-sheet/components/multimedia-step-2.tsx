@@ -11,15 +11,20 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useMultimedia } from '../MultimediaContext';
 import { Controller } from 'react-hook-form';
+import { useStepIndicator } from '@/components/ui/step-indicator';
 
 export function MultimediaStep2() {
   const { t } = useTranslation();
   const theme = useTheme();
-  const { form } = useMultimedia();
+  const { form, uploadProgress, isProcessing } = useMultimedia();
+  const { currentStep } = useStepIndicator();
   const [isPicking, setIsPicking] = useState(false);
   
   // Utiliser watch pour surveiller la valeur du fichier audio de manière réactive
   const selectedFile = form.watch('audioFile');
+  
+  // Afficher la barre de progression uniquement si on est en train d'uploader (step 2 et isProcessing)
+  const showProgress = isProcessing && uploadProgress !== null && currentStep === 2;
 
   const handlePickDocument = async (onChange: (value: any) => void) => {
     try {
@@ -73,9 +78,29 @@ export function MultimediaStep2() {
                     borderRadius: theme.spacing.md,
                     borderWidth: 1,
                     borderColor: theme.colors.border,
+                    overflow: 'hidden', // Important pour que la barre de progression ne dépasse pas
                   },
                 ]}
               >
+                {/* Barre de progression en overlay (par-dessus la card) */}
+                {showProgress && uploadProgress && (
+                  <View
+                    style={[
+                      styles.progressOverlay,
+                      {
+                        backgroundColor: theme.colors.success,
+                        height: 4,
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: `${100 - Math.min(100, uploadProgress.percentage)}%`,
+                        borderBottomLeftRadius: theme.spacing.md,
+                        borderBottomRightRadius: uploadProgress.percentage >= 100 ? theme.spacing.md : 0,
+                      },
+                    ]}
+                  />
+                )}
+                
                 <View style={styles.fileInfo}>
                   <IconSymbol
                     name="music.note"
@@ -89,27 +114,31 @@ export function MultimediaStep2() {
                     </ThemedText>
                     {selectedFile.size && (
                       <ThemedText style={{ fontSize: theme.typography.fontSize.sm, opacity: 0.7, marginTop: theme.spacing.xs }}>
-                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                        {showProgress && uploadProgress
+                          ? `${(uploadProgress.loaded / 1024 / 1024).toFixed(2)} MB / ${(uploadProgress.total / 1024 / 1024).toFixed(2)} MB`
+                          : `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`}
                       </ThemedText>
                     )}
                   </View>
-                  <TouchableOpacity
-                    onPress={() => {
-                      onChange(undefined);
-                      // Forcer la mise à jour avec setValue pour s'assurer que la valeur est bien supprimée
-                      form.setValue('audioFile', undefined, { shouldValidate: false });
-                    }}
-                    style={[
-                      styles.removeButton,
-                      {
-                        backgroundColor: theme.colors.errorBackground,
-                        padding: theme.spacing.xs,
-                        borderRadius: theme.spacing.xs,
-                      },
-                    ]}
-                  >
-                    <IconSymbol name="xmark.circle.fill" size={20} color={theme.colors.error} />
-                  </TouchableOpacity>
+                  {!showProgress && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        onChange(undefined);
+                        // Forcer la mise à jour avec setValue pour s'assurer que la valeur est bien supprimée
+                        form.setValue('audioFile', undefined, { shouldValidate: false });
+                      }}
+                      style={[
+                        styles.removeButton,
+                        {
+                          backgroundColor: theme.colors.errorBackground,
+                          padding: theme.spacing.xs,
+                          borderRadius: theme.spacing.xs,
+                        },
+                      ]}
+                    >
+                      <IconSymbol name="trash.fill" size={20} color={theme.colors.error} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             ) : (
@@ -126,6 +155,7 @@ export function MultimediaStep2() {
                     borderStyle: 'dashed',
                     borderColor: theme.colors.tint,
                     opacity: isPicking ? 0.6 : 1,
+                    marginTop: theme.spacing.md,
                   },
                 ]}
               >
@@ -191,5 +221,8 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     marginLeft: 8,
+  },
+  progressOverlay: {
+    zIndex: 1,
   },
 });

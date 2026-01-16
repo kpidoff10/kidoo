@@ -162,16 +162,49 @@ void processSerialCommands() {
   }
 }
 
+// Callback pour les événements NFC
+void onNFCEvent(const NFCEvent& event) {
+  switch (event.type) {
+    case NFC_EVENT_TAG_PLACED:
+      Serial.println("[NFC EVENT] Tag pose - Action a implementer");
+      // TODO: Implémenter l'action quand un tag est posé
+      // Exemple: jouer la musique associée au tag
+      break;
+      
+    case NFC_EVENT_TAG_REMOVED:
+      Serial.println("[NFC EVENT] Tag retire - Action a implementer");
+      // TODO: Implémenter l'action quand un tag est retiré
+      // Exemple: arrêter la musique
+      break;
+      
+    case NFC_EVENT_TAG_CHANGED:
+      Serial.println("[NFC EVENT] Tag change - Action a implementer");
+      // TODO: Implémenter l'action quand un tag change
+      // Exemple: arrêter l'ancien, démarrer le nouveau
+      break;
+  }
+}
+
 void loop() {
   static int lastClientCount = 0;
   static bool lastBluetoothState = false;
   static bool lastWifiState = false;
+  static bool nfcDetectionStarted = false;
+  
+  // Démarrer la détection NFC une seule fois (si le module est disponible)
+  if (!nfcDetectionStarted && isNFCAvailable()) {
+    startNFCDetection(onNFCEvent);
+    nfcDetectionStarted = true;
+  }
   
   // Traiter les commandes série
   processSerialCommands();
   
   // Traiter les commandes BLE (configuration WiFi, etc.)
   processBLECommands();
+  
+  // Mettre à jour la détection NFC
+  updateNFCDetection();
   
   // Mettre à jour l'état WiFi
   updateWiFiState();

@@ -3,6 +3,7 @@
  */
 
 import { z } from 'zod';
+import { TagType } from '../types/tag-type';
 
 /**
  * Schéma de validation pour créer un nouveau tag
@@ -13,6 +14,9 @@ export const createTagInputSchema = z.object({
   tagId: z.string().uuid('Le tagId doit être un UUID valide'), // UUID généré par l'app et écrit sur le tag NFC
   kidooId: z.string().uuid('Le kidooId doit être un UUID valide'),
   name: z.string().max(100, 'Le nom est trop long').optional(),
+  type: z.nativeEnum(TagType, {
+    errorMap: () => ({ message: 'Le type doit être MUSIC, STORY ou SOUND' }),
+  }).optional(), // Type du tag (enum: MUSIC, STORY, SOUND)
 });
 
 /**
@@ -26,6 +30,9 @@ export type CreateTagInput = z.infer<typeof createTagInputSchema>;
 export const updateTagInputSchema = z.object({
   uid: z.string().min(1, 'L\'UID est requis').max(50, 'L\'UID est trop long').optional(),
   name: z.string().min(1, 'Le nom est requis').max(100, 'Le nom est trop long').optional(),
+  type: z.nativeEnum(TagType, {
+    errorMap: () => ({ message: 'Le type doit être MUSIC, STORY ou SOUND' }),
+  }).optional(), // Type du tag (enum: MUSIC, STORY, SOUND)
 });
 
 /**

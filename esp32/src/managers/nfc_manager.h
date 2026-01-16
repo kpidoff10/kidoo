@@ -38,4 +38,36 @@ String formatUID(const uint8_t* uid, uint8_t length);
 // Fonction pour vérifier si un tag est présent
 bool isTagPresent();
 
+// Types d'événements NFC
+enum NFCEventType {
+  NFC_EVENT_TAG_PLACED,    // Un tag vient d'être posé
+  NFC_EVENT_TAG_REMOVED,   // Un tag vient d'être retiré
+  NFC_EVENT_TAG_CHANGED    // Un tag différent a été posé (remplacement)
+};
+
+// Structure pour les événements NFC
+struct NFCEvent {
+  NFCEventType type;
+  String uid;              // UID du tag concerné
+};
+
+// Type de callback pour les événements NFC
+typedef void (*NFCEventCallback)(const NFCEvent& event);
+
+// Fonction pour démarrer la détection continue de tags
+// Appelle le callback à chaque changement d'état (tag posé, retiré, changé)
+void startNFCDetection(NFCEventCallback callback);
+
+// Fonction pour arrêter la détection continue
+void stopNFCDetection();
+
+// Fonction pour mettre en pause la détection continue (sans perdre l'état)
+void pauseNFCDetection();
+
+// Fonction pour reprendre la détection continue après une pause
+void resumeNFCDetection();
+
+// Fonction pour mettre à jour la détection (à appeler dans loop())
+void updateNFCDetection();
+
 #endif // NFC_MANAGER_H
