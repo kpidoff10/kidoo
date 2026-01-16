@@ -6,7 +6,9 @@
 import { useRef, useCallback } from 'react';
 import { ThemedView } from '@/components/themed-view';
 import { BottomSheetModalRef } from '@/components/ui/bottom-sheet';
+import { useMultimediaByTag } from '@/hooks/useMultimedia';
 import { MultimediaInfoCard, FloatingActionMenu, MultimediaList } from './components';
+import { MultimediaInfoCardSkeleton } from './components/multimedia-info-card-skeleton';
 import { MultimediaSheet } from '@/components/ui/multimedia-sheet';
 
 export interface TagDetailsProps {
@@ -16,6 +18,7 @@ export interface TagDetailsProps {
 
 export function TagDetails({ kidooId: _kidooId, tagId: _tagId }: TagDetailsProps) {
   const multimediaSheetRef = useRef<BottomSheetModalRef>(null);
+  const { isLoading } = useMultimediaByTag(_tagId);
 
   const handleMultimediaPress = useCallback(() => {
     console.log('[TagDetails] ===== handleMultimediaPress DÉBUT =====');
@@ -45,7 +48,7 @@ export function TagDetails({ kidooId: _kidooId, tagId: _tagId }: TagDetailsProps
 
   return (
     <ThemedView style={{ flex: 1 }}>
-      <MultimediaInfoCard />
+      {isLoading ? <MultimediaInfoCardSkeleton /> : <MultimediaInfoCard />}
       <MultimediaList tagId={_tagId} />
       <FloatingActionMenu
         onMultimediaPress={handleMultimediaPress}

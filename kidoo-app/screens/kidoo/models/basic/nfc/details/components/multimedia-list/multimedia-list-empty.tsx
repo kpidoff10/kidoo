@@ -12,10 +12,50 @@ export function MultimediaListEmpty() {
   const theme = useTheme();
 
   return (
-    <View style={{ paddingHorizontal: theme.spacing.xl, paddingTop: theme.spacing.md }}>
-      <ThemedText style={{ opacity: 0.7, marginBottom: theme.spacing.lg }}>
-        {t('kidoos.multimedia.empty', 'Aucun fichier multimédia pour ce tag')}
-      </ThemedText>
+    <View
+      style={{
+        paddingHorizontal: theme.spacing.xl,
+        paddingTop: theme.spacing.xl,
+        paddingBottom: theme.spacing.xl,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <View
+        style={{
+          alignItems: 'center',
+          gap: theme.spacing.md,
+          maxWidth: 300,
+        }}
+      >
+        {/* Titre */}
+        <ThemedText
+          type="title"
+          style={{
+            fontSize: theme.typography.fontSize.lg,
+            fontWeight: '600',
+            textAlign: 'center',
+            marginBottom: theme.spacing.xs,
+          }}
+        >
+          {t('kidoos.multimedia.empty.title', 'Aucun fichier multimédia')}
+        </ThemedText>
+
+        {/* Description */}
+        <ThemedText
+          style={{
+            fontSize: theme.typography.fontSize.md,
+            textAlign: 'center',
+            opacity: 0.7,
+            lineHeight: theme.typography.fontSize.md * 1.5,
+          }}
+        >
+          {t(
+            'kidoos.multimedia.empty.description',
+            'Ajoutez votre premier fichier audio, histoire ou vocal en appuyant sur le bouton + ci-dessous.'
+          )}
+        </ThemedText>
+      </View>
     </View>
   );
 }
