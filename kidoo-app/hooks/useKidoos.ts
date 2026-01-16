@@ -83,8 +83,73 @@ export function useCreateKidoo() {
       }
       throw result; // React Query gère les erreurs automatiquement
     },
-    onSuccess: () => {
-      // Invalider la liste des Kidoos pour re-fetch
+    onMutate: async (variables) => {
+      // Annuler les requêtes en cours pour éviter les conflits
+      await queryClient.cancelQueries({ queryKey: kidooKeys.lists() });
+
+      // Sauvegarder l'état précédent pour rollback
+      const previousData = queryClient.getQueryData<ApiResponse<Kidoo[]>>(
+        kidooKeys.lists()
+      );
+
+      // Mise à jour optimiste : créer un Kidoo temporaire avec les données fournies
+      if (previousData?.success && previousData.data) {
+        const tempKidoo: Kidoo = {
+          id: `temp-${Date.now()}`, // ID temporaire
+          name: variables.name,
+          model: variables.model,
+          deviceId: variables.deviceId,
+          macAddress: variables.macAddress || null,
+          firmwareVersion: variables.firmwareVersion || null,
+          lastConnected: null,
+          isConnected: false,
+          wifiSSID: null,
+          userId: user!.id,
+          isSynced: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        queryClient.setQueryData<ApiResponse<Kidoo[]>>(
+          kidooKeys.lists(),
+          {
+            ...previousData,
+            data: [...previousData.data, tempKidoo],
+          }
+        );
+      }
+
+      return { previousData };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback en cas d'erreur
+      if (context?.previousData) {
+        queryClient.setQueryData(kidooKeys.lists(), context.previousData);
+      }
+    },
+    onSuccess: (data) => {
+      // Remplacer le Kidoo temporaire par le Kidoo réel retourné par le serveur
+      if (data.success) {
+        const previousData = queryClient.getQueryData<ApiResponse<Kidoo[]>>(
+          kidooKeys.lists()
+        );
+        if (previousData?.success && previousData.data) {
+          // Remplacer le Kidoo temporaire par le vrai Kidoo
+          const updatedKidoos = previousData.data.map(kidoo =>
+            kidoo.id.startsWith('temp-') ? data.data : kidoo
+          );
+          queryClient.setQueryData<ApiResponse<Kidoo[]>>(
+            kidooKeys.lists(),
+            {
+              ...previousData,
+              data: updatedKidoos,
+            }
+          );
+        }
+      }
+    },
+    onSettled: () => {
+      // Re-fetch pour s'assurer que les données sont à jour
       queryClient.invalidateQueries({
         queryKey: kidooKeys.lists(),
       });
@@ -110,8 +175,51 @@ export function useUpdateKidoo() {
       }
       throw result; // React Query gère les erreurs automatiquement
     },
-    onSuccess: (response) => {
-      if (response.success && response.data) {
+    onMutate: async ({ kidooId, data }) => {
+      // Annuler les requêtes en cours pour éviter les conflits
+      await queryClient.cancelQueries({ queryKey: kidooKeys.detail(kidooId) });
+      await queryClient.cancelQueries({ queryKey: kidooKeys.lists() });
+
+      // Sauvegarder les états précédents pour rollback
+      const previousDetail = queryClient.getQueryData<ApiResponse<Kidoo>>(
+        kidooKeys.detail(kidooId)
+      );
+      const previousList = queryClient.getQueryData<ApiResponse<Kidoo[]>>(
+        kidooKeys.lists()
+      );
+
+      // Mise à jour optimiste du détail
+      if (previousDetail?.success && previousDetail.data) {
+        queryClient.setQueryData<ApiResponse<Kidoo>>(kidooKeys.detail(kidooId), {
+          ...previousDetail,
+          data: { ...previousDetail.data, ...data, updatedAt: new Date().toISOString() },
+        });
+      }
+
+      // Mise à jour optimiste de la liste
+      if (previousList?.success && previousList.data) {
+        const updatedKidoos = previousList.data.map(kidoo =>
+          kidoo.id === kidooId ? { ...kidoo, ...data, updatedAt: new Date().toISOString() } : kidoo
+        );
+        queryClient.setQueryData<ApiResponse<Kidoo[]>>(kidooKeys.lists(), {
+          ...previousList,
+          data: updatedKidoos,
+        });
+      }
+
+      return { previousDetail, previousList };
+    },
+    onError: (_err, variables, context) => {
+      // Rollback en cas d'erreur
+      if (context?.previousDetail) {
+        queryClient.setQueryData(kidooKeys.detail(variables.kidooId), context.previousDetail);
+      }
+      if (context?.previousList) {
+        queryClient.setQueryData(kidooKeys.lists(), context.previousList);
+      }
+    },
+    onSettled: (response) => {
+      if (response?.success && response.data) {
         // Invalider le Kidoo spécifique
         queryClient.invalidateQueries({
           queryKey: kidooKeys.detail(response.data.id),
@@ -143,7 +251,40 @@ export function useDeleteKidoo() {
       }
       throw result; // React Query gère les erreurs automatiquement
     },
-    onSuccess: (_data, kidooId) => {
+    onMutate: async (kidooId) => {
+      // Annuler les requêtes en cours pour éviter les conflits
+      await queryClient.cancelQueries({ queryKey: kidooKeys.detail(kidooId) });
+      await queryClient.cancelQueries({ queryKey: kidooKeys.lists() });
+
+      // Sauvegarder les états précédents pour rollback
+      const previousDetail = queryClient.getQueryData<ApiResponse<Kidoo>>(
+        kidooKeys.detail(kidooId)
+      );
+      const previousList = queryClient.getQueryData<ApiResponse<Kidoo[]>>(
+        kidooKeys.lists()
+      );
+
+      // Mise à jour optimiste : supprimer le Kidoo de la liste
+      if (previousList?.success && previousList.data) {
+        const updatedKidoos = previousList.data.filter(kidoo => kidoo.id !== kidooId);
+        queryClient.setQueryData<ApiResponse<Kidoo[]>>(kidooKeys.lists(), {
+          ...previousList,
+          data: updatedKidoos,
+        });
+      }
+
+      return { previousDetail, previousList };
+    },
+    onError: (_err, kidooId, context) => {
+      // Rollback en cas d'erreur
+      if (context?.previousDetail) {
+        queryClient.setQueryData(kidooKeys.detail(kidooId), context.previousDetail);
+      }
+      if (context?.previousList) {
+        queryClient.setQueryData(kidooKeys.lists(), context.previousList);
+      }
+    },
+    onSettled: (_data, _error, kidooId) => {
       // Invalider le Kidoo spécifique
       queryClient.invalidateQueries({
         queryKey: kidooKeys.detail(kidooId),

@@ -2,7 +2,7 @@
  * Composant pour afficher un fichier multimédia individuel dans la liste
  */
 
-import { View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { useCallback, useRef } from 'react';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
@@ -14,11 +14,10 @@ import { decodeFileName, formatFileSize } from './utils';
 
 export interface MultimediaListItemProps extends RenderItemParams<MultimediaFile> {
   onDelete?: (item: MultimediaFile) => void;
-  onDisable?: (item: MultimediaFile) => Promise<void>;
-  isLoading?: boolean;
+  onDisable?: (item: MultimediaFile) => void;
 }
 
-export function MultimediaListItem({ item, drag, isActive, onDelete, onDisable, isLoading = false }: MultimediaListItemProps) {
+export function MultimediaListItem({ item, drag, isActive, onDelete, onDisable }: MultimediaListItemProps) {
   const theme = useTheme();
   const swipeableRef = useRef<SwipeableMethods>(null);
 
@@ -32,36 +31,24 @@ export function MultimediaListItem({ item, drag, isActive, onDelete, onDisable, 
       <View style={{ flexDirection: 'row', width: onDisable ? 160 : 80 }}>
         {onDisable && (
           <TouchableOpacity
-            onPress={async () => {
-              if (isLoading) return; // Empêcher les clics multiples
-              try {
-                await onDisable(item);
-                // Fermer seulement après que la requête soit terminée
-                swipeableRef.current?.close();
-              } catch  {
-                // En cas d'erreur, on ferme quand même
-                swipeableRef.current?.close();
-              }
+            onPress={() => {
+              onDisable(item);
+              // Fermer immédiatement car la mutation optimiste gère la mise à jour UI
+              swipeableRef.current?.close();
             }}
-            disabled={isLoading}
             style={{
               backgroundColor: warningColor,
               justifyContent: 'center',
               alignItems: 'center',
               width: 80,
               paddingHorizontal: theme.spacing.md,
-              opacity: isLoading ? 0.6 : 1,
             }}
           >
-            {isLoading ? (
-              <ActivityIndicator size="small" color={theme.colors.background} />
-            ) : (
-              <IconSymbol 
-                name={item.disabled ? "play.circle.fill" : "pause.circle.fill"} 
-                size={24} 
-                color={theme.colors.background} 
-              />
-            )}
+            <IconSymbol 
+              name={item.disabled ? "play.circle.fill" : "pause.circle.fill"} 
+              size={24} 
+              color={theme.colors.background} 
+            />
           </TouchableOpacity>
         )}
         {onDelete && (
@@ -83,7 +70,7 @@ export function MultimediaListItem({ item, drag, isActive, onDelete, onDisable, 
         )}
       </View>
     );
-  }, [onDelete, onDisable, item, theme.colors, theme.spacing.md, isLoading]);
+  }, [onDelete, onDisable, item, theme.colors, theme.spacing.md]);
 
   return (
     <ScaleDecorator>

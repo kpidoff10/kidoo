@@ -3,7 +3,7 @@
  * Gère le cache et les mutations pour les opérations sur les fichiers multimédias
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getMultimediaByTag,
@@ -14,6 +14,7 @@ import {
   type MultimediaFile,
 } from '@/services/multimediaService';
 import type { ApiResponse } from '@/services/api';
+import { useOptimisticMutation } from './useOptimisticMutation';
 
 // Réexporter multimediaKeys pour compatibilité
 export { multimediaKeys };
@@ -45,10 +46,14 @@ export function useMultimediaByTag(tagId: string, enabled: boolean = true) {
  * @param tagId - ID du tag (UUID)
  */
 export function useReorderMultimedia(tagId: string) {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  return useMutation<ApiResponse<null>, ApiResponse<null>, { fileIds: string[] }>({
+  return useOptimisticMutation<
+    ApiResponse<null>,
+    ApiResponse<null>,
+    { fileIds: string[] },
+    { previousData: ApiResponse<MultimediaFile[]> | undefined }
+  >({
     mutationFn: async ({ fileIds }) => {
       if (!user?.id) {
         throw new Error('Utilisateur non connecté');
@@ -59,11 +64,31 @@ export function useReorderMultimedia(tagId: string) {
       }
       throw result;
     },
-    onSuccess: () => {
-      // Invalider la liste des fichiers multimédias pour re-fetch
-      queryClient.invalidateQueries({
-        queryKey: multimediaKeys.byTag(tagId),
-      });
+    queryKey: multimediaKeys.byTag(tagId),
+    optimisticUpdate: (variables, previousData) => {
+      const data = previousData as ApiResponse<MultimediaFile[]> | undefined;
+      if (!data?.success || !data.data) {
+        return previousData;
+      }
+
+      const filesMap = new Map(data.data.map(file => [file.id, file]));
+      const reorderedFiles = variables.fileIds
+        .map(id => filesMap.get(id))
+        .filter((file): file is MultimediaFile => file !== undefined)
+        .map((file, index) => ({ ...file, order: index }));
+
+      // Ajouter les fichiers qui ne sont pas dans fileIds (au cas où)
+      const remainingFiles = data.data.filter(
+        file => !variables.fileIds.includes(file.id)
+      );
+      const allFiles = [...reorderedFiles, ...remainingFiles].sort(
+        (a, b) => (a.order || 0) - (b.order || 0)
+      );
+
+      return {
+        ...data,
+        data: allFiles,
+      };
     },
   });
 }
@@ -73,10 +98,14 @@ export function useReorderMultimedia(tagId: string) {
  * @param tagId - ID du tag (UUID) pour invalider le cache après mise à jour
  */
 export function useUpdateMultimediaStatus(tagId: string) {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  return useMutation<ApiResponse<MultimediaFile>, Error, { fileId: string; disabled: boolean }>({
+  return useOptimisticMutation<
+    ApiResponse<MultimediaFile>,
+    Error,
+    { fileId: string; disabled: boolean },
+    { previousData: ApiResponse<MultimediaFile[]> | undefined }
+  >({
     mutationFn: async ({ fileId, disabled }) => {
       if (!user?.id) {
         throw new Error('Utilisateur non connecté');
@@ -87,11 +116,21 @@ export function useUpdateMultimediaStatus(tagId: string) {
       }
       throw new Error(result.error || 'Une erreur est survenue lors de la mise à jour');
     },
-    onSuccess: () => {
-      // Invalider la liste des fichiers multimédias pour re-fetch
-      queryClient.invalidateQueries({
-        queryKey: multimediaKeys.byTag(tagId),
-      });
+    queryKey: multimediaKeys.byTag(tagId),
+    optimisticUpdate: (variables, previousData) => {
+      const data = previousData as ApiResponse<MultimediaFile[]> | undefined;
+      if (!data?.success || !data.data) {
+        return previousData;
+      }
+
+      const updatedFiles = data.data.map(file =>
+        file.id === variables.fileId ? { ...file, disabled: variables.disabled } : file
+      );
+
+      return {
+        ...data,
+        data: updatedFiles,
+      };
     },
   });
 }
@@ -101,10 +140,14 @@ export function useUpdateMultimediaStatus(tagId: string) {
  * @param tagId - ID du tag (UUID) pour invalider le cache après suppression
  */
 export function useDeleteMultimedia(tagId: string) {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  return useMutation<ApiResponse<null>, Error, { fileId: string }>({
+  return useOptimisticMutation<
+    ApiResponse<null>,
+    Error,
+    { fileId: string },
+    { previousData: ApiResponse<MultimediaFile[]> | undefined }
+  >({
     mutationFn: async ({ fileId }) => {
       if (!user?.id) {
         throw new Error('Utilisateur non connecté');
@@ -115,11 +158,19 @@ export function useDeleteMultimedia(tagId: string) {
       }
       throw new Error(result.error || 'Une erreur est survenue lors de la suppression');
     },
-    onSuccess: () => {
-      // Invalider la liste des fichiers multimédias pour re-fetch
-      queryClient.invalidateQueries({
-        queryKey: multimediaKeys.byTag(tagId),
-      });
+    queryKey: multimediaKeys.byTag(tagId),
+    optimisticUpdate: (variables, previousData) => {
+      const data = previousData as ApiResponse<MultimediaFile[]> | undefined;
+      if (!data?.success || !data.data) {
+        return previousData;
+      }
+
+      const updatedFiles = data.data.filter(file => file.id !== variables.fileId);
+
+      return {
+        ...data,
+        data: updatedFiles,
+      };
     },
   });
 }

@@ -16,9 +16,7 @@ interface MultimediaListContentProps {
   onRefresh: () => void;
   isRefetching: boolean;
   onDelete?: (item: MultimediaFile) => void;
-  onDisable?: (item: MultimediaFile) => Promise<void>;
-  isUpdatingStatus?: boolean;
-  fileIdBeingUpdated?: string;
+  onDisable?: (item: MultimediaFile) => void;
 }
 
 export function MultimediaListContent({
@@ -28,8 +26,6 @@ export function MultimediaListContent({
   isRefetching,
   onDelete,
   onDisable,
-  isUpdatingStatus,
-  fileIdBeingUpdated,
 }: MultimediaListContentProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -44,7 +40,6 @@ export function MultimediaListContent({
             {...props} 
             onDelete={onDelete} 
             onDisable={onDisable}
-            isLoading={isUpdatingStatus && fileIdBeingUpdated === props.item.id}
           />
           {index < files.length - 1 && (
             <View style={theme.components.dividerThin} />
@@ -52,7 +47,7 @@ export function MultimediaListContent({
         </View>
       );
     },
-    [files, theme.components.dividerThin, onDelete, onDisable, isUpdatingStatus, fileIdBeingUpdated]
+    [files, theme.components.dividerThin, onDelete, onDisable]
   );
 
   return (

@@ -25,19 +25,6 @@ export function MultimediaList({ tagId }: MultimediaListProps) {
   const updateStatusMutation = useUpdateMultimediaStatus(tagId);
   const deleteSheetRef = useRef<DeleteConfirmationSheetRef>(null);
   const [fileToDelete, setFileToDelete] = useState<MultimediaFile | null>(null);
-  const [fileIdBeingUpdated, setFileIdBeingUpdated] = useState<string | null>(null);
-  
-  // État local pour la liste (pour le drag and drop)
-  const [localFiles, setLocalFiles] = useState<MultimediaFile[]>([]);
-  
-  // Mettre à jour la liste locale quand les données changent
-  useEffect(() => {
-    if (data?.success && data.data) {
-      // Trier par ordre pour s'assurer que la liste est dans le bon ordre
-      const sortedFiles = [...data.data].sort((a, b) => (a.order || 0) - (b.order || 0));
-      setLocalFiles(sortedFiles);
-    }
-  }, [data]);
 
   // Ouvrir le sheet de confirmation quand fileToDelete est défini
   useEffect(() => {
@@ -53,25 +40,11 @@ export function MultimediaList({ tagId }: MultimediaListProps) {
   // Fonction appelée quand l'ordre change (drag and drop)
   const handleDragEnd = useCallback(
     ({ data: newData }: { data: MultimediaFile[] }) => {
-      // Mettre à jour l'état local immédiatement pour un feedback visuel
-      setLocalFiles(newData);
-      
-      // Envoyer le nouvel ordre au serveur
+      // Envoyer le nouvel ordre au serveur (mutation optimiste gère la mise à jour UI)
       const fileIds = newData.map((file) => file.id);
-      reorderMutation.mutate(
-        { fileIds },
-        {
-          onError: () => {
-            // En cas d'erreur, restaurer l'ordre précédent
-            if (data?.success && data.data) {
-              const sortedFiles = [...data.data].sort((a, b) => (a.order || 0) - (b.order || 0));
-              setLocalFiles(sortedFiles);
-            }
-          },
-        }
-      );
+      reorderMutation.mutate({ fileIds });
     },
-    [reorderMutation, data]
+    [reorderMutation]
   );
 
   // Fonction appelée quand on swipe pour supprimer
@@ -81,25 +54,31 @@ export function MultimediaList({ tagId }: MultimediaListProps) {
   }, []);
 
   // Fonction appelée quand on swipe pour désactiver/activer
-  const handleDisable = useCallback(async (item: MultimediaFile) => {
+  const handleDisable = useCallback((item: MultimediaFile) => {
     const newDisabledStatus = !item.disabled;
-    setFileIdBeingUpdated(item.id);
-    try {
-      await updateStatusMutation.mutateAsync({
-        fileId: item.id,
-        disabled: newDisabledStatus,
-      });
-    } finally {
-      setFileIdBeingUpdated(null);
-    }
+    // Mutation optimiste gère la mise à jour UI instantanément
+    updateStatusMutation.mutate({
+      fileId: item.id,
+      disabled: newDisabledStatus,
+    });
   }, [updateStatusMutation]);
 
   // Fonction de confirmation de suppression
-  const handleConfirmDelete = useCallback(async () => {
+  const handleConfirmDelete = useCallback(() => {
     if (!fileToDelete) return;
     
-    await deleteMutation.mutateAsync({ fileId: fileToDelete.id });
-    setFileToDelete(null);
+    // Mutation optimiste gère la suppression UI instantanément
+    deleteMutation.mutate(
+      { fileId: fileToDelete.id },
+      {
+        onSuccess: () => {
+          setFileToDelete(null);
+        },
+        onError: () => {
+          // Le rollback est géré automatiquement par la mutation optimiste
+        },
+      }
+    );
   }, [fileToDelete, deleteMutation]);
 
   // Fonction d'annulation
@@ -107,10 +86,11 @@ export function MultimediaList({ tagId }: MultimediaListProps) {
     setFileToDelete(null);
   }, []);
 
-  const files = useMemo(
-    () => localFiles.length > 0 ? localFiles : (data?.success ? data.data : []),
-    [localFiles, data]
-  );
+  const files = useMemo(() => {
+    if (!data?.success || !data.data) return [];
+    // Trier par ordre pour s'assurer que la liste est dans le bon ordre
+    return [...data.data].sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [data]);
 
   // Mémoriser le message pour éviter qu'il devienne "undefined" quand fileToDelete devient null
   const deleteMessage = useMemo(() => {
@@ -141,8 +121,6 @@ export function MultimediaList({ tagId }: MultimediaListProps) {
         isRefetching={isRefetching}
         onDelete={handleDelete}
         onDisable={handleDisable}
-        isUpdatingStatus={updateStatusMutation.isPending}
-        fileIdBeingUpdated={fileIdBeingUpdated || undefined}
       />
       {fileToDelete && (
         <DeleteConfirmationSheet
