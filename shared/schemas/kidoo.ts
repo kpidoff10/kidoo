@@ -61,6 +61,18 @@ export const kidooSetupSchema = z.object({
 });
 
 /**
+ * Schéma de validation pour renommer un Kidoo
+ */
+export const renameKidooSchema = z.object({
+  name: z.string().min(1, 'Le nom ne peut pas être vide').max(100, 'Le nom est trop long'),
+});
+
+/**
+ * Type TypeScript dérivé du schéma de renommage
+ */
+export type RenameKidooInput = z.infer<typeof renameKidooSchema>;
+
+/**
  * Types TypeScript dérivés des schémas de setup
  */
 export type KidooSetupStep1Input = z.infer<typeof kidooSetupStep1Schema>;

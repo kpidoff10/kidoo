@@ -43,27 +43,38 @@ export type BottomSheetPropsWithoutRef = Omit<BottomSheetProps, 'ref'>;
 
 /**
  * Hook pour utiliser le BottomSheet
+ * @param id - Identifiant optionnel pour différencier plusieurs instances
  */
-export function useBottomSheet() {
+export function useBottomSheet(id?: string) {
   const bottomSheetRef = useRef<BottomSheetModalRef>(null);
+  const instanceId = useMemo(() => id || `bottom-sheet-${Math.random().toString(36).slice(2, 11)}`, [id]);
 
   const present = useCallback(() => {
-    bottomSheetRef.current?.present();
-  }, []);
+    if (bottomSheetRef.current) {
+      console.log(`[useBottomSheet] Présentation du sheet: ${instanceId}`);
+      bottomSheetRef.current.present();
+    } else {
+      console.warn(`[useBottomSheet] ⚠️ Ref non disponible pour: ${instanceId}`);
+    }
+  }, [instanceId]);
 
   const dismiss = useCallback(() => {
-    bottomSheetRef.current?.dismiss();
-  }, []);
+    if (bottomSheetRef.current) {
+      console.log(`[useBottomSheet] Fermeture du sheet: ${instanceId}`);
+      bottomSheetRef.current.dismiss();
+    }
+  }, [instanceId]);
 
   const close = useCallback(() => {
-    bottomSheetRef.current?.dismiss();
-  }, []);
+    dismiss();
+  }, [dismiss]);
 
   return {
     ref: bottomSheetRef,
     present,
     dismiss,
     close,
+    id: instanceId,
   };
 }
 

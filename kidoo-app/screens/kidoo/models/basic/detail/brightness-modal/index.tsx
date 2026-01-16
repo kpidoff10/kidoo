@@ -19,8 +19,11 @@ const brightnessToY = (value: number) => {
   return (1 - percentage) * SLIDER_HEIGHT; // Inversé car haut = 100%
 };
 
-export const BrightnessModal = React.forwardRef<BottomSheetModalRef>(
-  (_props, ref) => {
+interface BrightnessModalProps {
+  bottomSheetRef: React.RefObject<BottomSheetModalRef | null>;
+}
+
+export const BrightnessModal = ({ bottomSheetRef }: BrightnessModalProps) => {
     const { isConnected, getBrightness } = useBasicKidoo();
     const [brightness, setBrightness] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
@@ -66,7 +69,7 @@ export const BrightnessModal = React.forwardRef<BottomSheetModalRef>(
 
     return (
       <BottomSheet
-        ref={ref}
+        ref={bottomSheetRef}
         onOpen={handleOpen}
         onDismiss={() => {
           // Marquer le composant comme démonté pour éviter les mises à jour d'état
@@ -92,10 +95,7 @@ export const BrightnessModal = React.forwardRef<BottomSheetModalRef>(
         </View>
       </BottomSheet>
     );
-  }
-);
-
-BrightnessModal.displayName = 'BrightnessModal';
+};
 
 const styles = StyleSheet.create({
   container: {

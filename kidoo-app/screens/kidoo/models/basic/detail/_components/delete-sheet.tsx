@@ -2,14 +2,17 @@
  * Composant pour le sheet de confirmation de suppression d'un Kidoo
  */
 
-import { useState, forwardRef } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type BottomSheetModalRef } from '@/components/ui/bottom-sheet';
 import { useKidoo } from '@/contexts/KidooContext';
 import { DeleteConfirmationSheet } from '@/components/ui/delete-confirmation-sheet';
 
-export const DeleteSheet = forwardRef<BottomSheetModalRef>(
-  (_props, ref) => {
+interface DeleteSheetProps {
+  bottomSheetRef: React.RefObject<BottomSheetModalRef | null>;
+}
+
+export const DeleteSheet = ({ bottomSheetRef }: DeleteSheetProps) => {
     const { t } = useTranslation();
     const { deleteKidoo, kidoo } = useKidoo();
     const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -34,11 +37,12 @@ export const DeleteSheet = forwardRef<BottomSheetModalRef>(
 
     const handleCancel = () => {
       setDeleteError(null);
+      // Le sheet sera fermé automatiquement par DeleteConfirmationSheet
     };
 
     return (
       <DeleteConfirmationSheet
-        ref={ref}
+        ref={bottomSheetRef}
         title={t('kidoos.detail.delete.title', 'Supprimer le Kidoo')}
         message={t('kidoos.detail.delete.message', 'Êtes-vous sûr de vouloir supprimer "{{name}}" ?', {
           name: kidoo.name,
@@ -49,7 +53,4 @@ export const DeleteSheet = forwardRef<BottomSheetModalRef>(
         error={deleteError}
       />
     );
-  }
-);
-
-DeleteSheet.displayName = 'DeleteSheet';
+};

@@ -153,6 +153,11 @@ export const DeleteConfirmationSheet = React.forwardRef<ThemedTrueSheetRef, Dele
     onCancel();
   };
 
+  const handleCancel = () => {
+    setInternalError(null);
+    sheetRef.current?.dismiss();
+  };
+
   return (
     <ThemedTrueSheet
       ref={sheetRef}
@@ -233,7 +238,7 @@ export const DeleteConfirmationSheet = React.forwardRef<ThemedTrueSheetRef, Dele
         <Button
           label={finalCancelLabel}
           variant="outline"
-          onPress={handleDismiss}
+          onPress={handleCancel}
           disabled={isLoading}
           style={{ flex: 1 }}
         />

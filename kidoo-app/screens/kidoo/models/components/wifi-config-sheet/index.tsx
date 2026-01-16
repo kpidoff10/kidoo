@@ -31,13 +31,11 @@ const wifiConfigSchema = z.object({
 type WifiConfigFormData = z.infer<typeof wifiConfigSchema>;
 
 interface WifiConfigSheetProps {
-  ref: React.RefObject<BottomSheetModalRef>;
+  bottomSheetRef: React.RefObject<BottomSheetModalRef | null>;
   onSuccess?: () => void;
-  onDismiss?: () => void;
 }
 
-export const WifiConfigSheet = React.forwardRef<BottomSheetModalRef, Omit<WifiConfigSheetProps, 'ref'>>(
-  ({ onSuccess, onDismiss }, ref) => {
+export const WifiConfigSheet = ({ bottomSheetRef, onSuccess }: WifiConfigSheetProps) => {
     const { t } = useTranslation();
     const theme = useTheme();
     const { kidoo, isConnected, sendCommandAndWait } = useKidoo();
@@ -120,9 +118,7 @@ export const WifiConfigSheet = React.forwardRef<BottomSheetModalRef, Omit<WifiCo
         
         // Fermer la modale et appeler le callback de succès
         setTimeout(() => {
-          if (ref && 'current' in ref && ref.current) {
-            (ref.current as any).dismiss();
-          }
+          bottomSheetRef.current?.dismiss();
           onSuccess?.();
         }, 500);
       } catch (err) {
@@ -135,9 +131,7 @@ export const WifiConfigSheet = React.forwardRef<BottomSheetModalRef, Omit<WifiCo
 
     const handleCancel = () => {
       // Fermer la modale
-      if (ref && 'current' in ref && ref.current) {
-        (ref.current as any).dismiss();
-      }
+      bottomSheetRef.current?.dismiss();
     };
 
     const handleDismiss = () => {
@@ -150,12 +144,12 @@ export const WifiConfigSheet = React.forwardRef<BottomSheetModalRef, Omit<WifiCo
       clearErrors();
       // Réinitialiser le flag pour permettre le rechargement à la prochaine ouverture
       shouldLoadSSIDRef.current = true;
-      onDismiss?.();
+      bottomSheetRef.current?.dismiss();
     };
 
     return (
       <BottomSheet
-        ref={ref}
+        ref={bottomSheetRef}
         enablePanDownToClose={!isSubmitting && !success}
         enableHandlePanningGesture={!isSubmitting && !success}
         onDismiss={handleDismiss}
@@ -219,7 +213,4 @@ export const WifiConfigSheet = React.forwardRef<BottomSheetModalRef, Omit<WifiCo
         </ScrollView>
       </BottomSheet>
     );
-  }
-);
-
-WifiConfigSheet.displayName = 'WifiConfigSheet';
+};

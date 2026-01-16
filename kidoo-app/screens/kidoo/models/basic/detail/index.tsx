@@ -48,15 +48,15 @@ export function BasicDetailModal({ kidooId }: BasicDetailModalProps) {
             />
           </ThemedScrollView>
 
-          <RenameSheet ref={renameSheet.ref} />
+          <RenameSheet bottomSheetRef={renameSheet.ref} />
 
-          <BrightnessModal ref={brightnessSheet.ref} />
+          <BrightnessModal bottomSheetRef={brightnessSheet.ref} />
 
-          <SleepModal ref={sleepSheet.ref} />
+          <SleepModal bottomSheetRef={sleepSheet.ref} />
 
-          <WifiConfigSheet ref={wifiSheet.ref} />
+          <WifiConfigSheet bottomSheetRef={wifiSheet.ref} />
 
-          <DeleteSheet ref={deleteSheet.ref} />
+          <DeleteSheet bottomSheetRef={deleteSheet.ref} />
         </ThemedView>
       </BasicKidooProvider>
     </KidooProvider>

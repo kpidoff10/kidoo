@@ -19,8 +19,11 @@ const timeoutToY = (value: number) => {
   return (1 - percentage) * SLIDER_HEIGHT; // Inversé car haut = max
 };
 
-export const SleepModal = React.forwardRef<BottomSheetModalRef>(
-  (_props, ref) => {
+interface SleepModalProps {
+  bottomSheetRef: React.RefObject<BottomSheetModalRef | null>;
+}
+
+export const SleepModal = ({ bottomSheetRef }: SleepModalProps) => {
     const { isConnected, getSleepTimeout } = useBasicKidoo();
     const [isDragging, setIsDragging] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -63,7 +66,7 @@ export const SleepModal = React.forwardRef<BottomSheetModalRef>(
 
     return (
       <BottomSheet
-        ref={ref}
+        ref={bottomSheetRef}
         onOpen={handleOpen}
         onDismiss={() => {
           // Marquer le composant comme démonté pour éviter les mises à jour d'état
@@ -87,10 +90,7 @@ export const SleepModal = React.forwardRef<BottomSheetModalRef>(
         </View>
       </BottomSheet>
     );
-  }
-);
-
-SleepModal.displayName = 'SleepModal';
+};
 
 const styles = StyleSheet.create({
   container: {
