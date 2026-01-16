@@ -11,6 +11,7 @@
 #include "managers/ble_manager.h"
 #include "managers/sd_manager.h"
 #include "managers/nfc_manager.h"
+#include "managers/mqtt_manager.h"
 
 // Effects
 #include "effects/led_effects.h"
@@ -212,6 +213,9 @@ void loop() {
   // Mettre à jour l'état BLE
   updateBLEState();
   
+  // Mettre à jour MQTT (gère la connexion et la réception des messages)
+  updateMQTT();
+  
   // Mettre à jour le timer de sommeil
   StateManager::updateSleepTimer();
   
@@ -228,6 +232,21 @@ void loop() {
       Serial.println(getStationIP());
       Serial.print("[WIFI] SSID: ");
       Serial.println(getConnectedSSID());
+      
+      // Initialiser MQTT après la connexion WiFi
+      // Note: Le Kidoo ID doit être configuré via setKidooId() avant
+      // Pour l'instant, on utilise un ID par défaut ou on le configure via BLE
+      if (getKidooId().length() == 0) {
+        // TODO: Récupérer le Kidoo ID depuis la configuration SD ou le définir via BLE
+        // Pour l'instant, on utilise un ID par défaut basé sur l'adresse MAC
+        String defaultId = "kidoo-" + WiFi.macAddress();
+        defaultId.replace(":", "");
+        defaultId.toLowerCase();
+        setKidooId(defaultId);
+        Serial.print("[MQTT] Kidoo ID par défaut utilisé: ");
+        Serial.println(defaultId);
+      }
+      initMQTT();
     } else {
       Serial.println("[WIFI] Deconnecte du reseau domestique");
     }

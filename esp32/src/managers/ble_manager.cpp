@@ -40,16 +40,7 @@ class MyCallbacks: public BLECharacteristicCallbacks {
           bleBuffer += (char)rxValue[i];
         }
         lastBLEWriteTime = millis();
-        Serial.print("[BLE] Paquet recu (");
-        Serial.print(rxValue.length());
-        Serial.print(" bytes), buffer total: ");
-        Serial.print(bleBuffer.length());
-        Serial.print(" - Derniers chars: ");
-        if (bleBuffer.length() > 20) {
-          Serial.println(bleBuffer.substring(bleBuffer.length() - 20));
-        } else {
-          Serial.println(bleBuffer);
-        }
+        // Log supprimé pour éviter la confusion : on log seulement la commande complète dans processBLECommands()
       }
     }
 };

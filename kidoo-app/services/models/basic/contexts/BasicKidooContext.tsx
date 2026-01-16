@@ -28,6 +28,7 @@ import {
   type EffectCommand,
   type SleepTimeoutCommand,
   type SleepConfigCommand,
+  type BrightnessGetResponse,
 } from '@/types/bluetooth';
 import type { BrightnessOptions, ColorOptions, EffectOptions, SleepModeOptions, SleepTimeoutOptions } from '@/services/models/basic/command';
 
@@ -96,16 +97,17 @@ export function BasicKidooProvider({ children }: BasicKidooProviderProps) {
       throw new Error('Le Kidoo n\'est pas connecté');
     }
 
-    const response = await bleManager.getBrightness({
-      timeout: 10000, // Augmenter le timeout à 10 secondes
-      timeoutErrorMessage: 'Timeout: aucune réponse reçue pour BRIGHTNESS_GET',
-    });
+    const { BasicBrightnessAction } = await import('@/services/models/basic/command/basic-command-brightness');
+    const result = await BasicBrightnessAction.getBrightness(10000);
 
-    if (response.status === 'success' && typeof response.brightness === 'number') {
-      return response.brightness;
+    if (result.success && result.data) {
+      const response = result.data as BrightnessGetResponse;
+      if (response.status === 'success' && typeof response.brightness === 'number') {
+        return response.brightness;
+      }
     }
 
-    throw new Error(response.error || 'Erreur lors de la récupération de la luminosité');
+    throw new Error(result.error || 'Erreur lors de la récupération de la luminosité');
   }, [isConnected]);
 
   // Définir une couleur RGB

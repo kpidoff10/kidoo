@@ -428,9 +428,16 @@ export function KidooProvider({ kidooId, children, autoConnect = true }: KidooPr
 
       setIsSendingCommand(true);
       try {
-        const response = await bleManager.getSystemInfo(options);
-        setBluetoothError(null);
-        return response;
+        const { CommonSystemAction } = await import('@/services/models/common/command/common-command-system');
+        const result = await CommonSystemAction.getSystemInfo(options?.timeout || 30000);
+        
+        if (result.success && result.data) {
+          const response = result.data as SystemInfoResponse;
+          setBluetoothError(null);
+          return response;
+        }
+        
+        throw new Error(result.error || 'Erreur lors de la récupération des informations système');
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la récupération des informations système';
         setBluetoothError(errorMessage);
@@ -524,6 +531,7 @@ export function KidooProvider({ kidooId, children, autoConnect = true }: KidooPr
   );
 
   // Fonction pour obtenir les informations de stockage
+  // Utilise BasicStorageAction qui est disponible via le modèle Basic
   const getStorage = useCallback(
     async (options?: {
       timeout?: number;
@@ -537,9 +545,17 @@ export function KidooProvider({ kidooId, children, autoConnect = true }: KidooPr
 
       setIsSendingCommand(true);
       try {
-        const response = await bleManager.getStorage(options);
-        setBluetoothError(null);
-        return response;
+        // Importer dynamiquement pour éviter les dépendances circulaires
+        const { BasicStorageAction } = await import('@/services/models/basic/command/basic-command-storage');
+        const result = await BasicStorageAction.getStorage();
+        
+        if (result.success && result.data) {
+          const response = result.data as StorageGetResponse;
+          setBluetoothError(null);
+          return response;
+        }
+        
+        throw new Error(result.error || 'Erreur lors de la récupération des informations de stockage');
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la récupération des informations de stockage';
         setBluetoothError(errorMessage);

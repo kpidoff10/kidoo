@@ -9,10 +9,29 @@ import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 
 interface SleepHeaderProps {
+  sleepTimeout?: number;
   isLoading?: boolean;
 }
 
+// Fonction pour formater le timeout en texte lisible
+const formatTimeout = (timeout: number): string => {
+  if (timeout < 1000) {
+    return `${timeout}ms`;
+  }
+  const seconds = Math.floor(timeout / 1000);
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (remainingSeconds === 0) {
+    return `${minutes}min`;
+  }
+  return `${minutes}min ${remainingSeconds}s`;
+};
+
 export function SleepHeader({
+  sleepTimeout,
   isLoading = false,
 }: SleepHeaderProps) {
   const { t } = useTranslation();
@@ -27,11 +46,15 @@ export function SleepHeader({
 
       {/* Valeur actuelle */}
       <View style={styles.valueContainer}>
-        {isLoading && (
+        {isLoading ? (
           <ThemedText style={[styles.value, { fontSize: theme.typography.fontSize.xxxl, opacity: 0.5 }]}>
             ...
           </ThemedText>
-        )}
+        ) : sleepTimeout !== undefined ? (
+          <ThemedText style={[styles.value, { fontSize: theme.typography.fontSize.xxxl }]}>
+            {formatTimeout(sleepTimeout)}
+          </ThemedText>
+        ) : null}
       </View>
     </>
   );

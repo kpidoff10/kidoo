@@ -3,10 +3,10 @@
  * Jauge verticale similaire au réglage de la luminosité
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { BottomSheet, type BottomSheetModalRef } from '@/components/ui/bottom-sheet';
-import { useBasicKidoo } from '@/services/models/basic/contexts/BasicKidooContext';
+import { useBasicGetSleepTimeout } from '@/services/models/basic/hooks/use-basic-sleep-timeout';
 import { SleepHeader, SleepSlider } from './components';
 
 const MIN_TIMEOUT = 5000; // Minimum 5 secondes
@@ -24,72 +24,53 @@ interface SleepModalProps {
 }
 
 export const SleepModal = ({ bottomSheetRef }: SleepModalProps) => {
-    const { isConnected, getSleepTimeout } = useBasicKidoo();
-    const [isDragging, setIsDragging] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const panY = useRef(new Animated.Value(0)).current;
-    const shouldLoadTimeout = useRef(true);
+  const { data: sleepTimeoutData, isLoading, refetch } = useBasicGetSleepTimeout();
+  const [sleepTimeout, setSleepTimeout] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const panY = useRef(new Animated.Value(0)).current;
 
-    // Fonction pour charger le timeout actuel depuis l'ESP32
-    const loadCurrentTimeout = useCallback(() => {
-      if (!isConnected) {
-        console.log('[SleepModal] Kidoo non connecté, utilisation de la valeur par défaut');
-        return;
-      }
+  // Mettre à jour le timeout et la position du slider quand les données changent
+  useEffect(() => {
+    if (sleepTimeoutData?.sleepTimeout !== undefined) {
+      setSleepTimeout(sleepTimeoutData.sleepTimeout);
+      const initialY = timeoutToY(sleepTimeoutData.sleepTimeout);
+      panY.setValue(initialY);
+    }
+  }, [sleepTimeoutData, panY]);
 
-      setIsLoading(true);
-      getSleepTimeout()
-        .then((currentTimeout) => {
-          // Mettre à jour la position du curseur
-          const initialY = timeoutToY(currentTimeout);
+  // Fonction appelée quand la modale s'ouvre
+  const handleOpen = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
+  return (
+    <BottomSheet
+      ref={bottomSheetRef}
+      onOpen={handleOpen}
+      onDismiss={() => {
+        // Réinitialiser la position du slider quand la modale se ferme
+        if (sleepTimeoutData?.sleepTimeout !== undefined) {
+          const initialY = timeoutToY(sleepTimeoutData.sleepTimeout);
           panY.setValue(initialY);
-        
-        })
-        .catch((error) => {
-            console.error('[SleepModal] Erreur lors du chargement du timeout:', error);
-        })
-        .finally(() => {
-          // Ne mettre à jour l'état que si le composant est toujours monté
-        
-          setIsLoading(false);
-      
-        });
-    }, [isConnected, getSleepTimeout, panY]);
+        }
+      }}
+      enablePanDownToClose={!isDragging}
+      enableHandlePanningGesture={!isDragging}
+    >
+      <View style={styles.container}>
+        <SleepHeader sleepTimeout={sleepTimeout} isLoading={isLoading} />
 
-    // Fonction appelée quand la modale s'ouvre
-    const handleOpen = useCallback(() => {
-      if (isConnected && shouldLoadTimeout.current) {
-        loadCurrentTimeout();
-        shouldLoadTimeout.current = false;
-      }
-    }, [isConnected, loadCurrentTimeout]);
-
-    return (
-      <BottomSheet
-        ref={bottomSheetRef}
-        onOpen={handleOpen}
-        onDismiss={() => {
-          // Marquer le composant comme démonté pour éviter les mises à jour d'état
-        
-          // Réinitialiser le flag de chargement quand la modale se ferme
-          setIsLoading(true);
-          shouldLoadTimeout.current = true;
-        }}
-        enablePanDownToClose={!isDragging}
-        enableHandlePanningGesture={!isDragging}
-      >
-        <View style={styles.container}>
-          <SleepHeader isLoading={isLoading} />
-
-          <SleepSlider
-            onDraggingChange={setIsDragging}
-            panY={panY}
-            isDragging={isDragging}
-            isLoading={isLoading}
-          />
-        </View>
-      </BottomSheet>
-    );
+        <SleepSlider
+          sleepTimeout={sleepTimeout}
+          onSleepTimeoutChange={setSleepTimeout}
+          onDraggingChange={setIsDragging}
+          panY={panY}
+          isDragging={isDragging}
+          isLoading={isLoading}
+        />
+      </View>
+    </BottomSheet>
+  );
 };
 
 const styles = StyleSheet.create({

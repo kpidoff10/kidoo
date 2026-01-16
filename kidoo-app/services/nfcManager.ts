@@ -276,10 +276,14 @@ class NFCManagerClass {
       console.log('[NFCManager] Écriture du tag NFC avec id:', tagId);
       
       // Écrire le tag NFC
-      const response = await bleManager.writeNFCTag(blockNumber, tagIdBytes, {
-        timeout: 15000,
-        timeoutErrorMessage: 'Timeout: Aucun tag NFC détecté après 15 secondes. Approchez le tag du Kidoo et réessayez.',
-      });
+      const { CommonNFCAction } = await import('@/services/models/common/command/common-command-nfc');
+      const result = await CommonNFCAction.writeNFCTag(blockNumber, tagIdBytes, 15000);
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Erreur lors de l\'écriture du tag NFC');
+      }
+      
+      const response = result.data;
 
       // Traiter la réponse
       const { uid } = response;
@@ -339,10 +343,14 @@ class NFCManagerClass {
         console.log('[NFCManager] Lecture du tag NFC');
         
         // Lire le tag NFC avec un timeout de 15 secondes (comme pour l'écriture)
-        const response = await bleManager.readNFCTag(blockNumber, {
-          timeout: 15000,
-          timeoutErrorMessage: 'Timeout: Aucun tag NFC détecté après 15 secondes. Approchez le tag du Kidoo et réessayez.',
-        });
+        const { CommonNFCAction } = await import('@/services/models/common/command/common-command-nfc');
+        const result = await CommonNFCAction.readNFCTag(blockNumber, 15000);
+        
+        if (!result.success || !result.data) {
+          throw new Error(result.error || 'Erreur lors de la lecture du tag NFC');
+        }
+        
+        const response = result.data;
 
         // Traiter la réponse
         const { uid, data } = response;

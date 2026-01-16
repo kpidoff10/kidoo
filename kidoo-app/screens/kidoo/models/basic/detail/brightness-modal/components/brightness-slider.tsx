@@ -5,7 +5,7 @@
 
 import { Animated } from 'react-native';
 import { VerticalSlider } from '@/components/ui/vertical-slider';
-import { useBasicKidoo } from '@/services/models/basic/contexts/BasicKidooContext';
+import { useBasicSetBrightness } from '@/services/models/basic/hooks/use-basic-brightness';
 
 const MIN_BRIGHTNESS = 10; // Luminosité minimale (10%)
 const MAX_BRIGHTNESS = 100; // Luminosité maximale (100%)
@@ -28,13 +28,17 @@ export function BrightnessSlider({
   isDragging = false,
   isLoading = false,
 }: BrightnessSliderProps) {
-  const { setBrightness } = useBasicKidoo();
+  const { mutate: setBrightness } = useBasicSetBrightness();
 
   const handleValueCommit = (value: number) => {
-    setBrightness({ percent: value })
-      .catch((error) => {
-        console.error('[BrightnessSlider] Erreur lors de la définition de la luminosité:', error);
-      });
+    setBrightness(
+      { percent: value },
+      {
+        onError: (error) => {
+          console.error('[BrightnessSlider] Erreur lors de la définition de la luminosité:', error);
+        },
+      }
+    );
   };
 
   return (

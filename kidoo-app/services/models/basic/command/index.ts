@@ -10,7 +10,6 @@ import { BasicColorAction } from './basic-command-color';
 import { BasicEffectAction } from './basic-command-effects';
 import { BasicSleepModeAction } from './basic-command-sleep-mode';
 import { BasicStorageAction } from './basic-command-storage';
-import { BasicTagCommand } from './basic-command-tag';
 import { CommonKidooActions } from '../../common/command';
 
 /**
@@ -21,6 +20,7 @@ import { CommonKidooActions } from '../../common/command';
 export class BasicKidooActions extends CommonKidooActions {
   // Actions pour la luminosité
   static setBrightness = BasicBrightnessAction.setBrightness;
+  static getBrightness = BasicBrightnessAction.getBrightness;
 
   // Actions pour les effets LED
   static setEffect = BasicEffectAction.setEffect;
@@ -35,9 +35,6 @@ export class BasicKidooActions extends CommonKidooActions {
 
   // Actions pour la couleur
   static setColor = BasicColorAction.setColor;
-
-  // Actions pour les tags NFC
-  static tagAddSuccess = BasicTagCommand.tagAddSuccess;
 }
 
 // Réexporter les classes d'actions individuelles pour un accès direct si nécessaire
@@ -46,7 +43,6 @@ export { BasicColorAction } from './basic-command-color';
 export { BasicEffectAction } from './basic-command-effects';
 export { BasicSleepModeAction } from './basic-command-sleep-mode';
 export { BasicStorageAction } from './basic-command-storage';
-export { BasicTagCommand } from './basic-command-tag';
 
 // Réexporter les types pour faciliter les imports
 export type {
