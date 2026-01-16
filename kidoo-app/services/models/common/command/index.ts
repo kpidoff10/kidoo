@@ -5,12 +5,10 @@
  * - Vérifier automatiquement la connexion avant chaque commande
  * - Standardiser le format de retour (KidooActionResult) pour toutes les actions
  * - Convertir les exceptions en format d'erreur standardisé
- * 
- * Note: Les commandes globales (getSystemInfo, getBrightness, reset) sont disponibles
- * directement via bleManager et ne nécessitent pas cette couche d'abstraction.
  */
 
 import { CommonBaseActions } from './common-command';
+import { CommonSystemAction } from './common-command-system';
 
 /**
  * Classe de base pour les actions communes
@@ -27,7 +25,11 @@ export class CommonKidooActions extends CommonBaseActions {
       command: 'TAG_ADD_SUCCESS',
     });
   }
+
+  // Actions système communes
+  static getSystemInfo = CommonSystemAction.getSystemInfo;
 }
 
 // Réexporter les classes d'actions individuelles pour un accès direct si nécessaire
 export { CommonBaseActions } from './common-command';
+export { CommonSystemAction } from './common-command-system';

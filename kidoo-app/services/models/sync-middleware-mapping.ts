@@ -28,13 +28,5 @@ export const SYNC_MAPPINGS: Record<string, SyncMapping> = {
   // ...otherModelMappings,
 };
 
-/**
- * Messages qui doivent être synchronisés dans la table Kidoo principale (pas KidooConfigBasic)
- * Ces messages mettent à jour directement les champs du Kidoo (firmwareVersion, model, etc.)
- */
-export const KIDOO_SYNC_MESSAGES = new Set<string>([
-  'VERSION',
-]);
-
 // Réexporter les types
 export type { SyncMapping, SyncMappingSingle, SyncMappingMultiple } from './types';

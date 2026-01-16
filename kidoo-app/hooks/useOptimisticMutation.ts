@@ -3,8 +3,8 @@
  * Simplifie la création de mutations optimistes avec rollback automatique
  */
 
-import { useMutation, useQueryClient, type UseMutationOptions, type UseMutationResult } from '@tanstack/react-query';
-import type { QueryKey } from '@tanstack/react-query';
+import { useMutation, useQueryClient, type UseMutationOptions, type UseMutationResult , QueryKey } from '@tanstack/react-query';
+
 
 /**
  * Options pour une mutation optimiste
@@ -29,9 +29,9 @@ export interface OptimisticMutationOptions<
    * Fonction pour mettre à jour optimistement le cache
    * @param variables - Variables de la mutation
    * @param previousData - Données précédentes du cache
-   * @returns Nouvelles données à mettre dans le cache
+   * @returns Nouvelles données à mettre dans le cache (peut être async)
    */
-  optimisticUpdate: (variables: TVariables, previousData: unknown) => unknown;
+  optimisticUpdate: (variables: TVariables, previousData: unknown) => unknown | Promise<unknown>;
   
   /**
    * Clés de requête supplémentaires à annuler avant la mutation
@@ -44,6 +44,12 @@ export interface OptimisticMutationOptions<
    * Utile pour invalider d'autres queries
    */
   onSettled?: (data: TData | undefined, error: TError | null, variables: TVariables) => void;
+  
+  /**
+   * Désactiver l'invalidation automatique des queries après la mutation
+   * @default false - Invalide automatiquement par défaut
+   */
+  skipInvalidation?: boolean;
   
   /**
    * Options supplémentaires de useMutation
@@ -80,6 +86,7 @@ export function useOptimisticMutation<
   optimisticUpdate,
   cancelQueryKeys = [queryKey],
   onSettled,
+  skipInvalidation = false,
   mutationOptions,
 }: OptimisticMutationOptions<TData, TError, TVariables, TContext>): UseMutationResult<TData, TError, TVariables, TContext> {
   const queryClient = useQueryClient();
@@ -96,8 +103,8 @@ export function useOptimisticMutation<
       // Sauvegarder l'état précédent pour rollback
       const previousData = queryClient.getQueryData(queryKey);
 
-      // Mise à jour optimiste
-      const newData = optimisticUpdate(variables, previousData);
+      // Mise à jour optimiste (peut être async)
+      const newData = await optimisticUpdate(variables, previousData);
       if (newData !== undefined) {
         queryClient.setQueryData(queryKey, newData);
       }
@@ -115,8 +122,10 @@ export function useOptimisticMutation<
       // Appel de la fonction onSettled personnalisée si fournie
       onSettled?.(data, error, variables);
       
-      // Invalidation par défaut pour re-fetch
-      queryClient.invalidateQueries({ queryKey });
+      // Invalidation par défaut pour re-fetch (sauf si désactivée)
+      if (!skipInvalidation) {
+        queryClient.invalidateQueries({ queryKey });
+      }
     },
   });
 }

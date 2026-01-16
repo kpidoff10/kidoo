@@ -19,13 +19,11 @@
  */
 
 import { bleManager } from './bleManager';
-import { updateKidoo , kidooKeys } from '@/services/models/common/api';
-
+import { updateKidoo } from '@/services/models/common/api';
 import { updateKidooConfigBasic } from '@/services/models/basic/api';
 import type { BluetoothResponse } from '@/types/bluetooth';
 import type { BLEManagerCallbacks } from './bleManager';
-import { SYNC_MAPPINGS, KIDOO_SYNC_MESSAGES, type SyncMappingSingle } from '../models/sync-middleware-mapping';
-import { queryClient } from '@/providers/QueryProvider';
+import { SYNC_MAPPINGS, type SyncMappingSingle } from '../models/sync-middleware-mapping';
 
 export interface ResponseSyncMiddlewareOptions {
   /** ID du Kidoo à synchroniser */
@@ -165,8 +163,12 @@ export function setupResponseSyncMiddleware(
     try {
       console.log('[ResponseSyncMiddleware] Synchronisation avec le serveur:', response.message, syncData);
       
-      // Déterminer si on synchronise dans Kidoo ou KidooConfigBasic
-      const isKidooSync = KIDOO_SYNC_MESSAGES.has(response.message);
+      // Déterminer automatiquement quelle API utiliser en fonction des champs dans syncData
+      // Les champs de Kidoo (firmwareVersion, model) → updateKidoo
+      // Les autres champs (brightness, sleepTimeout, storage*, etc.) → updateKidooConfigBasic
+      const isKidooSync = Object.keys(syncData).some(key => 
+        key === 'firmwareVersion' || key === 'model'
+      );
       
       // Synchroniser avec le serveur
       const result = isKidooSync
@@ -177,17 +179,9 @@ export function setupResponseSyncMiddleware(
         // Marquer comme synchronisé
         markAsSynced(response);
         
-        // Invalider le cache du Kidoo
-        queryClient.invalidateQueries({
-          queryKey: kidooKeys.detail(kidooId),
-        });
-        
-        // Si c'est une synchronisation de stockage, invalider aussi le cache storage
-        if (response.message === 'STORAGE_GET') {
-          queryClient.invalidateQueries({
-            queryKey: ['kidoo', kidooId, 'storage'],
-          });
-        }
+        // Le middleware synchronise uniquement avec le serveur
+        // Il ne touche pas au cache React Query pour rester générique et éviter les boucles infinies
+        // Les composants récupéreront les nouvelles données lors de leur prochain fetch naturel
         
         // Appeler le callback de succès si défini
         if (onSyncSuccess) {

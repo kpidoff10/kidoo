@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-helpers';
+import { publishKidooConfigUpdate } from '@/lib/mqtt';
 import { z } from 'zod';
 
 // Schéma de validation pour la mise à jour de la config Basic
@@ -164,6 +165,18 @@ export async function PATCH(
       updatedAt: configBasic.updatedAt.toISOString(),
       storageLastUpdated: configBasic.storageLastUpdated?.toISOString() || null,
     };
+
+    // Publier la mise à jour sur MQTT pour notifier l'ESP32 (si brightness ou sleepTimeout ont changé)
+    // On fait ça en arrière-plan pour ne pas bloquer la réponse HTTP
+    if (data.brightness !== undefined || data.sleepTimeout !== undefined) {
+      publishKidooConfigUpdate(id, {
+        brightness: configBasic.brightness,
+        sleepTimeout: configBasic.sleepTimeout,
+      }).catch((error) => {
+        // Logger l'erreur mais ne pas faire échouer la requête HTTP
+        console.error('[MQTT] Erreur lors de la publication MQTT (non bloquante):', error);
+      });
+    }
 
     return NextResponse.json({
       success: true,
