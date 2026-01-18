@@ -5,7 +5,9 @@
 #include "../sd/sd_manager.h"
 #include "../ble/ble_manager.h"
 #include "../wifi/wifi_manager.h"
+#include "../pubnub/pubnub_manager.h"
 #include "../../../model_serial_commands.h"
+#include "../../../model_pubnub_routes.h"
 #include <Arduino.h>
 
 // Variables statiques
@@ -98,6 +100,16 @@ void SerialCommands::processCommand(const String& command) {
     cmdWiFiConnect();
   } else if (cmd == "wifi-disconnect") {
     cmdWiFiDisconnect();
+  } else if (cmd == "pubnub" || cmd == "pubnub-status") {
+    cmdPubNub();
+  } else if (cmd == "pubnub-connect") {
+    cmdPubNubConnect();
+  } else if (cmd == "pubnub-disconnect") {
+    cmdPubNubDisconnect();
+  } else if (cmd == "pubnub-publish" || cmd == "pubnub-pub") {
+    cmdPubNubPublish(args);
+  } else if (cmd == "pubnub-routes" || cmd == "routes") {
+    cmdPubNubRoutes();
   } else {
     // Essayer les commandes spécifiques au modèle
     if (!ModelSerialCommands::processCommand(command)) {
@@ -126,6 +138,11 @@ void SerialCommands::printHelp() {
   Serial.println("  wifi-set <ssid> [password] - Configurer le WiFi");
   Serial.println("  wifi-connect     - Se connecter au WiFi configure");
   Serial.println("  wifi-disconnect  - Se deconnecter du WiFi");
+  Serial.println("  pubnub           - Afficher l'etat PubNub");
+  Serial.println("  pubnub-connect   - Se connecter a PubNub");
+  Serial.println("  pubnub-disconnect - Se deconnecter de PubNub");
+  Serial.println("  pubnub-pub <msg> - Publier un message");
+  Serial.println("  pubnub-routes    - Afficher les routes PubNub disponibles");
   Serial.println("========================================");
   
   // Afficher l'aide des commandes spécifiques au modèle
@@ -442,5 +459,91 @@ void SerialCommands::cmdWiFiDisconnect() {
   
   WiFiManager::disconnect();
   Serial.println("[WIFI] Deconnecte");
+#endif
+}
+
+void SerialCommands::cmdPubNub() {
+  PubNubManager::printInfo();
+}
+
+void SerialCommands::cmdPubNubConnect() {
+#ifndef HAS_PUBNUB
+  Serial.println("[PUBNUB] PubNub non disponible sur ce modele");
+  return;
+#else
+  if (!PubNubManager::isInitialized()) {
+    // Tenter d'initialiser
+    if (!PubNubManager::init()) {
+      Serial.println("[PUBNUB] Echec initialisation");
+      return;
+    }
+  }
+  
+  // Vérifier si déjà connecté
+  if (PubNubManager::isConnected()) {
+    Serial.println("[PUBNUB] Deja connecte");
+    return;
+  }
+  
+  // Se connecter
+  Serial.println("[PUBNUB] Tentative de connexion...");
+  if (PubNubManager::connect()) {
+    Serial.println("[PUBNUB] Connexion reussie!");
+  } else {
+    Serial.println("[PUBNUB] Echec de connexion");
+  }
+#endif
+}
+
+void SerialCommands::cmdPubNubDisconnect() {
+#ifndef HAS_PUBNUB
+  Serial.println("[PUBNUB] PubNub non disponible sur ce modele");
+  return;
+#else
+  if (!PubNubManager::isConnected()) {
+    Serial.println("[PUBNUB] Pas connecte");
+    return;
+  }
+  
+  PubNubManager::disconnect();
+  Serial.println("[PUBNUB] Deconnecte");
+#endif
+}
+
+void SerialCommands::cmdPubNubPublish(const String& args) {
+#ifndef HAS_PUBNUB
+  Serial.println("[PUBNUB] PubNub non disponible sur ce modele");
+  return;
+#else
+  if (!PubNubManager::isConnected()) {
+    Serial.println("[PUBNUB] Non connecte");
+    return;
+  }
+  
+  if (args.length() == 0) {
+    // Publier le statut par défaut
+    if (PubNubManager::publishStatus()) {
+      Serial.println("[PUBNUB] Statut publie");
+    } else {
+      Serial.println("[PUBNUB] Echec publication");
+    }
+  } else {
+    // Publier le message
+    if (PubNubManager::publish(args.c_str())) {
+      Serial.print("[PUBNUB] Message publie: ");
+      Serial.println(args);
+    } else {
+      Serial.println("[PUBNUB] Echec publication");
+    }
+  }
+#endif
+}
+
+void SerialCommands::cmdPubNubRoutes() {
+#ifndef HAS_PUBNUB
+  Serial.println("[PUBNUB] PubNub non disponible sur ce modele");
+  return;
+#else
+  ModelPubNubRoutes::printRoutes();
 #endif
 }

@@ -29,6 +29,7 @@ struct SystemStatus {
   InitStatus nfc;      // Gestionnaire NFC
   InitStatus ble;      // Gestionnaire BLE
   InitStatus wifi;     // Gestionnaire WiFi
+  InitStatus pubnub;   // Gestionnaire PubNub
   // Ajouter d'autres composants ici
   
   bool isFullyInitialized() const {
@@ -74,6 +75,7 @@ private:
   static bool initNFC();
   static bool initBLE();
   static bool initWiFi();
+  static bool initPubNub();
   // Ajouter d'autres méthodes d'initialisation ici
   
   // Variables statiques

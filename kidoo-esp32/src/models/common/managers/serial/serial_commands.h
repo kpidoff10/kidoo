@@ -48,6 +48,11 @@ private:
   static void cmdWiFiSet(const String& args);
   static void cmdWiFiConnect();
   static void cmdWiFiDisconnect();
+  static void cmdPubNub();
+  static void cmdPubNubConnect();
+  static void cmdPubNubDisconnect();
+  static void cmdPubNubPublish(const String& args);
+  static void cmdPubNubRoutes();
   
   static bool initialized;
   static String inputBuffer;

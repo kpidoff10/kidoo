@@ -100,8 +100,8 @@ private:
   static WiFiConnectionStatus connectionStatus;
   static char currentSSID[64];
   
-  // Timeout de connexion par défaut (10 secondes)
-  static const uint32_t DEFAULT_CONNECT_TIMEOUT_MS = 10000;
+  // Timeout de connexion par défaut (15 secondes)
+  static const uint32_t DEFAULT_CONNECT_TIMEOUT_MS = 15000;
 };
 
 #endif // WIFI_MANAGER_H

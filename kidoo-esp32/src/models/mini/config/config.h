@@ -46,5 +46,6 @@
 #define HAS_SD_CARD true
 #define HAS_WIFI true
 #define HAS_BLE true
+#define HAS_PUBNUB true
 
 #endif // MODEL_MINI_CONFIG_H

@@ -17,7 +17,7 @@ struct SDConfig {
   char device_name[32];    // Nom du dispositif
   uint8_t led_brightness;   // Luminosité LED (0-255)
   uint32_t sleep_timeout_ms; // Timeout pour le sleep mode (0 = désactivé)
-  // Ajouter d'autres champs de configuration ici
+  // Note: MQTT est configuré dans default_config.h (pas sur SD)
 };
 
 class SDManager {

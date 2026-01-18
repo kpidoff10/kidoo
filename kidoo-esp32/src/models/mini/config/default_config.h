@@ -24,4 +24,15 @@
 // Luminosité LED par défaut (0-255) - 50% = 128
 #define DEFAULT_LED_BRIGHTNESS 128
 
+// ============================================
+// Configuration PubNub - Mini
+// ============================================
+
+// Clés PubNub (créer un compte gratuit sur https://www.pubnub.com/)
+// Subscribe Key (obligatoire pour recevoir des messages)
+#define DEFAULT_PUBNUB_SUBSCRIBE_KEY ""
+
+// Publish Key (obligatoire pour envoyer des messages)
+#define DEFAULT_PUBNUB_PUBLISH_KEY ""
+
 #endif // MODEL_MINI_DEFAULT_CONFIG_H

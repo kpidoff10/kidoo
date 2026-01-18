@@ -60,5 +60,6 @@
 #define HAS_WIFI true
 #define HAS_BLE true
 #define HAS_NFC true
+#define HAS_PUBNUB true
 
 #endif // MODEL_BASIC_CONFIG_H
