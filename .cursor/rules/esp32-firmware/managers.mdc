@@ -1,0 +1,221 @@
+---
+description: "Règles pour les Managers ESP32. Structure des managers communs, conventions de nommage, et bonnes pratiques pour l'initialisation et l'utilisation."
+alwaysApply: false
+globs:
+  - kidoo-esp32/src/models/common/managers/**/*
+---
+
+# Règles des Managers ESP32
+
+## ⚠️ IMPORTANT : Avant de créer un nouveau composant
+
+**TOUJOURS demander à l'utilisateur** si le nouveau composant/manager doit être :
+- **Common** (`common/`) : Disponible pour tous les modèles (Basic, Mini, etc.)
+- **Model-specific** (`{model}/`) : Uniquement pour un modèle particulier (ex: Basic)
+
+**NE PAS créer directement** sans avoir clarifié cette information avec l'utilisateur.
+
+## Architecture des Managers
+
+Tous les managers sont dans `src/models/common/managers/` et utilisent des **classes statiques** :
+
+```cpp
+// led_manager.h
+class LEDManager {
+public:
+  // Méthodes publiques statiques
+  static bool init();
+  static bool isAvailable();
+  static uint8_t getCurrentBrightness();
+  
+private:
+  // Variables statiques membres
+  static bool initialized;
+  static uint8_t currentBrightness;
+  // ...
+};
+```
+
+## Structure d'un Manager
+
+### Header (`.h`)
+
+```cpp
+#ifndef LED_MANAGER_H
+#define LED_MANAGER_H
+
+#include <Arduino.h>
+#include "../../../model_config.h"
+
+/**
+ * Description du manager
+ */
+class LEDManager {
+public:
+  // Initialisation
+  static bool init();
+  static bool isInitialized();
+  static bool isAvailable();
+  
+  // Méthodes publiques
+  static bool setBrightness(uint8_t brightness);
+  
+private:
+  // Variables statiques membres
+  static bool initialized;
+  static bool available;
+  
+  // Méthodes privées
+  static void privateMethod();
+};
+
+#endif // LED_MANAGER_H
+```
+
+### Implémentation (`.cpp`)
+
+```cpp
+#include "led_manager.h"
+#include "../init/init_manager.h"
+#include "../../../model_config.h"
+
+// Initialisation des variables statiques
+bool LEDManager::initialized = false;
+bool LEDManager::available = false;
+
+bool LEDManager::init() {
+  if (initialized) {
+    return available;
+  }
+  
+  initialized = true;
+  
+  // Initialisation...
+  available = true;
+  
+  return available;
+}
+
+bool LEDManager::isAvailable() {
+  return initialized && available;
+}
+```
+
+## Conventions
+
+### Initialisation
+
+- **Toujours vérifier `initialized`** dans `init()` pour éviter la double initialisation
+- **Retourner `bool`** : `true` si succès, `false` si échec
+- **Idempotent** : `init()` peut être appelé plusieurs fois sans problème
+
+```cpp
+bool LEDManager::init() {
+  if (initialized) {
+    return available;  // Retourner l'état actuel si déjà initialisé
+  }
+  
+  initialized = true;
+  // ...
+}
+```
+
+### Disponibilité
+
+- **`isAvailable()`** : Vérifie que le manager est initialisé ET opérationnel
+- **`isInitialized()`** : Vérifie seulement l'initialisation (peut être true même si non opérationnel)
+
+### Accès à la configuration
+
+Les managers récupèrent la configuration depuis `InitManager` :
+
+```cpp
+#include "../init/init_manager.h"
+
+bool LEDManager::init() {
+  const SDConfig& config = InitManager::getConfig();
+  currentBrightness = config.led_brightness;
+  // ...
+}
+```
+
+## Thread LED (spécifique)
+
+LEDManager utilise un **thread FreeRTOS séparé** :
+
+```cpp
+void LEDManager::ledTask(void* parameter) {
+  while (true) {
+    // Traiter les commandes de la queue
+    // Mettre à jour les effets animés
+    // Gérer le sleep mode
+    FastLED.show();
+    vTaskDelay(pdMS_TO_TICKS(1));
+  }
+}
+```
+
+**Règle** : Le thread LED ne doit JAMAIS s'arrêter, même en cas d'erreur.
+
+## Sleep Mode (LEDManager)
+
+Gestion du sleep mode dans LEDManager :
+
+- **Timeout configuré** : Via `config.sleep_timeout_ms` (0 = désactivé)
+- **Minimum** : 5000 ms (5 secondes) si activé
+- **Animation fade** : Réduit la luminosité globale de `currentBrightness` à 0
+- **Réveil** : Via `wakeUp()` qui remet la luminosité à `currentBrightness`
+
+## Logging
+
+Utiliser `LogManager` pour les erreurs (écrit aussi sur SD) :
+
+```cpp
+#include "../log/log_manager.h"
+
+LogManager::error("Echec initialisation NFC: %s", errorMessage);
+LogManager::warning("NFC non operationnel");
+LogManager::info("LED initialise avec %d LEDs", NUM_LEDS);
+```
+
+## Managers disponibles
+
+### LEDManager
+- Gestion des LEDs dans un thread séparé
+- Effets animés (RAINBOW, PULSE, GLOSSY, ROTATE)
+- Sleep mode automatique
+- Luminosité limitée par `currentBrightness`
+
+### SDManager
+- Gestion de la carte SD (SPI)
+- Lecture/écriture de `config.json`
+- Structure `SDConfig` pour la configuration
+
+### SerialManager / SerialCommands
+- Gestion du Serial (115200 bauds)
+- Commandes série communes (help, reboot, info, memory, brightness, sleep)
+- Commandes spécifiques au modèle (via `ModelSerialCommands`)
+
+### LogManager
+- Logs avec niveaux (DEBUG, INFO, WARNING, ERROR)
+- Écriture des erreurs dans `/error_log.txt` sur la SD
+- Logs avec timestamps
+
+### NFCManager
+- Gestion du NFC (PN532 ou autre)
+- Test de disponibilité du hardware
+- Affiche un WARNING si non opérationnel
+
+### InitManager
+- Orchestre l'initialisation de tous les composants
+- Séquence : Serial → SD → LED → NFC → Model-specific
+- Gestion des erreurs avec statut par composant
+
+## Règles strictes
+
+1. **Managers statiques** - Pas d'instances, seulement des méthodes statiques
+2. **Vérifier `initialized`** - Toujours dans `init()`
+3. **Configuration via InitManager** - Utiliser `InitManager::getConfig()`
+4. **Logging via LogManager** - Pour les erreurs (écrit aussi sur SD)
+5. **Thread LED indépendant** - Ne doit jamais s'arrêter
+6. **Sleep mode simple** - Réduire juste la luminosité globale

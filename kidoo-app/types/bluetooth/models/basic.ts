@@ -40,17 +40,17 @@ export enum BasicBluetoothMessage {
  */
 export enum BasicBluetoothCommandType {
   /** Définir la luminosité */
-  BRIGHTNESS = 'BRIGHTNESS',
+  BRIGHTNESS_SET = 'BRIGHTNESS_SET',
   /** Obtenir la luminosité */
-  GET_BRIGHTNESS = 'GET_BRIGHTNESS',
+  BRIGHTNESS_GET = 'BRIGHTNESS_GET',
   /** Définir une couleur RGB */
-  COLOR = 'COLOR',
+  COLOR_SET = 'COLOR_SET',
   /** Définir un effet LED */
   EFFECT = 'EFFECT',
   /** Définir le timeout de sommeil */
-  SLEEP_TIMEOUT = 'SLEEP_TIMEOUT',
+  SLEEP_TIMEOUT_SET = 'SLEEP_TIMEOUT_SET',
   /** Obtenir le timeout de sommeil */
-  GET_SLEEP_TIMEOUT = 'GET_SLEEP_TIMEOUT',
+  SLEEP_TIMEOUT_GET = 'SLEEP_TIMEOUT_GET',
   /** Configurer le mode sommeil */
   SLEEP_CONFIG = 'SLEEP_CONFIG',
 }
@@ -71,7 +71,7 @@ export type BasicBluetoothCommandTypeUnion = DefaultBluetoothCommandType | Basic
  * Commande pour définir la luminosité
  */
 export interface BrightnessCommand extends BluetoothCommand {
-  command: BasicBluetoothCommandType.BRIGHTNESS;
+  command: BasicBluetoothCommandType.BRIGHTNESS_SET;
   percent: number;
 }
 
@@ -79,14 +79,14 @@ export interface BrightnessCommand extends BluetoothCommand {
  * Commande pour obtenir la luminosité
  */
 export interface GetBrightnessCommand extends BluetoothCommand {
-  command: BasicBluetoothCommandType.GET_BRIGHTNESS;
+  command: BasicBluetoothCommandType.BRIGHTNESS_GET;
 }
 
 /**
  * Commande pour définir une couleur RGB
  */
 export interface ColorCommand extends BluetoothCommand {
-  command: BasicBluetoothCommandType.COLOR;
+  command: BasicBluetoothCommandType.COLOR_SET;
   r: number;
   g: number;
   b: number;
@@ -104,7 +104,7 @@ export interface EffectCommand extends BluetoothCommand {
  * Commande pour définir le timeout de sommeil
  */
 export interface SleepTimeoutCommand extends BluetoothCommand {
-  command: BasicBluetoothCommandType.SLEEP_TIMEOUT;
+  command: BasicBluetoothCommandType.SLEEP_TIMEOUT_SET;
   timeout: number;
 }
 
@@ -112,7 +112,7 @@ export interface SleepTimeoutCommand extends BluetoothCommand {
  * Commande pour obtenir le timeout de sommeil
  */
 export interface GetSleepTimeoutCommand extends BluetoothCommand {
-  command: BasicBluetoothCommandType.GET_SLEEP_TIMEOUT;
+  command: BasicBluetoothCommandType.SLEEP_TIMEOUT_GET;
 }
 
 /**
@@ -137,7 +137,7 @@ export type TypedBluetoothCommand = DefaultTypedBluetoothCommand |
   SleepConfigCommand;
 
 /**
- * Réponse pour la commande BRIGHTNESS (setBrightness)
+ * Réponse pour la commande BRIGHTNESS_SET (setBrightness)
  */
 export interface BrightnessSetResponse extends BluetoothResponse {
   status: 'success';
@@ -147,7 +147,7 @@ export interface BrightnessSetResponse extends BluetoothResponse {
 }
 
 /**
- * Réponse pour la commande GET_BRIGHTNESS (getBrightness)
+ * Réponse pour la commande BRIGHTNESS_GET (getBrightness)
  */
 export interface BrightnessGetResponse extends BluetoothResponse {
   status: 'success';
@@ -156,7 +156,7 @@ export interface BrightnessGetResponse extends BluetoothResponse {
 }
 
 /**
- * Réponse pour la commande COLOR (setColor)
+ * Réponse pour la commande COLOR_SET (setColor)
  */
 export interface ColorSetResponse extends BluetoothResponse {
   status: 'success';
@@ -176,7 +176,7 @@ export interface EffectSetResponse extends BluetoothResponse {
 }
 
 /**
- * Réponse pour la commande SLEEP_TIMEOUT (setSleepTimeout)
+ * Réponse pour la commande SLEEP_TIMEOUT_SET (setSleepTimeout)
  */
 export interface SleepTimeoutSetResponse extends BluetoothResponse {
   status: 'success';
@@ -186,7 +186,7 @@ export interface SleepTimeoutSetResponse extends BluetoothResponse {
 }
 
 /**
- * Réponse pour la commande GET_SLEEP_TIMEOUT (getSleepTimeout)
+ * Réponse pour la commande SLEEP_TIMEOUT_GET (getSleepTimeout)
  */
 export interface SleepTimeoutGetResponse extends BluetoothResponse {
   status: 'success';
@@ -209,12 +209,12 @@ export interface SleepConfigSetResponse extends BluetoothResponse {
  */
 export const COMMAND_TO_MESSAGE: Record<BasicBluetoothCommandTypeUnion, BasicBluetoothMessageUnion> = {
   ...DEFAULT_COMMAND_TO_MESSAGE as any,
-  [BasicBluetoothCommandType.BRIGHTNESS]: BasicBluetoothMessage.BRIGHTNESS_SET,
-  [BasicBluetoothCommandType.GET_BRIGHTNESS]: BasicBluetoothMessage.BRIGHTNESS_GET,
-  [BasicBluetoothCommandType.COLOR]: BasicBluetoothMessage.COLOR_SET,
+  [BasicBluetoothCommandType.BRIGHTNESS_SET]: BasicBluetoothMessage.BRIGHTNESS_SET,
+  [BasicBluetoothCommandType.BRIGHTNESS_GET]: BasicBluetoothMessage.BRIGHTNESS_GET,
+  [BasicBluetoothCommandType.COLOR_SET]: BasicBluetoothMessage.COLOR_SET,
   [BasicBluetoothCommandType.EFFECT]: BasicBluetoothMessage.EFFECT_SET,
-  [BasicBluetoothCommandType.SLEEP_TIMEOUT]: BasicBluetoothMessage.SLEEP_TIMEOUT_SET,
-  [BasicBluetoothCommandType.GET_SLEEP_TIMEOUT]: BasicBluetoothMessage.SLEEP_TIMEOUT_GET,
+  [BasicBluetoothCommandType.SLEEP_TIMEOUT_SET]: BasicBluetoothMessage.SLEEP_TIMEOUT_SET,
+  [BasicBluetoothCommandType.SLEEP_TIMEOUT_GET]: BasicBluetoothMessage.SLEEP_TIMEOUT_GET,
   [BasicBluetoothCommandType.SLEEP_CONFIG]: BasicBluetoothMessage.SLEEP_CONFIG_SET,
 };
 
@@ -236,12 +236,12 @@ export const MESSAGE_TO_ERROR: Record<BasicBluetoothMessageUnion, BasicBluetooth
  * Mapping entre les types de commandes et leurs réponses correspondantes (default + Basic)
  */
 export type CommandToResponseMap = DefaultCommandToResponseMap & {
-  [BasicBluetoothCommandType.BRIGHTNESS]: BrightnessSetResponse;
-  [BasicBluetoothCommandType.GET_BRIGHTNESS]: BrightnessGetResponse;
-  [BasicBluetoothCommandType.COLOR]: ColorSetResponse;
+  [BasicBluetoothCommandType.BRIGHTNESS_SET]: BrightnessSetResponse;
+  [BasicBluetoothCommandType.BRIGHTNESS_GET]: BrightnessGetResponse;
+  [BasicBluetoothCommandType.COLOR_SET]: ColorSetResponse;
   [BasicBluetoothCommandType.EFFECT]: EffectSetResponse;
-  [BasicBluetoothCommandType.SLEEP_TIMEOUT]: SleepTimeoutSetResponse;
-  [BasicBluetoothCommandType.GET_SLEEP_TIMEOUT]: SleepTimeoutGetResponse;
+  [BasicBluetoothCommandType.SLEEP_TIMEOUT_SET]: SleepTimeoutSetResponse;
+  [BasicBluetoothCommandType.SLEEP_TIMEOUT_GET]: SleepTimeoutGetResponse;
   [BasicBluetoothCommandType.SLEEP_CONFIG]: SleepConfigSetResponse;
 };
 

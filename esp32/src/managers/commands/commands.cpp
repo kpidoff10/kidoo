@@ -18,31 +18,36 @@ bool processBLECommand(JsonDocument& doc, String& bleBuffer) {
       bleBuffer = "";
     }
     return handled;
-  } else if (command == "BRIGHTNESS") {
+  } else if (command == "BRIGHTNESS_SET" || command == "BRIGHTNESS") {
+    // Support des deux formats pour compatibilité (BRIGHTNESS sera déprécié)
     bool handled = handleBrightnessCommand(doc);
     if (handled) {
       bleBuffer = "";
     }
     return handled;
-  } else if (command == "GET_BRIGHTNESS") {
+  } else if (command == "BRIGHTNESS_GET" || command == "GET_BRIGHTNESS") {
+    // Support des deux formats pour compatibilité (GET_BRIGHTNESS sera déprécié)
     bool handled = handleGetBrightnessCommand(doc);
     if (handled) {
       bleBuffer = "";
     }
     return handled;
-  } else if (command == "COLOR") {
+  } else if (command == "COLOR_SET" || command == "COLOR") {
+    // Support des deux formats pour compatibilité (COLOR sera déprécié)
     bool handled = handleColorCommand(doc);
     if (handled) {
       bleBuffer = "";
     }
     return handled;
-  } else if (command == "SLEEP_TIMEOUT") {
+  } else if (command == "SLEEP_TIMEOUT_SET" || command == "SLEEP_TIMEOUT") {
+    // Support des deux formats pour compatibilité (SLEEP_TIMEOUT sera déprécié)
     bool handled = handleSleepTimeoutCommand(doc);
     if (handled) {
       bleBuffer = "";
     }
     return handled;
-  } else if (command == "GET_SLEEP_TIMEOUT") {
+  } else if (command == "SLEEP_TIMEOUT_GET" || command == "GET_SLEEP_TIMEOUT") {
+    // Support des deux formats pour compatibilité (GET_SLEEP_TIMEOUT sera déprécié)
     bool handled = handleGetSleepTimeoutCommand(doc);
     if (handled) {
       bleBuffer = "";

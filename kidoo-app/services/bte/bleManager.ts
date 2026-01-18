@@ -334,22 +334,40 @@ class BLEManagerClass {
       });
 
       // Attendre que la connexion soit établie
+      console.log('[BLEManager] Tentative de connexion en cours...');
       await bleDevice.connect();
 
       // Vérifier si la connexion est établie
       const isConnected = bleDevice.isConnected;
+      console.log('[BLEManager] État de connexion après connect():', isConnected);
+      
       if (!isConnected) {
+        console.error('[BLEManager] ÉCHEC: La connexion n\'est pas établie');
         manager.destroy();
         this.isConnecting = false;
         return { success: false, error: 'Échec de la connexion' };
       }
 
-      // Demander un MTU plus grand (512 bytes)
+      console.log('[BLEManager] Connexion établie avec succès !');
+      
+      // Découvrir les services AVANT de négocier le MTU (ordre recommandé)
       try {
-        await bleDevice.requestMTU(512);
-        console.log('[BLEManager] MTU négocié: 512 bytes');
+        console.log('[BLEManager] Découverte des services et caractéristiques...');
+        await bleDevice.discoverAllServicesAndCharacteristics();
+        console.log('[BLEManager] Services et caractéristiques découverts');
+      } catch (discoverError) {
+        console.error('[BLEManager] ERREUR lors de la découverte des services:', discoverError);
+        // Ne pas retourner d'erreur ici, continuer quand même
+      }
+
+      // Demander un MTU plus grand (247 bytes max standard BLE)
+      // Note: 512 bytes était trop élevé et causait des problèmes de mémoire sur l'ESP32
+      try {
+        console.log('[BLEManager] Négociation du MTU (247 bytes)...');
+        await bleDevice.requestMTU(247);
+        console.log('[BLEManager] MTU négocié avec succès: 247 bytes');
       } catch (mtuError) {
-        console.debug('[BLEManager] Erreur MTU (non critique):', mtuError);
+        console.warn('[BLEManager] Erreur lors de la négociation MTU (non critique):', mtuError);
       }
 
       // Stocker le device
@@ -360,8 +378,10 @@ class BLEManagerClass {
       // Invalider le cache de scan pour ce device (connexion réussie)
       this.invalidateScanCache(device.deviceId);
 
+      console.log('[BLEManager] Démarrage du monitoring automatique...');
       // Démarrer le monitoring automatiquement après la connexion
       await this.startPersistentMonitoring();
+      console.log('[BLEManager] Monitoring démarré');
 
       if (!this.isDisconnecting) {
         try {
@@ -576,8 +596,15 @@ class BLEManagerClass {
         return;
       }
 
-      // Découvrir les services si nécessaire
-      await this.device.discoverAllServicesAndCharacteristics();
+      // Découvrir les services si nécessaire (on l'a déjà fait dans connect(), mais on le refait au cas où)
+      try {
+        console.log('[BLEManager] Découverte des services pour le monitoring...');
+        await this.device.discoverAllServicesAndCharacteristics();
+        console.log('[BLEManager] Services découverts pour le monitoring');
+      } catch (discoverError) {
+        console.error('[BLEManager] ERREUR lors de la découverte des services pour le monitoring:', discoverError);
+        throw discoverError; // Propager l'erreur car on ne peut pas monitorer sans services
+      }
 
       console.log('[BLEManager] Démarrage du monitoring persistant');
       this.isMonitoring = true;

@@ -98,10 +98,12 @@ void ModeManager::applyMode(Mode mode) {
     
     case MODE_SLEEP:
       // Éteindre toutes les LEDs
+      LEDController::lock();
       for (int i = 0; i < numLeds; i++) {
         leds[i] = CRGB::Black;
       }
       LEDController::show();
+      LEDController::unlock();
       delay(100);  // Réduire la consommation en mode sommeil
       break;
     

@@ -1,0 +1,115 @@
+#ifndef LED_MANAGER_H
+#define LED_MANAGER_H
+
+#include <Arduino.h>
+#include <FastLED.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/queue.h>
+#include "../../../model_config.h"
+
+/**
+ * Gestionnaire de LEDs dans un thread séparé
+ * 
+ * Ce module garantit que la gestion des LEDs ne s'arrête jamais,
+ * même si d'autres parties du code buggent ou se bloquent.
+ */
+
+// Types de commandes pour le thread LED
+enum LEDCommandType {
+  LED_CMD_SET_COLOR,        // Définir une couleur RGB
+  LED_CMD_SET_BRIGHTNESS,   // Changer la luminosité
+  LED_CMD_SET_EFFECT,       // Activer un effet
+  LED_CMD_CLEAR             // Éteindre toutes les LEDs
+};
+
+// Types d'effets disponibles
+enum LEDEffect {
+  LED_EFFECT_NONE,          // Pas d'effet (couleur unie)
+  LED_EFFECT_RAINBOW,       // Arc-en-ciel
+  LED_EFFECT_PULSE,         // Pulsation
+  LED_EFFECT_GLOSSY,        // Effet glossy
+  LED_EFFECT_ROTATE         // Effet de rotation (utilise la couleur définie)
+};
+
+// Structure de commande pour le thread LED
+struct LEDCommand {
+  LEDCommandType type;
+  union {
+    struct {
+      uint8_t r;
+      uint8_t g;
+      uint8_t b;
+    } color;
+    uint8_t brightness;
+    LEDEffect effect;
+  } data;
+};
+
+class LEDManager {
+public:
+  // Initialiser le gestionnaire LED (créer le thread)
+  static bool init();
+  
+  // Arrêter le gestionnaire (ne devrait jamais être appelé)
+  static void stop();
+  
+  // Envoyer une commande au thread LED
+  static bool sendCommand(const LEDCommand& cmd);
+  
+  // Méthodes pratiques pour envoyer des commandes
+  static bool setColor(uint8_t r, uint8_t g, uint8_t b);
+  static bool setBrightness(uint8_t brightness);
+  static bool setEffect(LEDEffect effect);
+  static bool clear();
+  
+  // Gestion du sleep mode
+  static void wakeUp();  // Réveiller les LEDs (reset du timer d'inactivité)
+  static bool getSleepState();  // Vérifier si les LEDs sont en mode sleep
+  
+  // Obtenir l'état actuel
+  static bool isInitialized();
+  static uint8_t getCurrentBrightness();
+
+private:
+  // Thread principal de gestion des LEDs
+  static void ledTask(void* parameter);
+  
+  // Traiter une commande reçue
+  static void processCommand(const LEDCommand& cmd);
+  
+  // Appliquer les effets animés
+  static void updateEffects();
+  
+  // Gestion du sleep mode
+  static void checkSleepMode();
+  static void updateSleepFade();  // Animation de fade vers sleep
+  static void updateWakeFade();  // Animation de fade depuis sleep
+  static void resetPulseEffect();  // Réinitialiser l'effet PULSE pour transition fluide
+  
+  // Variables statiques
+  static bool initialized;
+  static TaskHandle_t taskHandle;
+  static QueueHandle_t commandQueue;
+  static CRGB* leds;
+  static uint8_t currentBrightness;
+  static LEDEffect currentEffect;
+  static CRGB currentColor;
+  static unsigned long lastUpdateTime;
+  static unsigned long lastActivityTime;  // Dernière activité (pour sleep mode)
+  static bool isSleeping;  // État du sleep mode
+  static bool isFadingToSleep;  // En cours d'animation de fade vers sleep
+  static bool isFadingFromSleep;  // En cours d'animation de fade depuis sleep
+  static unsigned long sleepFadeStartTime;  // Début de l'animation de fade
+  static LEDEffect savedEffect;  // Effet sauvegardé avant le sleep
+  static uint32_t sleepTimeoutMs;  // Timeout configuré pour le sleep mode
+  static bool pulseNeedsReset;  // Flag pour réinitialiser l'effet PULSE
+  
+  // Paramètres du thread
+  static const int QUEUE_SIZE = 10;
+  static const int TASK_STACK_SIZE = 4096;
+  static const int TASK_PRIORITY = 5;  // Priorité élevée pour garantir l'exécution
+  static const int UPDATE_INTERVAL_MS = 16;  // ~60 FPS pour les animations
+};
+
+#endif // LED_MANAGER_H

@@ -1,0 +1,228 @@
+---
+description: "Règles pour l'initialisation ESP32. Séquence d'initialisation, gestion des erreurs, et intégration des composants dans InitManager."
+alwaysApply: false
+globs:
+  - kidoo-esp32/src/models/common/managers/init/**/*
+  - kidoo-esp32/src/models/common/init/**/*
+  - kidoo-esp32/src/models/**/init/**/*
+---
+
+# Règles d'Initialisation ESP32
+
+## ⚠️ IMPORTANT : Avant de créer un nouveau composant
+
+**TOUJOURS demander à l'utilisateur** si le nouveau composant/manager/fonction d'initialisation doit être :
+- **Common** (`common/`) : Pour tous les modèles (fonction d'init commune)
+- **Model-specific** (`{model}/`) : Uniquement pour un modèle particulier
+
+**NE PAS créer directement** sans avoir clarifié cette information avec l'utilisateur.
+
+## Séquence d'initialisation
+
+L'initialisation suit une **séquence stricte** dans `InitManager::init()` :
+
+1. **Serial** (CRITIQUE) - Doit être en premier pour les logs
+2. **SD** (CRITIQUE) - Charge la configuration, arrête si échec
+3. **LED** - Affiche le statut visuel (orange = en cours, vert = OK, rouge = erreur)
+4. **NFC** (OPTIONNEL) - Affiche un WARNING si non opérationnel, n'empêche pas l'init
+5. **Model-specific** - Initialisation spécifique au modèle (`InitModel::init()`)
+
+### Code principal
+
+```cpp
+bool InitManager::init() {
+  // 1. Serial (CRITIQUE)
+  if (!initSerial()) {
+    return false;
+  }
+  
+  // 2. SD (CRITIQUE - charge la config)
+  if (!initSD()) {
+    // Échec critique : LEDs en rouge pulsé
+    if (initLED()) {
+      LEDManager::setColor(COLOR_ERROR);
+      LEDManager::setEffect(LED_EFFECT_PULSE);
+    }
+    return false;
+  }
+  
+  // 3. LED
+  if (!initLED()) {
+    allSuccess = false;
+  }
+  
+  // 4. NFC (OPTIONNEL - warning si échec)
+  initNFC();  // N'empêche pas l'initialisation
+  
+  // 5. Model-specific
+  if (!InitModel::init()) {
+    allSuccess = false;
+  }
+  
+  // LEDs vertes si tout OK
+  if (allSuccess) {
+    LEDManager::setColor(COLOR_SUCCESS);
+    LEDManager::setEffect(LED_EFFECT_ROTATE);
+  }
+  
+  return allSuccess;
+}
+```
+
+## Fonctions d'initialisation
+
+Les fonctions d'initialisation sont dans `src/models/common/init/` :
+
+- **`init_serial.cpp`** : Initialise Serial à 115200 bauds
+- **`init_sd.cpp`** : Initialise SD et charge `config.json`
+- **`init_led.cpp`** : Initialise LEDManager (orange qui tourne)
+- **`init_nfc.cpp`** : Initialise NFCManager (affiche warning si échec)
+
+### Structure d'une fonction d'init
+
+```cpp
+// init_led.cpp
+#include "../managers/init/init_manager.h"
+#include "../managers/led/led_manager.h"
+#include "../../../../../color/colors.h"
+
+bool InitManager::initLED() {
+  systemStatus.led = INIT_IN_PROGRESS;
+  
+  if (!LEDManager::init()) {
+    systemStatus.led = INIT_FAILED;
+    return false;
+  }
+  
+  systemStatus.led = INIT_SUCCESS;
+  
+  // Configuration initiale : orange qui tourne
+  LEDManager::setColor(COLOR_ORANGE);
+  LEDManager::setEffect(LED_EFFECT_ROTATE);
+  
+  return true;
+}
+```
+
+## Gestion des erreurs
+
+### Statut par composant
+
+Chaque composant a un statut dans `SystemStatus` :
+
+```cpp
+struct SystemStatus {
+  InitStatus serial;   // Communication série
+  InitStatus led;      // Gestionnaire LED
+  InitStatus sd;       // Gestionnaire SD
+  InitStatus nfc;      // Gestionnaire NFC
+};
+
+enum InitStatus {
+  INIT_NOT_STARTED,
+  INIT_IN_PROGRESS,
+  INIT_SUCCESS,
+  INIT_FAILED
+};
+```
+
+### Indicateurs visuels (LEDs)
+
+- **Orange qui tourne** : Initialisation en cours
+- **Vert qui tourne** : Tout est OK
+- **Rouge pulsé** : Erreur critique (SD non disponible)
+
+### Warnings
+
+Les composants **non critiques** (NFC) affichent un WARNING mais n'empêchent pas l'initialisation :
+
+```cpp
+bool InitManager::initNFC() {
+  systemStatus.nfc = INIT_IN_PROGRESS;
+  
+  if (!NFCManager::init() || !NFCManager::isAvailable()) {
+    systemStatus.nfc = INIT_FAILED;
+    Serial.println("[INIT] WARNING: NFC non operationnel");
+    return false;  // Retourne false mais n'empêche pas l'init globale
+  }
+  
+  systemStatus.nfc = INIT_SUCCESS;
+  return true;
+}
+```
+
+## Initialisation modèle-spécifique
+
+Chaque modèle peut avoir une initialisation spécifique :
+
+### Structure
+
+```
+src/models/{model}/init/
+├── init_model.h
+└── init_model.cpp
+```
+
+### Interface
+
+```cpp
+// init_model.h
+class InitModelBasic {
+public:
+  static bool configure();  // Avant les init communes
+  static bool init();       // Après les init communes
+};
+```
+
+### Inclusion automatique
+
+`src/models/model_init.h` inclut automatiquement le bon modèle :
+
+```cpp
+#ifdef KIDOO_MODEL_BASIC
+  #include "basic/init/init_model.h"
+  #define InitModel InitModelBasic
+#elif defined(KIDOO_MODEL_MINI)
+  #include "mini/init/init_model.h"
+  #define InitModel InitModelMini
+#endif
+```
+
+### Utilisation dans InitManager
+
+```cpp
+// Configuration spécifique AVANT les init communes
+if (!InitModel::configure()) {
+  return false;
+}
+
+// ... init communes ...
+
+// Initialisation spécifique APRÈS les init communes
+if (!InitModel::init()) {
+  allSuccess = false;
+}
+```
+
+## Affichage du statut
+
+`InitManager::printStatus()` affiche le statut de tous les composants :
+
+```
+[INIT] ========== Statut du systeme ==========
+[INIT] Serial: OK
+[INIT] LED: OK
+[INIT] SD: OK
+[INIT] NFC: WARNING
+[INIT] Systeme pret: OUI
+[INIT] ========================================
+```
+
+## Règles strictes
+
+1. **Séquence stricte** - Serial → SD → LED → NFC → Model
+2. **SD critique** - Si échec, LEDs rouge et arrêt de l'init
+3. **NFC optionnel** - WARNING si échec, continue l'init
+4. **Statut par composant** - Toujours mettre à jour `systemStatus.{component}`
+5. **Indicateurs visuels** - Orange (en cours), Vert (OK), Rouge (erreur)
+6. **Model init après** - `InitModel::init()` après les init communes

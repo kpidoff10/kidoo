@@ -1,0 +1,205 @@
+---
+description: "Règles pour la configuration ESP32. Organisation des fichiers config.h et default_config.h, gestion multi-modèles, et conventions de configuration."
+alwaysApply: false
+globs:
+  - kidoo-esp32/src/models/**/config/**/*
+  - kidoo-esp32/src/models/model_config.h
+---
+
+# Règles de Configuration ESP32
+
+## Architecture de configuration
+
+La configuration est organisée en **3 niveaux** :
+
+1. **Common** (`common/config/default_config.h`) : Valeurs communes à tous les modèles
+2. **Model** (`{model}/config/config.h`) : Configuration hardware spécifique (pins, LEDs)
+3. **Model Defaults** (`{model}/config/default_config.h`) : Valeurs par défaut spécifiques au modèle
+
+### Inclusion automatique
+
+`src/models/model_config.h` inclut automatiquement la bonne configuration selon le modèle :
+
+```cpp
+// model_config.h
+#include "common/config/default_config.h"
+
+#ifdef KIDOO_MODEL_BASIC
+  #include "basic/config/config.h"
+  #include "basic/config/default_config.h"
+  #define KIDOO_MODEL_NAME "Basic"
+#elif defined(KIDOO_MODEL_MINI)
+  #include "mini/config/config.h"
+  #include "mini/config/default_config.h"
+  #define KIDOO_MODEL_NAME "Mini"
+#endif
+```
+
+## Fichiers de configuration
+
+### Common (`common/config/default_config.h`)
+
+Valeurs par défaut **communes à tous les modèles** :
+
+```cpp
+// Timeout pour le sleep mode (en millisecondes)
+#define DEFAULT_SLEEP_TIMEOUT_MS 10000   // 10 secondes
+#define MIN_SLEEP_TIMEOUT_MS 5000        // Minimum: 5 secondes
+#define SLEEP_FADE_DURATION_MS 1000      // Durée animation fade
+```
+
+### Model Config (`{model}/config/config.h`)
+
+Configuration **hardware spécifique** au modèle :
+
+```cpp
+// Configuration LEDs
+#define LED_DATA_PIN 2
+#define NUM_LEDS 144
+#define LED_TYPE NEOPIXEL
+#define COLOR_ORDER GRB
+
+// Configuration SD
+#define SD_MOSI_PIN 23
+#define SD_MISO_PIN 19
+#define SD_SCK_PIN 18
+#define SD_CS_PIN 5
+
+// Configuration NFC (si disponible)
+#define NFC_SDA_PIN 21
+#define NFC_SCL_PIN 22
+#define NFC_IRQ_PIN 4
+#define NFC_RST_PIN 16
+#define NFC_I2C_ADDRESS 0x24
+
+// Composants disponibles
+#define HAS_SD_CARD true
+#define HAS_WIFI true
+#define HAS_BLE true
+#define HAS_NFC true
+```
+
+### Model Defaults (`{model}/config/default_config.h`)
+
+Valeurs par défaut **spécifiques au modèle** :
+
+```cpp
+// Nom du dispositif
+#define DEFAULT_DEVICE_NAME "Kidoo-Basic"
+
+// WiFi par défaut
+#define DEFAULT_WIFI_SSID "Kidoo-WiFi"
+#define DEFAULT_WIFI_PASSWORD ""
+
+// Luminosité LED par défaut (0-255, 128 = 50%)
+#define DEFAULT_LED_BRIGHTNESS 128
+```
+
+## Configuration runtime (config.json)
+
+La configuration peut être **surchargée** via `config.json` sur la SD :
+
+```json
+{
+  "device_name": "Mon-Kidoo",
+  "wifi_ssid": "Mon-WiFi",
+  "wifi_password": "motdepasse",
+  "led_brightness": 200,
+  "sleep_timeout_ms": 15000
+}
+```
+
+### Structure SDConfig
+
+```cpp
+// sd_manager.h
+struct SDConfig {
+  bool valid;
+  char wifi_ssid[64];
+  char wifi_password[64];
+  char device_name[32];
+  uint8_t led_brightness;      // 0-255
+  uint32_t sleep_timeout_ms;   // 0 = désactivé, min: 5000 ms
+};
+```
+
+## Utilisation dans le code
+
+### Accès à la configuration
+
+**Depuis n'importe où** via `InitManager` :
+
+```cpp
+#include "../init/init_manager.h"
+
+const SDConfig& config = InitManager::getConfig();
+uint8_t brightness = config.led_brightness;
+uint32_t timeout = config.sleep_timeout_ms;
+```
+
+### Macros de configuration
+
+Les **pins et constantes** sont disponibles via les macros :
+
+```cpp
+#include "../../../model_config.h"
+
+FastLED.addLeds<LED_TYPE, LED_DATA_PIN>(leds, NUM_LEDS);
+```
+
+### Feature flags
+
+Vérifier la disponibilité des composants :
+
+```cpp
+#ifdef HAS_NFC
+  // Code NFC uniquement si le modèle supporte le NFC
+  NFCManager::init();
+#endif
+```
+
+## Sauvegarde de configuration
+
+Modifier la configuration en runtime et **sauvegarder sur la SD** :
+
+```cpp
+#include "../sd/sd_manager.h"
+#include "../init/init_manager.h"
+
+SDConfig config = InitManager::getConfig();
+config.led_brightness = 128;
+
+if (SDManager::isAvailable() && InitManager::updateConfig(config)) {
+  Serial.println("Configuration sauvegardee");
+}
+```
+
+## Validation
+
+### Sleep timeout
+
+Le `sleep_timeout_ms` est validé lors du chargement :
+
+```cpp
+if (timeout > 0 && timeout < MIN_SLEEP_TIMEOUT_MS) {
+  timeout = MIN_SLEEP_TIMEOUT_MS;  // Forcer le minimum
+}
+```
+
+### Luminosité
+
+La `led_brightness` est validée (0-255) :
+
+```cpp
+if (brightness > 255) brightness = 255;
+if (brightness < 0) brightness = 0;
+```
+
+## Règles strictes
+
+1. **Common = valeurs partagées** - Sleep timeout, durées, etc.
+2. **Model config = hardware** - Pins, nombre de LEDs, composants
+3. **Model defaults = modèle-spécifique** - Nom du device, WiFi par défaut
+4. **Toujours inclure `model_config.h`** - Pour avoir accès à toute la config
+5. **Validation lors du chargement** - Valider les valeurs dans `SDManager::getConfig()`
+6. **Sauvegarde via InitManager** - Utiliser `InitManager::updateConfig()` pour sauvegarder

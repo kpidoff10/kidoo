@@ -15,22 +15,21 @@
  * ```
  */
 
-import React, { createContext, useContext, useCallback } from 'react';
-import { useKidoo, type KidooContextValue } from '../../common/contexts/KidooContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { bleManager } from '@/services/bte';
-import { useResponseSyncMiddleware } from '@/hooks/use-response-sync-middleware';
+import type { BrightnessOptions, ColorOptions, EffectOptions, SleepModeOptions, SleepTimeoutOptions } from '@/services/models/basic/command';
 import {
   BasicBluetoothCommandType,
-  type CommandResponse,
   type BrightnessCommand,
-  type ColorCommand,
-  type EffectCommand,
-  type SleepTimeoutCommand,
-  type SleepConfigCommand,
   type BrightnessGetResponse,
+  type ColorCommand,
+  type CommandResponse,
+  type EffectCommand,
+  type SleepConfigCommand,
+  type SleepTimeoutCommand,
 } from '@/types/bluetooth';
-import type { BrightnessOptions, ColorOptions, EffectOptions, SleepModeOptions, SleepTimeoutOptions } from '@/services/models/basic/command';
+import React, { createContext, useCallback, useContext } from 'react';
+import { useKidoo, type KidooContextValue } from '../../common/contexts/KidooContext';
 
 interface BasicKidooContextValue extends KidooContextValue {
   // Fonctions spécifiques au modèle Basic
@@ -58,15 +57,6 @@ export function BasicKidooProvider({ children }: BasicKidooProviderProps) {
   // Destructurer les propriétés nécessaires pour avoir des références stables
   const { isConnected, sendCommandAndWait, kidoo } = kidooContext;
   
-  // Activer le middleware de synchronisation automatique des réponses BLE
-  // Le middleware gère automatiquement la synchronisation de toutes les réponses BLE,
-  // y compris STORAGE_GET, BRIGHTNESS_SET, SLEEP_TIMEOUT_SET, etc.
-  useResponseSyncMiddleware({
-    kidoo,
-    userId,
-    isConnected,
-  });
-
   // Définir la luminosité
   const setBrightness = useCallback(
     async (brightness: BrightnessOptions): Promise<CommandResponse<BrightnessCommand>> => {
@@ -79,7 +69,7 @@ export function BasicKidooProvider({ children }: BasicKidooProviderProps) {
       }
 
       const response = await sendCommandAndWait({
-        command: BasicBluetoothCommandType.BRIGHTNESS,
+        command: BasicBluetoothCommandType.BRIGHTNESS_SET,
         percent: brightness.percent,
       });
 
@@ -126,7 +116,7 @@ export function BasicKidooProvider({ children }: BasicKidooProviderProps) {
       }
 
       return sendCommandAndWait({
-        command: BasicBluetoothCommandType.COLOR,
+        command: BasicBluetoothCommandType.COLOR_SET,
         r: color.r,
         g: color.g,
         b: color.b,
@@ -162,7 +152,7 @@ export function BasicKidooProvider({ children }: BasicKidooProviderProps) {
       }
 
       const response = await sendCommandAndWait({
-        command: BasicBluetoothCommandType.SLEEP_TIMEOUT,
+        command: BasicBluetoothCommandType.SLEEP_TIMEOUT_SET,
         timeout: timeout.timeout,
       });
 
@@ -181,7 +171,7 @@ export function BasicKidooProvider({ children }: BasicKidooProviderProps) {
     }
 
     const response = await sendCommandAndWait({
-      command: BasicBluetoothCommandType.GET_SLEEP_TIMEOUT,
+      command: BasicBluetoothCommandType.SLEEP_TIMEOUT_GET,
     }, {
       timeout: 5000,
       timeoutErrorMessage: 'Timeout: aucune réponse reçue pour SLEEP_TIMEOUT_GET',

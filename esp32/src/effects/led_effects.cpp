@@ -8,26 +8,32 @@
 
 // Fonction pour mettre toutes les LEDs en rouge
 void setRed(CRGB* leds, int numLeds) {
+  LEDController::lock();
   for (int i = 0; i < numLeds; i++) {
     leds[i] = CRGB::Red;
   }
   LEDController::show();
+  LEDController::unlock();
 }
 
 // Fonction pour mettre toutes les LEDs dans une couleur spécifique
 void setColor(CRGB* leds, int numLeds, CRGB color) {
+  LEDController::lock();
   for (int i = 0; i < numLeds; i++) {
     leds[i] = color;
   }
   LEDController::show();
+  LEDController::unlock();
 }
 
 // Fonction pour mettre toutes les LEDs dans une couleur HSV
 void setColorHSV(CRGB* leds, int numLeds, uint8_t hue, uint8_t saturation, uint8_t value) {
+  LEDController::lock();
   for (int i = 0; i < numLeds; i++) {
     leds[i] = CHSV(hue, saturation, value);
   }
   LEDController::show();
+  LEDController::unlock();
 }
 
 // Fonction pour l'effet glossy multicolore
@@ -35,6 +41,7 @@ void setGlossy(CRGB* leds, int numLeds) {
   static uint8_t hue = 0;      // Teinte de base (0-255 = cycle complet)
   static uint8_t offset = 0;   // Offset pour l'effet glossy
   
+  LEDController::lock();
   for (int i = 0; i < numLeds; i++) {
     // Calculer la teinte avec un décalage pour créer un gradient
     uint8_t pixelHue = hue + (i * 2) + offset;
@@ -53,15 +60,18 @@ void setGlossy(CRGB* leds, int numLeds) {
   
   LEDController::show();
   
-  // Incrémenter pour faire défiler les couleurs
+  // Incrémenter pour faire défiler les couleurs (hors lock pour éviter de bloquer trop longtemps)
   hue += 1;      // Vitesse du cycle de couleurs
   offset += 2;   // Vitesse de l'effet glossy
+  
+  LEDController::unlock();
 }
 
 // Fonction pour l'effet rainbow (arc-en-ciel)
 void setRainbow(CRGB* leds, int numLeds) {
   static uint8_t hue = 0;  // Teinte de base pour l'arc-en-ciel
   
+  LEDController::lock();
   for (int i = 0; i < numLeds; i++) {
     // Créer un arc-en-ciel en distribuant les teintes sur toutes les LEDs
     uint8_t pixelHue = hue + (i * 256 / numLeds);
@@ -72,6 +82,8 @@ void setRainbow(CRGB* leds, int numLeds) {
   
   // Incrémenter la teinte pour faire défiler l'arc-en-ciel
   hue += 2;  // Vitesse du défilement de l'arc-en-ciel
+  
+  LEDController::unlock();
 }
 
 // Fonction pour l'effet pulse (pulsation)
@@ -91,12 +103,14 @@ void setPulse(CRGB* leds, int numLeds) {
     direction = 1;
   }
   
+  LEDController::lock();
   // Appliquer la pulsation à toutes les LEDs avec une couleur bleue
   for (int i = 0; i < numLeds; i++) {
     leds[i] = CRGB(brightness / 3, brightness / 3, brightness);  // Bleu pulsant
   }
   
   LEDController::show();
+  LEDController::unlock();
 }
 
 // Fonction pour l'effet cercle vert progressif (indique que le Kidoo est configuré)
@@ -119,6 +133,7 @@ void setGreenProgressCircle(CRGB* leds, int numLeds) {
   // Calculer la position de départ en nombre de LEDs
   int startLed = (int)(position * numLeds);
   
+  LEDController::lock();
   // Éteindre toutes les LEDs d'abord
   for (int i = 0; i < numLeds; i++) {
     leds[i] = CRGB::Black;
@@ -131,6 +146,7 @@ void setGreenProgressCircle(CRGB* leds, int numLeds) {
   }
   
   LEDController::show();
+  LEDController::unlock();
 }
 
 // Fonction pour l'effet orange pulsant (respiration) - indique le démarrage
@@ -155,6 +171,7 @@ void setOrangeBreathing(CRGB* leds, int numLeds) {
   float sineValue = sin(progress * PI);  // sin(0) = 0, sin(PI/2) = 1, sin(PI) = 0
   uint8_t brightness = (uint8_t)(sineValue * 255.0f);
   
+  LEDController::lock();
   // Appliquer la respiration à toutes les LEDs avec une couleur orange
   // Orange = Rouge + Vert (sans bleu)
   // Ajuster les proportions pour un bel orange
@@ -163,6 +180,7 @@ void setOrangeBreathing(CRGB* leds, int numLeds) {
   }
   
   LEDController::show();
+  LEDController::unlock();
 }
 
 // Fonction pour l'effet cercle orange progressif (indique le démarrage en cours)
@@ -185,6 +203,7 @@ void setOrangeProgressCircle(CRGB* leds, int numLeds) {
   // Calculer la position de départ en nombre de LEDs
   int startLed = (int)(position * numLeds);
   
+  LEDController::lock();
   // Éteindre toutes les LEDs d'abord
   for (int i = 0; i < numLeds; i++) {
     leds[i] = CRGB::Black;
@@ -198,6 +217,7 @@ void setOrangeProgressCircle(CRGB* leds, int numLeds) {
   }
   
   LEDController::show();
+  LEDController::unlock();
 }
 
 // Variable statique globale pour réinitialiser l'effet de transition
@@ -238,6 +258,7 @@ void setSleepTransition(CRGB* leds, int numLeds) {
   // La transition part de la luminosité configurée et descend jusqu'à 0
   uint8_t brightness = (uint8_t)(configuredBrightness * (1.0f - fadeProgress));
   
+  LEDController::lock();
   // Appliquer un fondu progressif à toutes les LEDs
   // Utiliser une couleur douce (blanc chaud) qui s'assombrit
   for (int i = 0; i < numLeds; i++) {
@@ -249,6 +270,7 @@ void setSleepTransition(CRGB* leds, int numLeds) {
   }
   
   LEDController::show();
+  LEDController::unlock();
 }
 
 // Fonction pour réinitialiser l'effet de transition

@@ -4,6 +4,9 @@
 #include "../core/led_controller.h"
 #include "../core/state_manager.h"
 #include <ArduinoJson.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/queue.h>
 
 BLEServer* pServer = nullptr;
 BLECharacteristic* pTxCharacteristic = nullptr;
@@ -13,19 +16,34 @@ bool oldDeviceConnected = false;
 String bleBuffer = "";
 unsigned long lastBLEWriteTime = 0;
 
+// Structure pour passer les commandes BLE à la tâche
+// On stocke la commande JSON complète comme String (max 247 bytes pour correspondre au MTU BLE standard)
+struct BLECommandData {
+  char commandJson[256];  // Buffer pour la commande JSON (256 bytes, < 247 MTU pour laisser de la marge)
+  bool isValid;
+};
+
+// Queue pour les commandes BLE (taille 10 pour permettre plusieurs commandes en attente)
+static QueueHandle_t bleCommandQueue = nullptr;
+static TaskHandle_t bleTaskHandle = nullptr;
+
 // Callback pour les événements de connexion
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
+      Serial.println("========================================");
       Serial.println("[BLE] Client connecte !");
-      // Négocier un MTU plus grand (512 bytes) pour éviter la fragmentation
-      BLEDevice::setMTU(512);
-      Serial.println("[BLE] MTU negocie: 512 bytes");
+      Serial.print("[BLE] Nombre de connexions: ");
+      Serial.println(pServer->getConnId());
+      Serial.println("[BLE] Note: La negociation MTU sera effectuee par le client (l'app)");
+      Serial.println("========================================");
     }
 
     void onDisconnect(BLEServer* pServer) {
       deviceConnected = false;
+      Serial.println("========================================");
       Serial.println("[BLE] Client deconnecte");
+      Serial.println("========================================");
     }
 };
 
@@ -104,12 +122,20 @@ bool isBLEConnected() {
 }
 
 void sendBLEData(const char* data) {
-  if (deviceConnected && pTxCharacteristic) {
-    pTxCharacteristic->setValue(data);
-    pTxCharacteristic->notify();
-    Serial.print("[BLE] Donnees envoyees: ");
-    Serial.println(data);
+  if (!deviceConnected) {
+    Serial.println("[BLE] ATTENTION: Tentative d'envoi de donnees mais aucun client connecte");
+    return;
   }
+  
+  if (!pTxCharacteristic) {
+    Serial.println("[BLE] ERREUR: Caracteristique TX non initialisee");
+    return;
+  }
+  
+  pTxCharacteristic->setValue(data);
+  pTxCharacteristic->notify();
+  Serial.print("[BLE] Donnees envoyees: ");
+  Serial.println(data);
 }
 
 // Fonction pour mettre à jour l'état dans StateManager
@@ -135,7 +161,86 @@ void updateBLEState() {
   }
 }
 
-// Fonction pour traiter les commandes reçues via BLE
+// Tâche FreeRTOS pour traiter les commandes BLE de manière asynchrone
+void bleCommandTask(void* parameter) {
+  BLECommandData cmdData;
+  
+  Serial.println("[BLE] Tâche de traitement des commandes démarrée");
+  
+  while (true) {
+    // Attendre une commande dans la queue (timeout infini)
+    if (xQueueReceive(bleCommandQueue, &cmdData, portMAX_DELAY) == pdTRUE) {
+      if (!cmdData.isValid) {
+        continue;
+      }
+      
+      Serial.print("[BLE] Traitement de la commande (");
+      Serial.print(strlen(cmdData.commandJson));
+      Serial.print(" bytes): ");
+      Serial.println(cmdData.commandJson);
+      
+      // Réinitialiser le timer de sommeil et forcer le réveil car on a reçu une activité BLE
+      StateManager::resetSleepTimer(true);  // forceWake=true pour réveiller le système
+      
+      // Parser le JSON
+      JsonDocument doc;
+      DeserializationError error = deserializeJson(doc, cmdData.commandJson);
+      
+      if (error) {
+        Serial.print("[BLE] Erreur de parsing JSON: ");
+        Serial.println(error.c_str());
+        // Format invalide : passer la LED au rouge
+        StateManager::resetForceModes();
+        StateManager::setForceManualMode(true);
+        CRGB* leds = LEDController::getLeds();
+        int numLeds = LEDController::getNumLeds();
+        setColor(leds, numLeds, CRGB::Red);
+        
+        JsonDocument errorDoc;
+        errorDoc["status"] = "error";
+        errorDoc["message"] = "INVALID_FORMAT";
+        errorDoc["error"] = "Format JSON invalide";
+        String errorResponse;
+        serializeJson(errorDoc, errorResponse);
+        sendBLEData(errorResponse.c_str());
+        continue;
+      }
+      
+      // Traiter la commande via le système de commandes
+      String buffer = String(cmdData.commandJson);
+      processBLECommand(doc, buffer);
+    }
+  }
+}
+
+// Initialiser la tâche de traitement des commandes BLE (à appeler dans setup)
+void initBLECommandTask() {
+  // Créer la queue pour les commandes BLE (taille 10 pour permettre plusieurs commandes en attente)
+  bleCommandQueue = xQueueCreate(10, sizeof(BLECommandData));
+  
+  if (bleCommandQueue == nullptr) {
+    Serial.println("[BLE] ERREUR: Impossible de créer la queue de commandes BLE");
+    return;
+  }
+  
+  // Créer la tâche BLE
+  xTaskCreate(
+    bleCommandTask,      // Fonction de la tâche
+    "BLE_CommandTask",   // Nom de la tâche
+    8192,                // Stack size (8KB pour les commandes complexes comme SETUP)
+    nullptr,             // Paramètres
+    2,                   // Priorité (moyenne)
+    &bleTaskHandle       // Handle de la tâche
+  );
+  
+  if (bleTaskHandle == nullptr) {
+    Serial.println("[BLE] ERREUR: Impossible de créer la tâche de traitement des commandes");
+  } else {
+    Serial.println("[BLE] Tâche de traitement des commandes créée avec succès");
+  }
+}
+
+// Fonction pour traiter les commandes reçues via BLE (accumulation du buffer et envoi à la queue)
 void processBLECommands() {
   // Gérer les déconnexions
   if (!deviceConnected && oldDeviceConnected) {
@@ -152,7 +257,7 @@ void processBLECommands() {
     updateBLEState();
   }
   
-  // Traiter le buffer si des données sont disponibles
+  // Vérifier si une commande complète est disponible dans le buffer
   if (bleBuffer.length() > 0) {
     // Vérifier si le JSON est complet (accolades équilibrées)
     int openBraces = 0;
@@ -170,32 +275,26 @@ void processBLECommands() {
     
     bleBuffer.trim();
     
-    // Réinitialiser le timer de sommeil et forcer le réveil car on a reçu une activité BLE
-    StateManager::resetSleepTimer(true);  // forceWake=true pour réveiller le système
+    // Vérifier que la queue existe
+    if (bleCommandQueue == nullptr) {
+      Serial.println("[BLE] ERREUR: Queue de commandes non initialisée");
+      bleBuffer = "";
+      return;
+    }
     
-    Serial.print("[BLE] Commande recue (complete, ");
-    Serial.print(bleBuffer.length());
-    Serial.print(" bytes): ");
-    Serial.println(bleBuffer);
+    // Préparer les données de commande pour la queue
+    BLECommandData cmdData;
+    cmdData.isValid = false;
     
-    // Parser JSON uniquement
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, bleBuffer);
-    
-    if (error) {
-      Serial.print("[BLE] Erreur de parsing JSON: ");
-      Serial.println(error.c_str());
-      // Format invalide : passer la LED au rouge
-      StateManager::resetForceModes();
-      StateManager::setForceManualMode(true);
-      CRGB* leds = LEDController::getLeds();
-      int numLeds = LEDController::getNumLeds();
-      setColor(leds, numLeds, CRGB::Red);
-      
+    // Copier la commande dans le buffer (limiter à 255 chars pour laisser place au \0)
+    int cmdLength = bleBuffer.length();
+    if (cmdLength >= 256) {
+      Serial.println("[BLE] ERREUR: Commande trop longue (max 255 bytes)");
+      // Envoyer une erreur
       JsonDocument errorDoc;
       errorDoc["status"] = "error";
       errorDoc["message"] = "INVALID_FORMAT";
-      errorDoc["error"] = "Format JSON invalide";
+      errorDoc["error"] = "Commande trop longue";
       String errorResponse;
       serializeJson(errorDoc, errorResponse);
       sendBLEData(errorResponse.c_str());
@@ -203,7 +302,30 @@ void processBLECommands() {
       return;
     }
     
-    // Traiter la commande via le système de commandes
-    processBLECommand(doc, bleBuffer);
+    // Copier la commande
+    strncpy(cmdData.commandJson, bleBuffer.c_str(), 255);
+    cmdData.commandJson[255] = '\0';  // S'assurer que la string est terminée
+    cmdData.isValid = true;
+    
+    Serial.print("[BLE] Commande mise en queue (");
+    Serial.print(cmdLength);
+    Serial.print(" bytes): ");
+    Serial.println(cmdData.commandJson);
+    
+    // Envoyer la commande à la queue (non-bloquant)
+    if (xQueueSend(bleCommandQueue, &cmdData, 0) != pdTRUE) {
+      Serial.println("[BLE] ERREUR: Queue pleine, commande perdue");
+      // Envoyer une erreur
+      JsonDocument errorDoc;
+      errorDoc["status"] = "error";
+      errorDoc["message"] = "QUEUE_FULL";
+      errorDoc["error"] = "Queue de commandes pleine";
+      String errorResponse;
+      serializeJson(errorDoc, errorResponse);
+      sendBLEData(errorResponse.c_str());
+    }
+    
+    // Vider le buffer après avoir mis en queue
+    bleBuffer = "";
   }
 }

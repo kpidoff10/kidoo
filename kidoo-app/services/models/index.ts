@@ -29,9 +29,6 @@ export { KidooProvider, useKidoo, type KidooContextValue } from './common/contex
 // Hooks communs
 export * from './common/hooks/useKidoos';
 
-// Middleware communs
-export * from './common/middleware/common-mappings';
-
 // ============================================================================
 // BASIC - Fonctionnalités spécifiques au modèle Basic
 // ============================================================================
@@ -49,17 +46,9 @@ export { BasicKidooProvider, useBasicKidoo } from './basic/contexts/BasicKidooCo
 export * from './basic/hooks/use-basic-get-storage';
 export * from './basic/hooks/use-basic-multimedia';
 
-// Middleware Basic
-export * from './basic/middleware';
-
-// ============================================================================
-// SYNC MIDDLEWARE - Synchronisation automatique BLE <-> Serveur
-// ============================================================================
-
-export * from './sync-middleware-mapping';
-
 // ============================================================================
 // TYPES - Types partagés pour les mappings de synchronisation
 // ============================================================================
 
 export * from './types';
+

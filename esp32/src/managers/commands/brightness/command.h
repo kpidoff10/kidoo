@@ -7,7 +7,7 @@
 // Traiter la commande BRIGHTNESS (définir la luminosité)
 bool handleBrightnessCommand(JsonDocument& doc);
 
-// Traiter la commande GET_BRIGHTNESS (récupérer la luminosité)
+// Traiter la commande BRIGHTNESS_GET (récupérer la luminosité)
 bool handleGetBrightnessCommand(JsonDocument& doc);
 
 #endif // BRIGHTNESS_COMMAND_H
