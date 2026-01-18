@@ -1,6 +1,7 @@
 #include "../managers/init/init_manager.h"
 #include "../managers/wifi/wifi_manager.h"
 #include "../managers/sd/sd_manager.h"
+#include "../managers/rtc/rtc_manager.h"
 #include "../../model_config.h"
 
 bool InitManager::initWiFi() {
@@ -34,6 +35,12 @@ bool InitManager::initWiFi() {
     if (WiFiManager::connect()) {
       systemStatus.wifi = INIT_SUCCESS;
       Serial.println("[INIT] WiFi connecte");
+      
+      // Synchronisation RTC automatique après connexion WiFi
+      #ifdef HAS_RTC
+      RTCManager::autoSyncIfNeeded();
+      #endif
+      
       return true;
     } else {
       // Connexion échouée mais WiFi initialisé

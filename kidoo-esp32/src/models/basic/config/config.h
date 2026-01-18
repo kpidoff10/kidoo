@@ -53,6 +53,17 @@
 #define NFC_I2C_ADDRESS 0x24
 
 // ============================================
+// Configuration RTC DS3231 (I2C)
+// ============================================
+
+// Le DS3231 utilise le même bus I2C que le NFC
+#define RTC_SDA_PIN 21      // GPIO 21 (I2C SDA)
+#define RTC_SCL_PIN 22      // GPIO 22 (I2C SCL)
+
+// Adresse I2C du DS3231 (fixe)
+#define RTC_I2C_ADDRESS 0x68
+
+// ============================================
 // Composants disponibles sur ce modèle
 // ============================================
 
@@ -61,5 +72,6 @@
 #define HAS_BLE true
 #define HAS_NFC true
 #define HAS_PUBNUB true
+#define HAS_RTC true
 
 #endif // MODEL_BASIC_CONFIG_H

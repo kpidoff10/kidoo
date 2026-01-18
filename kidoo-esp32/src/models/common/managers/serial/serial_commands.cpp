@@ -6,6 +6,7 @@
 #include "../ble/ble_manager.h"
 #include "../wifi/wifi_manager.h"
 #include "../pubnub/pubnub_manager.h"
+#include "../rtc/rtc_manager.h"
 #include "../../../model_serial_commands.h"
 #include "../../../model_pubnub_routes.h"
 #include <Arduino.h>
@@ -110,6 +111,12 @@ void SerialCommands::processCommand(const String& command) {
     cmdPubNubPublish(args);
   } else if (cmd == "pubnub-routes" || cmd == "routes") {
     cmdPubNubRoutes();
+  } else if (cmd == "rtc" || cmd == "time" || cmd == "date") {
+    cmdRTC();
+  } else if (cmd == "rtc-set" || cmd == "time-set") {
+    cmdRTCSet(args);
+  } else if (cmd == "rtc-sync" || cmd == "ntp" || cmd == "ntp-sync") {
+    cmdRTCSync();
   } else {
     // Essayer les commandes spécifiques au modèle
     if (!ModelSerialCommands::processCommand(command)) {
@@ -143,6 +150,9 @@ void SerialCommands::printHelp() {
   Serial.println("  pubnub-disconnect - Se deconnecter de PubNub");
   Serial.println("  pubnub-pub <msg> - Publier un message");
   Serial.println("  pubnub-routes    - Afficher les routes PubNub disponibles");
+  Serial.println("  rtc, time, date  - Afficher l'heure et la date du RTC");
+  Serial.println("  rtc-set <timestamp|DD/MM/YYYY HH:MM:SS> - Definir l'heure");
+  Serial.println("  rtc-sync, ntp    - Synchroniser l'heure via NTP (WiFi requis)");
   Serial.println("========================================");
   
   // Afficher l'aide des commandes spécifiques au modèle
@@ -545,5 +555,103 @@ void SerialCommands::cmdPubNubRoutes() {
   return;
 #else
   ModelPubNubRoutes::printRoutes();
+#endif
+}
+
+void SerialCommands::cmdRTC() {
+#ifndef HAS_RTC
+  Serial.println("[RTC] RTC non disponible sur ce modele");
+  return;
+#else
+  RTCManager::printInfo();
+#endif
+}
+
+void SerialCommands::cmdRTCSet(const String& args) {
+#ifndef HAS_RTC
+  Serial.println("[RTC] RTC non disponible sur ce modele");
+  return;
+#else
+  if (!RTCManager::isAvailable()) {
+    Serial.println("[RTC] RTC non disponible");
+    return;
+  }
+  
+  if (args.length() == 0) {
+    Serial.println("[RTC] Usage: rtc-set <timestamp|DD/MM/YYYY HH:MM:SS>");
+    Serial.println("[RTC] Exemples:");
+    Serial.println("[RTC]   rtc-set 1704067200        (timestamp Unix)");
+    Serial.println("[RTC]   rtc-set 18/01/2026 15:30:00");
+    return;
+  }
+  
+  // Vérifier si c'est un timestamp Unix (nombre uniquement)
+  bool isTimestamp = true;
+  for (unsigned int i = 0; i < args.length(); i++) {
+    if (!isDigit(args.charAt(i))) {
+      isTimestamp = false;
+      break;
+    }
+  }
+  
+  if (isTimestamp) {
+    // Timestamp Unix
+    uint32_t timestamp = args.toInt();
+    if (RTCManager::setUnixTime(timestamp)) {
+      Serial.print("[RTC] Heure definie depuis timestamp: ");
+      Serial.println(RTCManager::getDateTimeString());
+    } else {
+      Serial.println("[RTC] Erreur lors de la definition de l'heure");
+    }
+  } else {
+    // Format DD/MM/YYYY HH:MM:SS
+    DateTime dt = {0, 0, 0, 0, 0, 0, 0};
+    
+    // Parser la date et l'heure
+    int day, month, year, hour, minute, second;
+    if (sscanf(args.c_str(), "%d/%d/%d %d:%d:%d", &day, &month, &year, &hour, &minute, &second) == 6) {
+      dt.day = day;
+      dt.month = month;
+      dt.year = year;
+      dt.hour = hour;
+      dt.minute = minute;
+      dt.second = second;
+      
+      if (RTCManager::setDateTime(dt)) {
+        Serial.print("[RTC] Heure definie: ");
+        Serial.println(RTCManager::getDateTimeString());
+      } else {
+        Serial.println("[RTC] Erreur lors de la definition de l'heure");
+        Serial.println("[RTC] Verifiez le format: DD/MM/YYYY HH:MM:SS");
+      }
+    } else {
+      Serial.println("[RTC] Format invalide");
+      Serial.println("[RTC] Utilisez: DD/MM/YYYY HH:MM:SS (ex: 18/01/2026 15:30:00)");
+    }
+  }
+#endif
+}
+
+void SerialCommands::cmdRTCSync() {
+#ifndef HAS_RTC
+  Serial.println("[RTC] RTC non disponible sur ce modele");
+  return;
+#else
+  if (!RTCManager::isAvailable()) {
+    Serial.println("[RTC] RTC non disponible");
+    return;
+  }
+  
+  if (!WiFiManager::isConnected()) {
+    Serial.println("[RTC] WiFi non connecte - connexion requise pour NTP");
+    return;
+  }
+  
+  // Synchroniser avec le fuseau horaire français (GMT+1/+2)
+  if (RTCManager::syncWithNTPFrance()) {
+    Serial.println("[RTC] Synchronisation NTP reussie");
+  } else {
+    Serial.println("[RTC] Echec synchronisation NTP");
+  }
 #endif
 }

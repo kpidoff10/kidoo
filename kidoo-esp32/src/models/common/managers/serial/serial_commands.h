@@ -53,6 +53,9 @@ private:
   static void cmdPubNubDisconnect();
   static void cmdPubNubPublish(const String& args);
   static void cmdPubNubRoutes();
+  static void cmdRTC();
+  static void cmdRTCSet(const String& args);
+  static void cmdRTCSync();
   
   static bool initialized;
   static String inputBuffer;

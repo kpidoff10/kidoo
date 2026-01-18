@@ -30,6 +30,7 @@ struct SystemStatus {
   InitStatus ble;      // Gestionnaire BLE
   InitStatus wifi;     // Gestionnaire WiFi
   InitStatus pubnub;   // Gestionnaire PubNub
+  InitStatus rtc;      // Gestionnaire RTC DS3231
   // Ajouter d'autres composants ici
   
   bool isFullyInitialized() const {
@@ -76,6 +77,7 @@ private:
   static bool initBLE();
   static bool initWiFi();
   static bool initPubNub();
+  static bool initRTC();
   // Ajouter d'autres méthodes d'initialisation ici
   
   // Variables statiques

@@ -7,6 +7,7 @@
 #include "../ble/ble_manager.h"
 #include "../wifi/wifi_manager.h"
 #include "../pubnub/pubnub_manager.h"
+#include "../rtc/rtc_manager.h"
 #include "../../../model_config.h"
 #include "../../../../../color/colors.h"
 #include "../../../model_init.h"
@@ -19,7 +20,8 @@ SystemStatus InitManager::systemStatus = {
   INIT_NOT_STARTED,  // nfc
   INIT_NOT_STARTED,  // ble
   INIT_NOT_STARTED,  // wifi
-  INIT_NOT_STARTED   // pubnub
+  INIT_NOT_STARTED,  // pubnub
+  INIT_NOT_STARTED   // rtc
 };
 bool InitManager::initialized = false;
 SDConfig* InitManager::globalConfig = nullptr;
@@ -103,6 +105,10 @@ bool InitManager::init() {
   
   // ÉTAPE 6 : Initialiser PubNub (après WiFi)
   initPubNub();  // Tente de se connecter à PubNub
+  delay(100);
+  
+  // ÉTAPE 7 : Initialiser le RTC DS3231 (optionnel)
+  initRTC();  // Affiche un WARNING si non opérationnel
   
   initialized = true;
   
@@ -147,6 +153,8 @@ InitStatus InitManager::getComponentStatus(const char* componentName) {
     return systemStatus.wifi;
   } else if (strcmp(componentName, "pubnub") == 0) {
     return systemStatus.pubnub;
+  } else if (strcmp(componentName, "rtc") == 0) {
+    return systemStatus.rtc;
   }
   // Ajouter d'autres composants ici
   
@@ -273,6 +281,24 @@ void InitManager::printStatus() {
       break;
     case INIT_FAILED:
       Serial.println("Non configure");
+      break;
+  }
+  
+  Serial.print("[INIT] RTC: ");
+  switch (systemStatus.rtc) {
+    case INIT_NOT_STARTED:
+      Serial.println("Non demarre");
+      break;
+    case INIT_IN_PROGRESS:
+      Serial.println("En cours");
+      break;
+    case INIT_SUCCESS:
+      Serial.println("OK");
+      Serial.print("[INIT]   -> Heure: ");
+      Serial.println(RTCManager::getDateTimeString());
+      break;
+    case INIT_FAILED:
+      Serial.println("Non disponible");
       break;
   }
   
