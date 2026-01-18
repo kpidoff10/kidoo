@@ -8,6 +8,7 @@
 #include "../wifi/wifi_manager.h"
 #include "../pubnub/pubnub_manager.h"
 #include "../rtc/rtc_manager.h"
+#include "../potentiometer/potentiometer_manager.h"
 #include "../../../model_config.h"
 #include "../../../../../color/colors.h"
 #include "../../../model_init.h"
@@ -21,7 +22,8 @@ SystemStatus InitManager::systemStatus = {
   INIT_NOT_STARTED,  // ble
   INIT_NOT_STARTED,  // wifi
   INIT_NOT_STARTED,  // pubnub
-  INIT_NOT_STARTED   // rtc
+  INIT_NOT_STARTED,  // rtc
+  INIT_NOT_STARTED   // potentiometer
 };
 bool InitManager::initialized = false;
 SDConfig* InitManager::globalConfig = nullptr;
@@ -109,6 +111,10 @@ bool InitManager::init() {
   
   // ÉTAPE 7 : Initialiser le RTC DS3231 (optionnel)
   initRTC();  // Affiche un WARNING si non opérationnel
+  delay(100);
+  
+  // ÉTAPE 8 : Initialiser le potentiomètre (optionnel)
+  initPotentiometer();  // Pour contrôle du volume/luminosité
   
   initialized = true;
   
@@ -155,6 +161,8 @@ InitStatus InitManager::getComponentStatus(const char* componentName) {
     return systemStatus.pubnub;
   } else if (strcmp(componentName, "rtc") == 0) {
     return systemStatus.rtc;
+  } else if (strcmp(componentName, "potentiometer") == 0) {
+    return systemStatus.potentiometer;
   }
   // Ajouter d'autres composants ici
   
@@ -296,6 +304,25 @@ void InitManager::printStatus() {
       Serial.println("OK");
       Serial.print("[INIT]   -> Heure: ");
       Serial.println(RTCManager::getDateTimeString());
+      break;
+    case INIT_FAILED:
+      Serial.println("Non disponible");
+      break;
+  }
+  
+  Serial.print("[INIT] Potentiometre: ");
+  switch (systemStatus.potentiometer) {
+    case INIT_NOT_STARTED:
+      Serial.println("Non demarre");
+      break;
+    case INIT_IN_PROGRESS:
+      Serial.println("En cours");
+      break;
+    case INIT_SUCCESS:
+      Serial.println("OK");
+      Serial.print("[INIT]   -> Valeur: ");
+      Serial.print(PotentiometerManager::getLastValue());
+      Serial.println("%");
       break;
     case INIT_FAILED:
       Serial.println("Non disponible");

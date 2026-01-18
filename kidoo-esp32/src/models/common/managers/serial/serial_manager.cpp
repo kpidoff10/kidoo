@@ -83,20 +83,79 @@ void SerialManager::printMemoryInfo() {
     return;
   }
   
+  uint32_t freeHeap = getFreeHeap();
+  uint32_t totalHeap = getTotalHeap();
+  uint32_t minFreeHeap = getMinFreeHeap();
+  uint32_t usedHeap = totalHeap - freeHeap;
+  uint32_t usagePercent = (usedHeap * 100) / totalHeap;
+  
   printTimestamp();
   Serial.println("[MEMORY] Informations memoire:");
   Serial.print("  Heap libre: ");
-  Serial.print(getFreeHeap());
-  Serial.println(" octets");
+  Serial.print(freeHeap);
+  Serial.print(" octets (");
+  Serial.print(freeHeap / 1024);
+  Serial.println(" KB)");
+  Serial.print("  Heap utilise: ");
+  Serial.print(usedHeap);
+  Serial.print(" octets (");
+  Serial.print(usedHeap / 1024);
+  Serial.println(" KB)");
   Serial.print("  Heap total: ");
-  Serial.print(getTotalHeap());
-  Serial.println(" octets");
-  Serial.print("  Heap minimum: ");
-  Serial.print(getMinFreeHeap());
-  Serial.println(" octets");
+  Serial.print(totalHeap);
+  Serial.print(" octets (");
+  Serial.print(totalHeap / 1024);
+  Serial.println(" KB)");
+  Serial.print("  Heap minimum atteint: ");
+  Serial.print(minFreeHeap);
+  Serial.print(" octets (");
+  Serial.print(minFreeHeap / 1024);
+  Serial.println(" KB)");
   Serial.print("  Utilisation: ");
-  Serial.print((getTotalHeap() - getFreeHeap()) * 100 / getTotalHeap());
+  Serial.print(usagePercent);
   Serial.println("%");
+  
+  // Détails par type de mémoire
+  Serial.println("");
+  Serial.println("  [Details par type]");
+  
+  // DRAM (mémoire interne rapide)
+  uint32_t freeDRAM = heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+  uint32_t totalDRAM = heap_caps_get_total_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+  Serial.print("  DRAM interne: ");
+  Serial.print(freeDRAM / 1024);
+  Serial.print(" KB libre / ");
+  Serial.print(totalDRAM / 1024);
+  Serial.println(" KB total");
+  
+  // PSRAM (si disponible)
+  uint32_t freePSRAM = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+  uint32_t totalPSRAM = heap_caps_get_total_size(MALLOC_CAP_SPIRAM);
+  if (totalPSRAM > 0) {
+    Serial.print("  PSRAM externe: ");
+    Serial.print(freePSRAM / 1024);
+    Serial.print(" KB libre / ");
+    Serial.print(totalPSRAM / 1024);
+    Serial.println(" KB total");
+  } else {
+    Serial.println("  PSRAM externe: Non disponible");
+  }
+  
+  // Plus grand bloc contigu disponible
+  uint32_t largestBlock = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
+  Serial.print("  Plus grand bloc libre: ");
+  Serial.print(largestBlock / 1024);
+  Serial.println(" KB");
+  
+  // Avertissement si mémoire critique
+  if (usagePercent > 85) {
+    Serial.println("");
+    Serial.println("  [!] ATTENTION: Memoire critique!");
+    Serial.println("  Causes possibles:");
+    Serial.println("    - WiFi + BLE actifs simultanement (~70-100 KB)");
+    Serial.println("    - PubNub connecte (~20-30 KB)");
+    Serial.println("    - Gros documents JSON en memoire");
+  }
 }
 
 uint32_t SerialManager::getFreeHeap() {

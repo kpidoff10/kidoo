@@ -23,14 +23,15 @@ enum InitStatus {
 
 // État global du système
 struct SystemStatus {
-  InitStatus serial;   // Communication série
-  InitStatus led;      // Gestionnaire LED
-  InitStatus sd;       // Gestionnaire SD
-  InitStatus nfc;      // Gestionnaire NFC
-  InitStatus ble;      // Gestionnaire BLE
-  InitStatus wifi;     // Gestionnaire WiFi
-  InitStatus pubnub;   // Gestionnaire PubNub
-  InitStatus rtc;      // Gestionnaire RTC DS3231
+  InitStatus serial;        // Communication série
+  InitStatus led;           // Gestionnaire LED
+  InitStatus sd;            // Gestionnaire SD
+  InitStatus nfc;           // Gestionnaire NFC
+  InitStatus ble;           // Gestionnaire BLE
+  InitStatus wifi;          // Gestionnaire WiFi
+  InitStatus pubnub;        // Gestionnaire PubNub
+  InitStatus rtc;           // Gestionnaire RTC DS3231
+  InitStatus potentiometer; // Gestionnaire Potentiomètre
   // Ajouter d'autres composants ici
   
   bool isFullyInitialized() const {
@@ -78,6 +79,7 @@ private:
   static bool initWiFi();
   static bool initPubNub();
   static bool initRTC();
+  static bool initPotentiometer();
   // Ajouter d'autres méthodes d'initialisation ici
   
   // Variables statiques

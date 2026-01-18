@@ -64,14 +64,22 @@
 #define RTC_I2C_ADDRESS 0x68
 
 // ============================================
+// Configuration Potentiomètre WH148 (ADC)
+// ============================================
+
+// Pin analogique pour le potentiomètre
+#define POTENTIOMETER_PIN 34  // GPIO 34 (ADC1_CH6) - Input only
+
+// ============================================
 // Composants disponibles sur ce modèle
 // ============================================
 
 #define HAS_SD_CARD true
 #define HAS_WIFI true
-#define HAS_BLE true
+#define HAS_BLE false
 #define HAS_NFC true
 #define HAS_PUBNUB true
 #define HAS_RTC true
+#define HAS_POTENTIOMETER true
 
 #endif // MODEL_BASIC_CONFIG_H

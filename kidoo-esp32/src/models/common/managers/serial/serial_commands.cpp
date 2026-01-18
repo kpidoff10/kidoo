@@ -7,6 +7,7 @@
 #include "../wifi/wifi_manager.h"
 #include "../pubnub/pubnub_manager.h"
 #include "../rtc/rtc_manager.h"
+#include "../potentiometer/potentiometer_manager.h"
 #include "../../../model_serial_commands.h"
 #include "../../../model_pubnub_routes.h"
 #include <Arduino.h>
@@ -117,6 +118,10 @@ void SerialCommands::processCommand(const String& command) {
     cmdRTCSet(args);
   } else if (cmd == "rtc-sync" || cmd == "ntp" || cmd == "ntp-sync") {
     cmdRTCSync();
+  } else if (cmd == "pot" || cmd == "potentiometer" || cmd == "volume") {
+    cmdPotentiometer();
+  } else if (cmd == "memdebug" || cmd == "mem-debug" || cmd == "raminfo") {
+    cmdMemoryDebug();
   } else {
     // Essayer les commandes spécifiques au modèle
     if (!ModelSerialCommands::processCommand(command)) {
@@ -153,6 +158,8 @@ void SerialCommands::printHelp() {
   Serial.println("  rtc, time, date  - Afficher l'heure et la date du RTC");
   Serial.println("  rtc-set <timestamp|DD/MM/YYYY HH:MM:SS> - Definir l'heure");
   Serial.println("  rtc-sync, ntp    - Synchroniser l'heure via NTP (WiFi requis)");
+  Serial.println("  pot, volume      - Afficher la valeur du potentiometre");
+  Serial.println("  memdebug, raminfo - Analyse detaillee de la RAM par composant");
   Serial.println("========================================");
   
   // Afficher l'aide des commandes spécifiques au modèle
@@ -654,4 +661,204 @@ void SerialCommands::cmdRTCSync() {
     Serial.println("[RTC] Echec synchronisation NTP");
   }
 #endif
+}
+
+void SerialCommands::cmdPotentiometer() {
+#ifndef HAS_POTENTIOMETER
+  Serial.println("[POT] Potentiometre non disponible sur ce modele");
+  return;
+#else
+  PotentiometerManager::printInfo();
+#endif
+}
+
+void SerialCommands::cmdMemoryDebug() {
+  Serial.println("");
+  Serial.println("========== ANALYSE RAM DETAILLEE ==========");
+  Serial.println("");
+  
+  uint32_t freeHeap = ESP.getFreeHeap();
+  uint32_t totalHeap = ESP.getHeapSize();
+  uint32_t usedHeap = totalHeap - freeHeap;
+  uint32_t usagePercent = (usedHeap * 100) / totalHeap;
+  uint32_t freePercent = (freeHeap * 100) / totalHeap;
+  
+  Serial.print("RAM Totale: ");
+  Serial.print(totalHeap / 1024);
+  Serial.println(" KB");
+  Serial.print("RAM Utilisee: ");
+  Serial.print(usedHeap / 1024);
+  Serial.print(" KB (");
+  Serial.print(usagePercent);
+  Serial.println("%)");
+  Serial.print("RAM Libre: ");
+  Serial.print(freeHeap / 1024);
+  Serial.print(" KB (");
+  Serial.print(freePercent);
+  Serial.println("%)");
+  Serial.println("");
+  
+  // Estimation par composant basée sur l'état actuel
+  Serial.println("[Estimation par composant]");
+  Serial.println("(Basee sur les valeurs typiques ESP32)");
+  Serial.println("");
+  
+  uint32_t estimatedUsed = 0;
+  uint32_t totalKB = totalHeap / 1024;
+  
+  // Helper pour afficher KB et %
+  auto printComponent = [totalKB](const char* name, uint32_t minKB, uint32_t maxKB) {
+    uint32_t avgKB = (minKB + maxKB) / 2;
+    uint32_t percent = (avgKB * 100) / totalKB;
+    Serial.print("  ");
+    Serial.print(name);
+    Serial.print("~");
+    Serial.print(minKB);
+    Serial.print("-");
+    Serial.print(maxKB);
+    Serial.print(" KB (");
+    Serial.print(percent);
+    Serial.println("%)");
+    return avgKB;
+  };
+  
+  // Firmware de base (~50-60 KB)
+  estimatedUsed += printComponent("Firmware/Stack:      ", 50, 60);
+  
+  // WiFi
+  if (WiFiManager::isConnected()) {
+    estimatedUsed += printComponent("WiFi (connecte):     ", 40, 50);
+  } else if (WiFiManager::isInitialized()) {
+    estimatedUsed += printComponent("WiFi (init):         ", 25, 30);
+  } else {
+    Serial.println("  WiFi:                      Non init (0%)");
+  }
+  
+  // BLE
+  if (BLEManager::isInitialized()) {
+    if (BLEManager::isConnected()) {
+      estimatedUsed += printComponent("BLE (connecte):      ", 40, 50);
+    } else {
+      estimatedUsed += printComponent("BLE (advertising):   ", 30, 40);
+    }
+  } else {
+    Serial.println("  BLE:                       Non init (0%)");
+  }
+  
+  // PubNub
+  if (PubNubManager::isConnected()) {
+    estimatedUsed += printComponent("PubNub (connecte):   ", 20, 30);
+  } else if (PubNubManager::isInitialized()) {
+    estimatedUsed += printComponent("PubNub (init):       ", 5, 10);
+  } else {
+    Serial.println("  PubNub:                    Non init (0%)");
+  }
+  
+  // LEDs (FastLED)
+  if (LEDManager::isInitialized()) {
+#ifdef NUM_LEDS
+    uint32_t ledRam = (NUM_LEDS * 3 + 1023) / 1024;  // Arrondi supérieur
+    if (ledRam < 1) ledRam = 1;
+    uint32_t ledPercent = (ledRam * 100) / totalKB;
+    Serial.print("  FastLED (");
+    Serial.print(NUM_LEDS);
+    Serial.print(" LEDs):    ~");
+    Serial.print(ledRam);
+    Serial.print(" KB (");
+    Serial.print(ledPercent);
+    Serial.println("%)");
+    estimatedUsed += ledRam;
+#else
+    estimatedUsed += printComponent("FastLED:             ", 1, 1);
+#endif
+  }
+  
+  // SD Card
+  if (SDManager::isAvailable()) {
+    estimatedUsed += printComponent("SD Card:             ", 2, 5);
+  }
+  
+  // NFC - compte même si WARNING car la lib est chargée
+#ifdef HAS_NFC
+  InitStatus nfcStatus = InitManager::getComponentStatus("nfc");
+  if (nfcStatus == INIT_SUCCESS || nfcStatus == INIT_FAILED || nfcStatus == INIT_IN_PROGRESS) {
+    // Wire (I2C) + PN532 lib sont chargées même si le module n'est pas détecté
+    estimatedUsed += printComponent("NFC/I2C (PN532+Wire):", 8, 15);
+  }
+#endif
+  
+  // RTC (partage I2C avec NFC, donc pas de surcoût Wire)
+#ifdef HAS_RTC
+  if (RTCManager::isAvailable()) {
+    Serial.print("  RTC (DS3231):              ~1-2 KB (");
+    Serial.print((1 * 100) / totalKB);
+    Serial.println("%)");
+    estimatedUsed += 1;
+  } else if (InitManager::getComponentStatus("rtc") != INIT_NOT_STARTED) {
+    // RTC init tenté mais échoué - lib quand même chargée
+    Serial.print("  RTC (init failed):         ~1 KB (");
+    Serial.print((1 * 100) / totalKB);
+    Serial.println("%)");
+    estimatedUsed += 1;
+  }
+#endif
+  
+  // Potentiometre
+#ifdef HAS_POTENTIOMETER
+  if (PotentiometerManager::isAvailable()) {
+    Serial.println("  Potentiometre:             <1 KB (0%)");
+  }
+#endif
+  
+  // FreeRTOS tasks
+  estimatedUsed += printComponent("FreeRTOS tasks:      ", 10, 20);
+  
+  // Buffers divers (Serial, JSON, etc.)
+  estimatedUsed += printComponent("Buffers (Serial,JSON):", 5, 10);
+  
+  Serial.println("");
+  Serial.println("-------------------------------------------");
+  uint32_t estimatedPercent = (estimatedUsed * 100) / totalKB;
+  Serial.print("  Estimation totale:         ~");
+  Serial.print(estimatedUsed);
+  Serial.print(" KB (~");
+  Serial.print(estimatedPercent);
+  Serial.println("%)");
+  
+  Serial.print("  Utilisation reelle:        ");
+  Serial.print(usedHeap / 1024);
+  Serial.print(" KB (");
+  Serial.print(usagePercent);
+  Serial.println("%)");
+  
+  int32_t diff = (usedHeap / 1024) - estimatedUsed;
+  int32_t diffPercent = usagePercent - estimatedPercent;
+  Serial.print("  Difference:                ");
+  if (diff > 0) Serial.print("+");
+  Serial.print(diff);
+  Serial.print(" KB (");
+  if (diffPercent > 0) Serial.print("+");
+  Serial.print(diffPercent);
+  Serial.println("%)");
+  
+  if (diff > 20) {
+    Serial.println("");
+    Serial.println("[!] Difference importante detectee!");
+    Serial.println("    Causes possibles:");
+    Serial.println("    - Fuites memoire");
+    Serial.println("    - Gros buffers JSON non liberes");
+    Serial.println("    - Strings dynamiques accumulees");
+  }
+  
+  Serial.println("");
+  Serial.println("============================================");
+  
+  // Conseil
+  if (freeHeap < 30000) {
+    Serial.println("");
+    Serial.println("[CONSEIL] RAM critique! Options:");
+    Serial.println("  1. Desactiver BLE si WiFi suffit");
+    Serial.println("  2. Reduire NUM_LEDS si possible");
+    Serial.println("  3. Utiliser un ESP32 avec PSRAM");
+  }
 }

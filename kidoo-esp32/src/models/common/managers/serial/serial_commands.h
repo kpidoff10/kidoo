@@ -56,6 +56,8 @@ private:
   static void cmdRTC();
   static void cmdRTCSet(const String& args);
   static void cmdRTCSync();
+  static void cmdPotentiometer();
+  static void cmdMemoryDebug();
   
   static bool initialized;
   static String inputBuffer;
