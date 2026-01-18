@@ -44,6 +44,10 @@ private:
   static void cmdBrightness(const String& args);
   static void cmdSleep(const String& args);
   static void cmdBLE();
+  static void cmdWiFi();
+  static void cmdWiFiSet(const String& args);
+  static void cmdWiFiConnect();
+  static void cmdWiFiDisconnect();
   
   static bool initialized;
   static String inputBuffer;

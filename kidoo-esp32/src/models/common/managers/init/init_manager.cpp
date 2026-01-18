@@ -5,6 +5,7 @@
 #include "../log/log_manager.h"
 #include "../nfc/nfc_manager.h"
 #include "../ble/ble_manager.h"
+#include "../wifi/wifi_manager.h"
 #include "../../../model_config.h"
 #include "../../../../../color/colors.h"
 #include "../../../model_init.h"
@@ -15,7 +16,8 @@ SystemStatus InitManager::systemStatus = {
   INIT_NOT_STARTED,  // led
   INIT_NOT_STARTED,  // sd
   INIT_NOT_STARTED,  // nfc
-  INIT_NOT_STARTED   // ble
+  INIT_NOT_STARTED,  // ble
+  INIT_NOT_STARTED   // wifi
 };
 bool InitManager::initialized = false;
 SDConfig* InitManager::globalConfig = nullptr;
@@ -91,6 +93,10 @@ bool InitManager::init() {
   
   // ÉTAPE 4 : Initialiser le BLE (après l'init complète)
   initBLE();  // Affiche un WARNING si non opérationnel, mais n'empêche pas l'initialisation
+  delay(100);
+  
+  // ÉTAPE 5 : Initialiser le WiFi et se connecter si configuré
+  initWiFi();  // Tente de se connecter au WiFi configuré dans config.json
   
   initialized = true;
   
@@ -110,7 +116,7 @@ bool InitManager::init() {
 }
 
 // Les fonctions d'initialisation communes sont dans models/common/init/
-// models/common/init/init_serial.cpp, models/common/init/init_sd.cpp, models/common/init/init_led.cpp, models/common/init/init_nfc.cpp, models/common/init/init_ble.cpp
+// models/common/init/init_serial.cpp, models/common/init/init_sd.cpp, models/common/init/init_led.cpp, models/common/init/init_nfc.cpp, models/common/init/init_ble.cpp, models/common/init/init_wifi.cpp
 
 SystemStatus InitManager::getStatus() {
   return systemStatus;
@@ -131,6 +137,8 @@ InitStatus InitManager::getComponentStatus(const char* componentName) {
     return systemStatus.nfc;
   } else if (strcmp(componentName, "ble") == 0) {
     return systemStatus.ble;
+  } else if (strcmp(componentName, "wifi") == 0) {
+    return systemStatus.wifi;
   }
   // Ajouter d'autres composants ici
   
@@ -214,6 +222,26 @@ void InitManager::printStatus() {
       break;
     case INIT_SUCCESS:
       Serial.println("OK");
+      break;
+    case INIT_FAILED:
+      Serial.println("ERREUR");
+      break;
+  }
+  
+  Serial.print("[INIT] WiFi: ");
+  switch (systemStatus.wifi) {
+    case INIT_NOT_STARTED:
+      Serial.println("Non demarre");
+      break;
+    case INIT_IN_PROGRESS:
+      Serial.println("En cours");
+      break;
+    case INIT_SUCCESS:
+      Serial.println("OK");
+      if (WiFiManager::isConnected()) {
+        Serial.print("[INIT]   -> IP: ");
+        Serial.println(WiFiManager::getLocalIP());
+      }
       break;
     case INIT_FAILED:
       Serial.println("ERREUR");

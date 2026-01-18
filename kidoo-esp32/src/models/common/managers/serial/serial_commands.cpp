@@ -4,6 +4,7 @@
 #include "../init/init_manager.h"
 #include "../sd/sd_manager.h"
 #include "../ble/ble_manager.h"
+#include "../wifi/wifi_manager.h"
 #include "../../../model_serial_commands.h"
 #include <Arduino.h>
 
@@ -89,6 +90,14 @@ void SerialCommands::processCommand(const String& command) {
     cmdSleep(args);
   } else if (cmd == "ble" || cmd == "bluetooth" || cmd == "ble-status") {
     cmdBLE();
+  } else if (cmd == "wifi" || cmd == "wifi-status") {
+    cmdWiFi();
+  } else if (cmd == "wifi-set") {
+    cmdWiFiSet(args);
+  } else if (cmd == "wifi-connect") {
+    cmdWiFiConnect();
+  } else if (cmd == "wifi-disconnect") {
+    cmdWiFiDisconnect();
   } else {
     // Essayer les commandes spécifiques au modèle
     if (!ModelSerialCommands::processCommand(command)) {
@@ -113,6 +122,10 @@ void SerialCommands::printHelp() {
   Serial.println("  brightness [%]   - Afficher ou definir la luminosite (0-100%)");
   Serial.println("  sleep [timeout]  - Afficher ou definir le timeout sleep mode (ms, min: 5000, 0=desactive)");
   Serial.println("  ble, bluetooth   - Afficher l'etat de connexion BLE");
+  Serial.println("  wifi             - Afficher l'etat de connexion WiFi");
+  Serial.println("  wifi-set <ssid> [password] - Configurer le WiFi");
+  Serial.println("  wifi-connect     - Se connecter au WiFi configure");
+  Serial.println("  wifi-disconnect  - Se deconnecter du WiFi");
   Serial.println("========================================");
   
   // Afficher l'aide des commandes spécifiques au modèle
@@ -311,5 +324,123 @@ void SerialCommands::cmdBLE() {
   }
   
   Serial.println("==============================");
+#endif
+}
+
+void SerialCommands::cmdWiFi() {
+  WiFiManager::printInfo();
+}
+
+void SerialCommands::cmdWiFiSet(const String& args) {
+#ifndef HAS_WIFI
+  Serial.println("[WIFI] WiFi non disponible sur ce modele");
+  return;
+#else
+  if (args.length() == 0) {
+    Serial.println("[WIFI] Usage: wifi-set <ssid> [password]");
+    Serial.println("[WIFI] Exemple: wifi-set MonReseau MonMotDePasse");
+    Serial.println("[WIFI] Note: Si pas de mot de passe, laissez vide");
+    return;
+  }
+  
+  // Séparer SSID et mot de passe
+  String ssid = "";
+  String password = "";
+  
+  int spaceIndex = args.indexOf(' ');
+  if (spaceIndex > 0) {
+    ssid = args.substring(0, spaceIndex);
+    password = args.substring(spaceIndex + 1);
+    password.trim();
+  } else {
+    ssid = args;
+  }
+  
+  ssid.trim();
+  
+  if (ssid.length() == 0) {
+    Serial.println("[WIFI] Erreur: SSID invalide");
+    return;
+  }
+  
+  if (ssid.length() >= 64) {
+    Serial.println("[WIFI] Erreur: SSID trop long (max 63 caracteres)");
+    return;
+  }
+  
+  if (password.length() >= 64) {
+    Serial.println("[WIFI] Erreur: Mot de passe trop long (max 63 caracteres)");
+    return;
+  }
+  
+  // Mettre à jour la configuration
+  SDConfig config = InitManager::getConfig();
+  strncpy(config.wifi_ssid, ssid.c_str(), sizeof(config.wifi_ssid) - 1);
+  config.wifi_ssid[sizeof(config.wifi_ssid) - 1] = '\0';
+  strncpy(config.wifi_password, password.c_str(), sizeof(config.wifi_password) - 1);
+  config.wifi_password[sizeof(config.wifi_password) - 1] = '\0';
+  
+  // Sauvegarder
+  if (SDManager::isAvailable() && InitManager::updateConfig(config)) {
+    Serial.println("[WIFI] Configuration WiFi sauvegardee:");
+    Serial.print("[WIFI]   SSID: ");
+    Serial.println(ssid);
+    Serial.print("[WIFI]   Password: ");
+    if (password.length() > 0) {
+      Serial.println("********");
+    } else {
+      Serial.println("(aucun)");
+    }
+    Serial.println("[WIFI] Utilisez 'wifi-connect' pour vous connecter");
+  } else {
+    Serial.println("[WIFI] Erreur: Impossible de sauvegarder la configuration");
+  }
+#endif
+}
+
+void SerialCommands::cmdWiFiConnect() {
+#ifndef HAS_WIFI
+  Serial.println("[WIFI] WiFi non disponible sur ce modele");
+  return;
+#else
+  if (!WiFiManager::isAvailable()) {
+    Serial.println("[WIFI] WiFi non initialise");
+    return;
+  }
+  
+  // Vérifier si déjà connecté
+  if (WiFiManager::isConnected()) {
+    Serial.println("[WIFI] Deja connecte. Deconnexion...");
+    WiFiManager::disconnect();
+    delay(500);
+  }
+  
+  // Se connecter avec la config
+  Serial.println("[WIFI] Tentative de connexion...");
+  if (WiFiManager::connect()) {
+    Serial.println("[WIFI] Connexion reussie!");
+  } else {
+    Serial.println("[WIFI] Echec de connexion");
+  }
+#endif
+}
+
+void SerialCommands::cmdWiFiDisconnect() {
+#ifndef HAS_WIFI
+  Serial.println("[WIFI] WiFi non disponible sur ce modele");
+  return;
+#else
+  if (!WiFiManager::isAvailable()) {
+    Serial.println("[WIFI] WiFi non initialise");
+    return;
+  }
+  
+  if (!WiFiManager::isConnected()) {
+    Serial.println("[WIFI] Pas connecte");
+    return;
+  }
+  
+  WiFiManager::disconnect();
+  Serial.println("[WIFI] Deconnecte");
 #endif
 }

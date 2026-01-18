@@ -108,9 +108,21 @@ bool BLEManager::init(const char* deviceName) {
   pAdvertising->setMinPreferred(0x06);
   pAdvertising->setMaxPreferred(0x0C);
   
+  // Démarrer l'advertising immédiatement (double démarrage pour s'assurer qu'il démarre)
+  BLEDevice::startAdvertising();
+  delay(100);
+  
   available = true;
-  Serial.println("[BLE] BLE initialise avec succes");
+  
+  Serial.println("[BLE] ========================================");
+  Serial.println("[BLE] BLE initialise avec succes !");
+  Serial.print("[BLE] Nom du dispositif: ");
+  Serial.println(deviceName);
+  Serial.print("[BLE] Service UUID: ");
+  Serial.println(SERVICE_UUID);
   Serial.println("[BLE] Le dispositif est maintenant visible pour le couplage");
+  Serial.println("[BLE] Recherchez 'KIDOO-Basic' dans votre scan Bluetooth");
+  Serial.println("[BLE] ========================================");
   
   return true;
 #endif

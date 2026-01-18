@@ -28,7 +28,8 @@ struct SystemStatus {
   InitStatus sd;       // Gestionnaire SD
   InitStatus nfc;      // Gestionnaire NFC
   InitStatus ble;      // Gestionnaire BLE
-  // Ajouter d'autres composants ici (WiFi, etc.)
+  InitStatus wifi;     // Gestionnaire WiFi
+  // Ajouter d'autres composants ici
   
   bool isFullyInitialized() const {
     return serial == INIT_SUCCESS && led == INIT_SUCCESS;
@@ -72,6 +73,7 @@ private:
   static bool initSD();
   static bool initNFC();
   static bool initBLE();
+  static bool initWiFi();
   // Ajouter d'autres méthodes d'initialisation ici
   
   // Variables statiques
