@@ -58,6 +58,8 @@ private:
   static void cmdRTCSync();
   static void cmdPotentiometer();
   static void cmdMemoryDebug();
+  static void cmdNFCRead(const String& args);
+  static void cmdNFCWrite(const String& args);
   
   static bool initialized;
   static String inputBuffer;

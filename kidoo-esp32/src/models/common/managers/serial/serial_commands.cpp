@@ -8,6 +8,7 @@
 #include "../pubnub/pubnub_manager.h"
 #include "../rtc/rtc_manager.h"
 #include "../potentiometer/potentiometer_manager.h"
+#include "../nfc/nfc_manager.h"
 #include "../../../model_serial_commands.h"
 #include "../../../model_pubnub_routes.h"
 #include <Arduino.h>
@@ -122,6 +123,10 @@ void SerialCommands::processCommand(const String& command) {
     cmdPotentiometer();
   } else if (cmd == "memdebug" || cmd == "mem-debug" || cmd == "raminfo") {
     cmdMemoryDebug();
+  } else if (cmd == "nfc-read" || cmd == "nfc-read-uid") {
+    cmdNFCRead(args);
+  } else if (cmd == "nfc-write" || cmd == "nfc-write-block") {
+    cmdNFCWrite(args);
   } else {
     // Essayer les commandes spécifiques au modèle
     if (!ModelSerialCommands::processCommand(command)) {
@@ -160,6 +165,8 @@ void SerialCommands::printHelp() {
   Serial.println("  rtc-sync, ntp    - Synchroniser l'heure via NTP (WiFi requis)");
   Serial.println("  pot, volume      - Afficher la valeur du potentiometre");
   Serial.println("  memdebug, raminfo - Analyse detaillee de la RAM par composant");
+  Serial.println("  nfc-read [block] - Lire l'UID d'un tag NFC (optionnel: lire un bloc)");
+  Serial.println("  nfc-write <block> <data> - Ecrire des donnees sur un tag NFC");
   Serial.println("========================================");
   
   // Afficher l'aide des commandes spécifiques au modèle
@@ -861,4 +868,176 @@ void SerialCommands::cmdMemoryDebug() {
     Serial.println("  2. Reduire NUM_LEDS si possible");
     Serial.println("  3. Utiliser un ESP32 avec PSRAM");
   }
+}
+
+void SerialCommands::cmdNFCRead(const String& args) {
+#ifndef HAS_NFC
+  Serial.println("[NFC] NFC non disponible sur ce modele");
+  return;
+#else
+  if (!NFCManager::isAvailable()) {
+    Serial.println("[NFC] NFC non disponible");
+    return;
+  }
+  
+  // Lire l'UID du tag
+  uint8_t uid[10];
+  uint8_t uidLength;
+  
+  Serial.println("[NFC] Approchez un tag NFC...");
+  
+  if (!NFCManager::readTagUID(uid, &uidLength, 10000)) {
+    Serial.println("[NFC] ERREUR: Aucun tag detecte apres 10 secondes");
+    return;
+  }
+  
+  // Afficher l'UID
+  Serial.print("[NFC] Tag detecte - UID: ");
+  for (uint8_t i = 0; i < uidLength; i++) {
+    if (uid[i] < 0x10) Serial.print("0");
+    Serial.print(uid[i], HEX);
+    if (i < uidLength - 1) Serial.print(":");
+  }
+  Serial.println();
+  Serial.print("[NFC] Longueur UID: ");
+  Serial.print(uidLength);
+  Serial.println(" bytes");
+  
+  // Si un numéro de bloc est spécifié, lire ce bloc
+  if (args.length() > 0) {
+    int blockNumber = args.toInt();
+    
+    if (blockNumber < 0 || blockNumber > 63) {
+      Serial.println("[NFC] ERREUR: Numero de bloc invalide (0-63)");
+      return;
+    }
+    
+    uint8_t data[16];
+    Serial.print("[NFC] Lecture du bloc ");
+    Serial.print(blockNumber);
+    Serial.println("...");
+    
+    if (!NFCManager::readBlock(blockNumber, data, uid, uidLength)) {
+      Serial.println("[NFC] ERREUR: Echec de lecture du bloc");
+      return;
+    }
+    
+    // Afficher les données du bloc
+    Serial.print("[NFC] Bloc ");
+    Serial.print(blockNumber);
+    Serial.println(" (hex):");
+    for (uint8_t i = 0; i < 16; i++) {
+      if (data[i] < 0x10) Serial.print("0");
+      Serial.print(data[i], HEX);
+      Serial.print(" ");
+      if ((i + 1) % 8 == 0) Serial.println();
+    }
+    Serial.println();
+    
+    // Afficher en ASCII (si possible)
+    Serial.print("[NFC] Bloc ");
+    Serial.print(blockNumber);
+    Serial.println(" (ASCII):");
+    for (uint8_t i = 0; i < 16; i++) {
+      if (data[i] >= 32 && data[i] < 127) {
+        Serial.print((char)data[i]);
+      } else {
+        Serial.print(".");
+      }
+    }
+    Serial.println();
+  }
+#endif
+}
+
+void SerialCommands::cmdNFCWrite(const String& args) {
+#ifndef HAS_NFC
+  Serial.println("[NFC] NFC non disponible sur ce modele");
+  return;
+#else
+  if (!NFCManager::isAvailable()) {
+    Serial.println("[NFC] NFC non disponible");
+    return;
+  }
+  
+  if (args.length() == 0) {
+    Serial.println("[NFC] Usage: nfc-write <block> <data>");
+    Serial.println("[NFC] Exemple: nfc-write 4 Hello World!");
+    Serial.println("[NFC] Note: Le bloc doit etre entre 0 et 63");
+    Serial.println("[NFC]       Les donnees seront tronquees a 16 bytes");
+    return;
+  }
+  
+  // Séparer le numéro de bloc et les données
+  int spaceIndex = args.indexOf(' ');
+  if (spaceIndex <= 0) {
+    Serial.println("[NFC] ERREUR: Format invalide. Utilisez: nfc-write <block> <data>");
+    return;
+  }
+  
+  String blockStr = args.substring(0, spaceIndex);
+  String dataStr = args.substring(spaceIndex + 1);
+  
+  int blockNumber = blockStr.toInt();
+  
+  if (blockNumber < 0 || blockNumber > 63) {
+    Serial.println("[NFC] ERREUR: Numero de bloc invalide (0-63)");
+    return;
+  }
+  
+  // Préparer les données (16 bytes max)
+  uint8_t data[16];
+  memset(data, 0, sizeof(data));
+  
+  uint8_t dataLength = dataStr.length();
+  if (dataLength > 16) {
+    dataLength = 16;
+    Serial.println("[NFC] ATTENTION: Donnees tronquees a 16 bytes");
+  }
+  
+  memcpy(data, dataStr.c_str(), dataLength);
+  
+  // Lire l'UID du tag d'abord
+  uint8_t uid[10];
+  uint8_t uidLength;
+  
+  Serial.println("[NFC] Approchez un tag NFC...");
+  
+  if (!NFCManager::readTagUID(uid, &uidLength, 10000)) {
+    Serial.println("[NFC] ERREUR: Aucun tag detecte apres 10 secondes");
+    return;
+  }
+  
+  Serial.print("[NFC] Tag detecte - UID: ");
+  for (uint8_t i = 0; i < uidLength; i++) {
+    if (uid[i] < 0x10) Serial.print("0");
+    Serial.print(uid[i], HEX);
+    if (i < uidLength - 1) Serial.print(":");
+  }
+  Serial.println();
+  
+  // Écrire le bloc
+  Serial.print("[NFC] Ecriture du bloc ");
+  Serial.print(blockNumber);
+  Serial.println("...");
+  
+  if (!NFCManager::writeBlock(blockNumber, data, uid, uidLength)) {
+    Serial.println("[NFC] ERREUR: Echec d'ecriture du bloc");
+    Serial.println("[NFC] Verifiez que le tag n'est pas en lecture seule");
+    return;
+  }
+  
+  Serial.print("[NFC] Bloc ");
+  Serial.print(blockNumber);
+  Serial.println(" ecrit avec succes!");
+  
+  // Afficher les données écrites
+  Serial.print("[NFC] Donnees ecrites (hex): ");
+  for (uint8_t i = 0; i < 16; i++) {
+    if (data[i] < 0x10) Serial.print("0");
+    Serial.print(data[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
+#endif
 }
