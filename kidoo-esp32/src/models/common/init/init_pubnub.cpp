@@ -14,6 +14,10 @@ bool InitManager::initPubNub() {
   systemStatus.pubnub = INIT_NOT_STARTED;
   return true;
 #else
+  if (!HAS_PUBNUB) {
+    systemStatus.pubnub = INIT_NOT_STARTED;
+    return true;
+  }
   systemStatus.pubnub = INIT_IN_PROGRESS;
   Serial.println("[INIT] Initialisation PubNub...");
   

@@ -1,9 +1,14 @@
 #include "../managers/init/init_manager.h"
 #include "../managers/nfc/nfc_manager.h"
+#include "../../model_config.h"
 
 bool InitManager::initNFC() {
   systemStatus.nfc = INIT_IN_PROGRESS;
   
+#ifndef HAS_NFC
+  systemStatus.nfc = INIT_NOT_STARTED;
+  return true;  // Pas une erreur, juste désactivé
+#else
   if (!NFCManager::init()) {
     systemStatus.nfc = INIT_FAILED;
     
@@ -26,4 +31,5 @@ bool InitManager::initNFC() {
   Serial.println("[INIT] NFC operationnel");
   
   return true;
+#endif
 }

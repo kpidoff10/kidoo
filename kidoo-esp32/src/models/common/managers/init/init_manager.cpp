@@ -9,6 +9,7 @@
 #include "../pubnub/pubnub_manager.h"
 #include "../rtc/rtc_manager.h"
 #include "../potentiometer/potentiometer_manager.h"
+#include "../audio/audio_manager.h"
 #include "../../../model_config.h"
 #include "../../../../../color/colors.h"
 #include "../../../model_init.h"
@@ -23,7 +24,8 @@ SystemStatus InitManager::systemStatus = {
   INIT_NOT_STARTED,  // wifi
   INIT_NOT_STARTED,  // pubnub
   INIT_NOT_STARTED,  // rtc
-  INIT_NOT_STARTED   // potentiometer
+  INIT_NOT_STARTED,  // potentiometer
+  INIT_NOT_STARTED   // audio
 };
 bool InitManager::initialized = false;
 SDConfig* InitManager::globalConfig = nullptr;
@@ -68,11 +70,13 @@ bool InitManager::init() {
   if (!initSD()) {
     Serial.println("[INIT] ERREUR: Carte SD non disponible");
     
-    // Initialiser les LEDs en mode d'erreur (respiration rouge)
-    if (initLED()) {
+    // Initialiser les LEDs en mode d'erreur (respiration rouge) si disponibles
+    #ifdef HAS_LED
+    if (HAS_LED && initLED()) {
       LEDManager::setColor(COLOR_ERROR);
       LEDManager::setEffect(LED_EFFECT_PULSE);
     }
+    #endif
     
     initialized = true;
     return false;
@@ -80,15 +84,31 @@ bool InitManager::init() {
   delay(100);
   
   // ÉTAPE 2 : Initialiser le gestionnaire LED
-  if (!initLED()) {
-    Serial.println("[INIT] ERREUR: Echec LED");
-    allSuccess = false;
+  #ifdef HAS_LED
+  if (HAS_LED) {
+    if (!initLED()) {
+      Serial.println("[INIT] ERREUR: Echec LED");
+      allSuccess = false;
+    }
+    delay(100);
   }
-  delay(100);
+  #endif
   
   // ÉTAPE 3 : Initialiser le gestionnaire NFC (optionnel)
-  initNFC();  // Affiche un WARNING si non opérationnel, mais n'empêche pas l'initialisation
-  delay(100);
+  #ifdef HAS_NFC
+  if (HAS_NFC) {
+    initNFC();  // Affiche un WARNING si non opérationnel, mais n'empêche pas l'initialisation
+    delay(100);
+  }
+  #endif
+  
+  // ÉTAPE 3.5 : Initialiser le gestionnaire Audio (optionnel, après SD)
+  #ifdef HAS_AUDIO
+  if (HAS_AUDIO) {
+    initAudio();  // Affiche un WARNING si non opérationnel, mais n'empêche pas l'initialisation
+    delay(100);
+  }
+  #endif
   
   // Initialisation spécifique au modèle (après l'initialisation des composants communs)
   if (!InitModel::init()) {
@@ -98,33 +118,55 @@ bool InitManager::init() {
   delay(100);
   
   // ÉTAPE 4 : Initialiser le BLE (après l'init complète)
-  initBLE();  // Affiche un WARNING si non opérationnel, mais n'empêche pas l'initialisation
-  delay(100);
+  #ifdef HAS_BLE
+  if (HAS_BLE) {
+    initBLE();  // Affiche un WARNING si non opérationnel, mais n'empêche pas l'initialisation
+    delay(100);
+  }
+  #endif
   
   // ÉTAPE 5 : Initialiser le WiFi et se connecter si configuré
-  initWiFi();  // Tente de se connecter au WiFi configuré dans config.json
-  delay(100);
+  #ifdef HAS_WIFI
+  if (HAS_WIFI) {
+    initWiFi();  // Tente de se connecter au WiFi configuré dans config.json
+    delay(100);
+  }
+  #endif
   
   // ÉTAPE 6 : Initialiser PubNub (après WiFi)
-  initPubNub();  // Tente de se connecter à PubNub
-  delay(100);
+  #ifdef HAS_PUBNUB
+  if (HAS_PUBNUB) {
+    initPubNub();  // Tente de se connecter à PubNub
+    delay(100);
+  }
+  #endif
   
   // ÉTAPE 7 : Initialiser le RTC DS3231 (optionnel)
-  initRTC();  // Affiche un WARNING si non opérationnel
-  delay(100);
+  #ifdef HAS_RTC
+  if (HAS_RTC) {
+    initRTC();  // Affiche un WARNING si non opérationnel
+    delay(100);
+  }
+  #endif
   
   // ÉTAPE 8 : Initialiser le potentiomètre (optionnel)
-  initPotentiometer();  // Pour contrôle du volume/luminosité
+  #ifdef HAS_POTENTIOMETER
+  if (HAS_POTENTIOMETER) {
+    initPotentiometer();  // Pour contrôle du volume/luminosité
+  }
+  #endif
   
   initialized = true;
   
   if (allSuccess) {
     Serial.println("[INIT] OK");
     // Mettre les LEDs en vert qui tourne pour indiquer que tout est OK
-    if (systemStatus.led == INIT_SUCCESS) {
+    #ifdef HAS_LED
+    if (HAS_LED && systemStatus.led == INIT_SUCCESS) {
       LEDManager::setColor(COLOR_SUCCESS);
       LEDManager::setEffect(LED_EFFECT_ROTATE);
     }
+    #endif
   } else {
     Serial.println("[INIT] ERREUR");
     printStatus();
@@ -163,6 +205,8 @@ InitStatus InitManager::getComponentStatus(const char* componentName) {
     return systemStatus.rtc;
   } else if (strcmp(componentName, "potentiometer") == 0) {
     return systemStatus.potentiometer;
+  } else if (strcmp(componentName, "audio") == 0) {
+    return systemStatus.audio;
   }
   // Ajouter d'autres composants ici
   
@@ -188,21 +232,25 @@ void InitManager::printStatus() {
       break;
   }
   
-  Serial.print("[INIT] LED: ");
-  switch (systemStatus.led) {
-    case INIT_NOT_STARTED:
-      Serial.println("Non demarre");
-      break;
-    case INIT_IN_PROGRESS:
-      Serial.println("En cours");
-      break;
-    case INIT_SUCCESS:
-      Serial.println("OK");
-      break;
-    case INIT_FAILED:
-      Serial.println("ERREUR");
-      break;
+  #ifdef HAS_LED
+  if (HAS_LED) {
+    Serial.print("[INIT] LED: ");
+    switch (systemStatus.led) {
+      case INIT_NOT_STARTED:
+        Serial.println("Non demarre");
+        break;
+      case INIT_IN_PROGRESS:
+        Serial.println("En cours");
+        break;
+      case INIT_SUCCESS:
+        Serial.println("OK");
+        break;
+      case INIT_FAILED:
+        Serial.println("ERREUR");
+        break;
+    }
   }
+  #endif
   
   Serial.print("[INIT] SD: ");
   switch (systemStatus.sd) {
@@ -220,114 +268,169 @@ void InitManager::printStatus() {
       break;
   }
   
-  Serial.print("[INIT] NFC: ");
-  switch (systemStatus.nfc) {
-    case INIT_NOT_STARTED:
-      Serial.println("Non demarre");
-      break;
-    case INIT_IN_PROGRESS:
-      Serial.println("En cours");
-      break;
-    case INIT_SUCCESS:
-      Serial.println("OK");
-      break;
-    case INIT_FAILED:
-      Serial.println("WARNING");
-      break;
+  #ifdef HAS_NFC
+  if (HAS_NFC) {
+    Serial.print("[INIT] NFC: ");
+    switch (systemStatus.nfc) {
+      case INIT_NOT_STARTED:
+        Serial.println("Non demarre");
+        break;
+      case INIT_IN_PROGRESS:
+        Serial.println("En cours");
+        break;
+      case INIT_SUCCESS:
+        Serial.println("OK");
+        break;
+      case INIT_FAILED:
+        Serial.println("WARNING");
+        break;
+    }
   }
+  #endif
   
-  Serial.print("[INIT] BLE: ");
-  switch (systemStatus.ble) {
-    case INIT_NOT_STARTED:
-      Serial.println("Non demarre");
-      break;
-    case INIT_IN_PROGRESS:
-      Serial.println("En cours");
-      break;
-    case INIT_SUCCESS:
-      Serial.println("OK");
-      break;
-    case INIT_FAILED:
-      Serial.println("ERREUR");
-      break;
+  #ifdef HAS_BLE
+  if (HAS_BLE) {
+    Serial.print("[INIT] BLE: ");
+    switch (systemStatus.ble) {
+      case INIT_NOT_STARTED:
+        Serial.println("Non demarre");
+        break;
+      case INIT_IN_PROGRESS:
+        Serial.println("En cours");
+        break;
+      case INIT_SUCCESS:
+        Serial.println("OK");
+        break;
+      case INIT_FAILED:
+        Serial.println("ERREUR");
+        break;
+    }
   }
+  #endif
   
-  Serial.print("[INIT] WiFi: ");
-  switch (systemStatus.wifi) {
-    case INIT_NOT_STARTED:
-      Serial.println("Non demarre");
-      break;
-    case INIT_IN_PROGRESS:
-      Serial.println("En cours");
-      break;
-    case INIT_SUCCESS:
-      Serial.println("OK");
-      if (WiFiManager::isConnected()) {
-        Serial.print("[INIT]   -> IP: ");
-        Serial.println(WiFiManager::getLocalIP());
-      }
-      break;
-    case INIT_FAILED:
-      Serial.println("ERREUR");
-      break;
+  #ifdef HAS_WIFI
+  if (HAS_WIFI) {
+    Serial.print("[INIT] WiFi: ");
+    switch (systemStatus.wifi) {
+      case INIT_NOT_STARTED:
+        Serial.println("Non demarre");
+        break;
+      case INIT_IN_PROGRESS:
+        Serial.println("En cours");
+        break;
+      case INIT_SUCCESS:
+        Serial.println("OK");
+        if (WiFiManager::isConnected()) {
+          Serial.print("[INIT]   -> IP: ");
+          Serial.println(WiFiManager::getLocalIP());
+        }
+        break;
+      case INIT_FAILED:
+        Serial.println("ERREUR");
+        break;
+    }
   }
+  #endif
   
-  Serial.print("[INIT] PubNub: ");
-  switch (systemStatus.pubnub) {
-    case INIT_NOT_STARTED:
-      Serial.println("Non demarre");
-      break;
-    case INIT_IN_PROGRESS:
-      Serial.println("En cours");
-      break;
-    case INIT_SUCCESS:
-      Serial.println("OK");
-      if (PubNubManager::isConnected()) {
-        Serial.print("[INIT]   -> Channel: ");
-        Serial.println(PubNubManager::getChannel());
-      }
-      break;
-    case INIT_FAILED:
-      Serial.println("Non configure");
-      break;
+  #ifdef HAS_PUBNUB
+  if (HAS_PUBNUB) {
+    Serial.print("[INIT] PubNub: ");
+    switch (systemStatus.pubnub) {
+      case INIT_NOT_STARTED:
+        Serial.println("Non demarre");
+        break;
+      case INIT_IN_PROGRESS:
+        Serial.println("En cours");
+        break;
+      case INIT_SUCCESS:
+        Serial.println("OK");
+        if (PubNubManager::isConnected()) {
+          Serial.print("[INIT]   -> Channel: ");
+          Serial.println(PubNubManager::getChannel());
+        }
+        break;
+      case INIT_FAILED:
+        Serial.println("Non configure");
+        break;
+    }
   }
+  #endif
   
-  Serial.print("[INIT] RTC: ");
-  switch (systemStatus.rtc) {
-    case INIT_NOT_STARTED:
-      Serial.println("Non demarre");
-      break;
-    case INIT_IN_PROGRESS:
-      Serial.println("En cours");
-      break;
-    case INIT_SUCCESS:
-      Serial.println("OK");
-      Serial.print("[INIT]   -> Heure: ");
-      Serial.println(RTCManager::getDateTimeString());
-      break;
-    case INIT_FAILED:
-      Serial.println("Non disponible");
-      break;
+  #ifdef HAS_RTC
+  if (HAS_RTC) {
+    Serial.print("[INIT] RTC: ");
+    switch (systemStatus.rtc) {
+      case INIT_NOT_STARTED:
+        Serial.println("Non demarre");
+        break;
+      case INIT_IN_PROGRESS:
+        Serial.println("En cours");
+        break;
+      case INIT_SUCCESS:
+        Serial.println("OK");
+        Serial.print("[INIT]   -> Heure: ");
+        Serial.println(RTCManager::getDateTimeString());
+        break;
+      case INIT_FAILED:
+        Serial.println("Non disponible");
+        break;
+    }
   }
+  #endif
   
-  Serial.print("[INIT] Potentiometre: ");
-  switch (systemStatus.potentiometer) {
-    case INIT_NOT_STARTED:
-      Serial.println("Non demarre");
-      break;
-    case INIT_IN_PROGRESS:
-      Serial.println("En cours");
-      break;
-    case INIT_SUCCESS:
-      Serial.println("OK");
-      Serial.print("[INIT]   -> Valeur: ");
-      Serial.print(PotentiometerManager::getLastValue());
-      Serial.println("%");
-      break;
-    case INIT_FAILED:
-      Serial.println("Non disponible");
-      break;
+  #ifdef HAS_POTENTIOMETER
+  if (HAS_POTENTIOMETER) {
+    Serial.print("[INIT] Potentiometre: ");
+    switch (systemStatus.potentiometer) {
+      case INIT_NOT_STARTED:
+        Serial.println("Non demarre");
+        break;
+      case INIT_IN_PROGRESS:
+        Serial.println("En cours");
+        break;
+      case INIT_SUCCESS:
+        Serial.println("OK");
+        Serial.print("[INIT]   -> Valeur: ");
+        Serial.print(PotentiometerManager::getLastValue());
+        Serial.println("%");
+        break;
+      case INIT_FAILED:
+        Serial.println("Non disponible");
+        break;
+    }
   }
+  #endif
+  
+  #ifdef HAS_AUDIO
+  if (HAS_AUDIO) {
+    Serial.print("[INIT] Audio: ");
+    switch (systemStatus.audio) {
+      case INIT_NOT_STARTED:
+        Serial.println("Non demarre");
+        break;
+      case INIT_IN_PROGRESS:
+        Serial.println("En cours");
+        break;
+      case INIT_SUCCESS:
+        Serial.println("OK");
+        if (AudioManager::isAvailable()) {
+          Serial.print("[INIT]   -> Mode: ");
+          #if AUDIO_MODE == 2
+            Serial.println("STEREO");
+          #else
+            Serial.println("MONO");
+          #endif
+          Serial.print("[INIT]   -> Volume: ");
+          Serial.print(AudioManager::getVolume());
+          Serial.println("/21");
+        }
+        break;
+      case INIT_FAILED:
+        Serial.println("Non disponible");
+        break;
+    }
+  }
+  #endif
   
   // Ajouter d'autres composants ici
   

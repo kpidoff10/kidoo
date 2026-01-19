@@ -9,8 +9,10 @@
 #include "../rtc/rtc_manager.h"
 #include "../potentiometer/potentiometer_manager.h"
 #include "../nfc/nfc_manager.h"
+#include "../audio/audio_manager.h"
 #include "../../../model_serial_commands.h"
 #include "../../../model_pubnub_routes.h"
+#include "../../../model_config.h"
 #include <Arduino.h>
 
 // Variables statiques
@@ -127,6 +129,14 @@ void SerialCommands::processCommand(const String& command) {
     cmdNFCRead(args);
   } else if (cmd == "nfc-write" || cmd == "nfc-write-block") {
     cmdNFCWrite(args);
+  } else if (cmd == "audio-play" || cmd == "play") {
+    cmdAudioPlay(args);
+  } else if (cmd == "audio-stop" || cmd == "stop") {
+    cmdAudioStop();
+  } else if (cmd == "audio-volume" || cmd == "volume") {
+    cmdAudioVolume(args);
+  } else if (cmd == "audio" || cmd == "audio-info") {
+    cmdAudioInfo();
   } else {
     // Essayer les commandes spécifiques au modèle
     if (!ModelSerialCommands::processCommand(command)) {
@@ -148,25 +158,70 @@ void SerialCommands::printHelp() {
   Serial.println("  info, system     - Afficher les informations systeme");
   Serial.println("  memory, mem      - Afficher l'utilisation de la memoire");
   Serial.println("  clear, cls       - Effacer l'ecran");
-  Serial.println("  brightness [%]   - Afficher ou definir la luminosite (0-100%)");
-  Serial.println("  sleep [timeout]  - Afficher ou definir le timeout sleep mode (ms, min: 5000, 0=desactive)");
-  Serial.println("  ble, bluetooth   - Afficher l'etat de connexion BLE");
-  Serial.println("  wifi             - Afficher l'etat de connexion WiFi");
-  Serial.println("  wifi-set <ssid> [password] - Configurer le WiFi");
-  Serial.println("  wifi-connect     - Se connecter au WiFi configure");
-  Serial.println("  wifi-disconnect  - Se deconnecter du WiFi");
-  Serial.println("  pubnub           - Afficher l'etat PubNub");
-  Serial.println("  pubnub-connect   - Se connecter a PubNub");
-  Serial.println("  pubnub-disconnect - Se deconnecter de PubNub");
-  Serial.println("  pubnub-pub <msg> - Publier un message");
-  Serial.println("  pubnub-routes    - Afficher les routes PubNub disponibles");
-  Serial.println("  rtc, time, date  - Afficher l'heure et la date du RTC");
-  Serial.println("  rtc-set <timestamp|DD/MM/YYYY HH:MM:SS> - Definir l'heure");
-  Serial.println("  rtc-sync, ntp    - Synchroniser l'heure via NTP (WiFi requis)");
-  Serial.println("  pot, volume      - Afficher la valeur du potentiometre");
   Serial.println("  memdebug, raminfo - Analyse detaillee de la RAM par composant");
-  Serial.println("  nfc-read [block] - Lire l'UID d'un tag NFC (optionnel: lire un bloc)");
-  Serial.println("  nfc-write <block> <data> - Ecrire des donnees sur un tag NFC");
+  
+  #ifdef HAS_LED
+  if (HAS_LED) {
+    Serial.println("  brightness [%]   - Afficher ou definir la luminosite (0-100%)");
+    Serial.println("  sleep [timeout]  - Afficher ou definir le timeout sleep mode (ms, min: 5000, 0=desactive)");
+  }
+  #endif
+  
+  #ifdef HAS_BLE
+  if (HAS_BLE) {
+    Serial.println("  ble, bluetooth   - Afficher l'etat de connexion BLE");
+  }
+  #endif
+  
+  #ifdef HAS_WIFI
+  if (HAS_WIFI) {
+    Serial.println("  wifi             - Afficher l'etat de connexion WiFi");
+    Serial.println("  wifi-set <ssid> [password] - Configurer le WiFi");
+    Serial.println("  wifi-connect     - Se connecter au WiFi configure");
+    Serial.println("  wifi-disconnect  - Se deconnecter du WiFi");
+  }
+  #endif
+  
+  #ifdef HAS_PUBNUB
+  if (HAS_PUBNUB) {
+    Serial.println("  pubnub           - Afficher l'etat PubNub");
+    Serial.println("  pubnub-connect   - Se connecter a PubNub");
+    Serial.println("  pubnub-disconnect - Se deconnecter de PubNub");
+    Serial.println("  pubnub-pub <msg> - Publier un message");
+    Serial.println("  pubnub-routes    - Afficher les routes PubNub disponibles");
+  }
+  #endif
+  
+  #ifdef HAS_RTC
+  if (HAS_RTC) {
+    Serial.println("  rtc, time, date  - Afficher l'heure et la date du RTC");
+    Serial.println("  rtc-set <timestamp|DD/MM/YYYY HH:MM:SS> - Definir l'heure");
+    Serial.println("  rtc-sync, ntp    - Synchroniser l'heure via NTP (WiFi requis)");
+  }
+  #endif
+  
+  #ifdef HAS_POTENTIOMETER
+  if (HAS_POTENTIOMETER) {
+    Serial.println("  pot, volume      - Afficher la valeur du potentiometre");
+  }
+  #endif
+  
+  #ifdef HAS_NFC
+  if (HAS_NFC) {
+    Serial.println("  nfc-read [block] - Lire l'UID d'un tag NFC (optionnel: lire un bloc)");
+    Serial.println("  nfc-write <block> <data> - Ecrire des donnees sur un tag NFC");
+  }
+  #endif
+  
+  #ifdef HAS_AUDIO
+  if (HAS_AUDIO) {
+    Serial.println("  audio-play <file> - Jouer un fichier audio depuis la SD (MP3, WAV)");
+    Serial.println("  audio-stop - Arreter la lecture audio en cours");
+    Serial.println("  audio-volume [0-21] - Afficher ou definir le volume (0=mute, 21=max)");
+    Serial.println("  audio, audio-info - Afficher l'etat de l'audio");
+  }
+  #endif
+  
   Serial.println("========================================");
   
   // Afficher l'aide des commandes spécifiques au modèle
@@ -1039,5 +1094,104 @@ void SerialCommands::cmdNFCWrite(const String& args) {
     Serial.print(" ");
   }
   Serial.println();
+#endif
+}
+
+void SerialCommands::cmdAudioPlay(const String& args) {
+#ifndef HAS_AUDIO
+  Serial.println("[AUDIO] Audio non disponible sur ce modele");
+  return;
+#else
+  if (!AudioManager::isAvailable()) {
+    Serial.println("[AUDIO] Audio non disponible");
+    return;
+  }
+  
+  if (args.length() == 0) {
+    Serial.println("[AUDIO] Usage: audio-play <file>");
+    Serial.println("[AUDIO] Exemple: audio-play /music.mp3");
+    Serial.println("[AUDIO] Formats supportes: MP3, WAV");
+    return;
+  }
+  
+  // Nettoyer le chemin (enlever les espaces)
+  String filePath = args;
+  filePath.trim();
+  
+  // S'assurer que le chemin commence par /
+  if (!filePath.startsWith("/")) {
+    filePath = "/" + filePath;
+  }
+  
+  Serial.print("[AUDIO] Lecture du fichier: ");
+  Serial.println(filePath);
+  
+  if (AudioManager::playFile(filePath.c_str())) {
+    Serial.println("[AUDIO] Lecture demarree");
+  } else {
+    Serial.println("[AUDIO] ERREUR: Echec du demarrage de la lecture");
+  }
+#endif
+}
+
+void SerialCommands::cmdAudioStop() {
+#ifndef HAS_AUDIO
+  Serial.println("[AUDIO] Audio non disponible sur ce modele");
+  return;
+#else
+  if (!AudioManager::isAvailable()) {
+    Serial.println("[AUDIO] Audio non disponible");
+    return;
+  }
+  
+  AudioManager::stop();
+  Serial.println("[AUDIO] Lecture arretee");
+#endif
+}
+
+void SerialCommands::cmdAudioVolume(const String& args) {
+#ifndef HAS_AUDIO
+  Serial.println("[AUDIO] Audio non disponible sur ce modele");
+  return;
+#else
+  if (!AudioManager::isAvailable()) {
+    Serial.println("[AUDIO] Audio non disponible");
+    return;
+  }
+  
+  if (args.length() == 0) {
+    // Afficher le volume actuel
+    uint8_t volume = AudioManager::getVolume();
+    Serial.print("[AUDIO] Volume actuel: ");
+    Serial.print(volume);
+    Serial.println("/21");
+    Serial.println("[AUDIO] Utilisez: audio-volume <0-21> pour definir le volume");
+    Serial.println("[AUDIO] Exemple: audio-volume 21 (volume maximum)");
+  } else {
+    // Définir le volume
+    int volume = args.toInt();
+    
+    if (volume < 0 || volume > 21) {
+      Serial.println("[AUDIO] ERREUR: Le volume doit etre entre 0 et 21");
+      return;
+    }
+    
+    if (AudioManager::setVolume((uint8_t)volume)) {
+      Serial.print("[AUDIO] Volume defini a: ");
+      Serial.print(volume);
+      Serial.println("/21");
+    } else {
+      Serial.println("[AUDIO] ERREUR: Impossible de definir le volume");
+    }
+  }
+#endif
+}
+
+void SerialCommands::cmdAudioInfo() {
+#ifndef HAS_AUDIO
+  Serial.println("[AUDIO] Audio non disponible sur ce modele");
+  return;
+#else
+  AudioManager::printInfo();
 #endif
 }

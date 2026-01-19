@@ -7,6 +7,10 @@ bool InitManager::initRTC() {
   systemStatus.rtc = INIT_NOT_STARTED;
   return true;
 #else
+  if (!HAS_RTC) {
+    systemStatus.rtc = INIT_NOT_STARTED;
+    return true;
+  }
   systemStatus.rtc = INIT_IN_PROGRESS;
   Serial.println("[INIT] Initialisation RTC DS3231...");
   

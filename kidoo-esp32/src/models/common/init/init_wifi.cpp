@@ -9,9 +9,12 @@ bool InitManager::initWiFi() {
   
 #ifndef HAS_WIFI
   systemStatus.wifi = INIT_NOT_STARTED;
-  Serial.println("[INIT] WiFi non disponible sur ce modele");
   return false;
 #else
+  if (!HAS_WIFI) {
+    systemStatus.wifi = INIT_NOT_STARTED;
+    return false;
+  }
   // Initialiser le WiFi
   if (!WiFiManager::init()) {
     systemStatus.wifi = INIT_FAILED;

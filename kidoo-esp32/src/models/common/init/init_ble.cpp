@@ -7,9 +7,12 @@ bool InitManager::initBLE() {
   
 #ifndef HAS_BLE
   systemStatus.ble = INIT_NOT_STARTED;
-  Serial.println("[INIT] BLE desactive dans la config");
   return true;  // Pas une erreur, juste désactivé
 #else
+  if (!HAS_BLE) {
+    systemStatus.ble = INIT_NOT_STARTED;
+    return true;  // Pas une erreur, juste désactivé
+  }
   // Construire le nom du device avec le modèle
   String deviceName = "KIDOO-";
   deviceName += KIDOO_MODEL_NAME;

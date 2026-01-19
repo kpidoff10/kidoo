@@ -1,5 +1,6 @@
 #include "model_serial_commands.h"
 #include "../../common/managers/nfc/nfc_manager.h"
+#include "../../model_config.h"
 #include <Arduino.h>
 
 /**
@@ -78,7 +79,11 @@ void ModelBasicSerialCommands::printHelp() {
   Serial.println("  COMMANDES SPECIFIQUES BASIC");
   Serial.println("========================================");
   Serial.println("  basic-info      - Afficher les infos du modele Basic");
-  Serial.println("  nfc-test, nfc   - Tester la detection du module NFC");
+  #ifdef HAS_NFC
+  if (HAS_NFC) {
+    Serial.println("  nfc-test, nfc   - Tester la detection du module NFC");
+  }
+  #endif
   Serial.println("========================================");
   Serial.println("");
 }
