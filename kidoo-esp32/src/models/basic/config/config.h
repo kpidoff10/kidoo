@@ -95,9 +95,9 @@
 #define HAS_SD_CARD true
 #define HAS_LED true        // Désactivé pour test
 #define HAS_WIFI true       // Désactivé pour test
-#define HAS_BLE false
+#define HAS_BLE true
 #define HAS_NFC false
-#define HAS_PUBNUB false
+#define HAS_PUBNUB true
 #define HAS_RTC false
 #define HAS_POTENTIOMETER true
 #define HAS_AUDIO true

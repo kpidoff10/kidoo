@@ -156,6 +156,141 @@ export interface CommandResult {
   error?: string;
 }
 
+/**
+ * Récupère l'historique des messages d'un channel PubNub
+ * @param channel Le nom du channel
+ * @param count Nombre de messages à récupérer (défaut: 1)
+ * @param afterTimetoken Timetoken après lequel récupérer les messages (optionnel)
+ * @returns Les messages avec leurs timetokens ou null en cas d'erreur
+ */
+export async function fetchHistory(
+  channel: string,
+  count: number = 1,
+  afterTimetoken?: string
+): Promise<{ message: Record<string, unknown>; timetoken: string }[] | null> {
+  if (!isPubNubConfigured()) {
+    console.warn('[PUBNUB] PubNub non configuré (clés manquantes)');
+    return null;
+  }
+
+  try {
+    // API History de PubNub avec include_token pour avoir les timetokens
+    // Note: "start" = timetoken le plus récent (exclusif), "end" = timetoken le plus ancien (exclusif)
+    // Pour récupérer les messages APRÈS un timetoken, on utilise "end" comme borne inférieure
+    let url = `https://${PUBNUB_ORIGIN}/v2/history/sub-key/${PUBNUB_SUBSCRIBE_KEY}/channel/${channel}?count=${count}&include_token=true`;
+    
+    // Si on a un timetoken, ne récupérer que les messages APRÈS celui-ci
+    if (afterTimetoken) {
+      url += `&end=${afterTimetoken}`;
+    }
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`[PUBNUB] Erreur history: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    console.log(`[PUBNUB] History raw response:`, JSON.stringify(data, null, 2));
+    
+    // Format de réponse PubNub History avec include_token:
+    // [[{message: {...}, timetoken: "..."}, ...], startTimetoken, endTimetoken]
+    if (Array.isArray(data) && Array.isArray(data[0])) {
+      const messages = data[0] as { message: Record<string, unknown>; timetoken: string }[];
+      console.log(`[PUBNUB] Parsed ${messages.length} messages from history`);
+      return messages;
+    }
+    
+    console.log(`[PUBNUB] Unexpected history format`);
+    return null;
+  } catch (error) {
+    console.error('[PUBNUB] Erreur lors de la récupération de l\'historique:', error);
+    return null;
+  }
+}
+
+/**
+ * Récupère l'historique des messages d'un Kidoo
+ * @param macAddress L'adresse MAC du Kidoo
+ * @param count Nombre de messages à récupérer (défaut: 1)
+ * @returns Les messages ou null en cas d'erreur
+ */
+export async function fetchKidooHistory(
+  macAddress: string,
+  count: number = 1
+): Promise<Record<string, unknown>[] | null> {
+  const channel = getKidooChannel(macAddress);
+  const history = await fetchHistory(channel, count);
+  // Extraire juste les messages (sans les timetokens)
+  return history?.map(item => item.message) ?? null;
+}
+
+/**
+ * Attend un message de type spécifique sur un channel avec timeout
+ * @param macAddress L'adresse MAC du Kidoo
+ * @param messageType Le type de message attendu (ex: 'info')
+ * @param timeoutMs Timeout en millisecondes (défaut: 5000)
+ * @param pollIntervalMs Intervalle de polling (défaut: 500)
+ * @returns Le message trouvé ou null si timeout
+ */
+export async function waitForMessage(
+  macAddress: string,
+  messageType: string,
+  timeoutMs: number = 5000,
+  pollIntervalMs: number = 500
+): Promise<Record<string, unknown> | null> {
+  const startTime = Date.now();
+  const channel = getKidooChannel(macAddress);
+  
+  // Récupérer le dernier timetoken pour ne chercher que les NOUVEAUX messages
+  const initialHistory = await fetchHistory(channel, 1);
+  let afterTimetoken: string | undefined;
+  
+  if (initialHistory && initialHistory.length > 0) {
+    // Utiliser le timetoken du dernier message comme point de départ
+    // Les messages sont retournés du plus ancien au plus récent, donc [0] est le plus récent quand count=1
+    afterTimetoken = initialHistory[0].timetoken;
+    console.log(`[PUBNUB] Timetoken de départ: ${afterTimetoken}`);
+  }
+  
+  while (Date.now() - startTime < timeoutMs) {
+    // Attendre avant de poll
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+    
+    // Récupérer les messages APRÈS le timetoken de départ
+    const messages = await fetchHistory(channel, 10, afterTimetoken);
+    
+    if (messages && messages.length > 0) {
+      console.log(`[PUBNUB] ${messages.length} nouveau(x) message(s) trouvé(s)`);
+      
+      // Les messages sont retournés du plus ancien au plus récent
+      // On cherche le DERNIER message du type attendu (le plus récent)
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const item = messages[i];
+        const msg = item.message;
+        if (msg && typeof msg === 'object' && msg.type === messageType) {
+          console.log(`[PUBNUB] Message '${messageType}' trouvé (timetoken: ${item.timetoken})`);
+          return msg;
+        }
+      }
+      
+      // Mettre à jour le timetoken pour la prochaine itération
+      // Le dernier message de la liste est le plus récent
+      afterTimetoken = messages[messages.length - 1].timetoken;
+    }
+  }
+  
+  console.log(`[PUBNUB] Timeout après ${timeoutMs}ms`);
+  return null; // Timeout
+}
+
 // Commandes disponibles
 export const Commands = {
   /**

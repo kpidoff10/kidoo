@@ -5,9 +5,7 @@
 
 // Schémas
 export * from './schemas/auth';
-export * from './schemas/commands';  // Exporte depuis commands/index.ts
 export * from './schemas/kidoo';
-export * from './schemas/multimedia';
 export * from './schemas/tag';
 
 // Types
@@ -16,3 +14,6 @@ export * from './types/kidoo';
 export * from './types/tag';
 export * from './types/tag-type'; // Exporte TagType et TAG_TYPES
 export * from './types/user';
+
+// Kidoos (schémas et types par modèle)
+export * from './kidoos';

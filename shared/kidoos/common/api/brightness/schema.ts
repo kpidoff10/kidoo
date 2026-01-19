@@ -1,6 +1,6 @@
 /**
  * Schéma pour la commande brightness
- * Luminosité en pourcentage (10-100)
+ * Luminosité en pourcentage (1-100)
  */
 
 import { z } from 'zod';
@@ -15,5 +15,3 @@ export const brightnessCommandSchema = z.object({
 });
 
 export type BrightnessCommandInput = z.infer<typeof brightnessCommandSchema>;
-
-

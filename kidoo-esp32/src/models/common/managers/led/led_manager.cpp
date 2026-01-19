@@ -3,6 +3,10 @@
 #include "../sd/sd_manager.h"
 #include "../../../model_config.h"
 
+#ifdef HAS_WIFI
+#include "../wifi/wifi_manager.h"
+#endif
+
 // Variables statiques
 bool LEDManager::initialized = false;
 TaskHandle_t LEDManager::taskHandle = nullptr;
@@ -267,6 +271,8 @@ void LEDManager::updateSleepFade() {
 }
 
 void LEDManager::wakeUp() {
+  bool wasSleeping = (isSleeping || isFadingToSleep);
+  
   if (isSleeping || isFadingToSleep) {
     isSleeping = false;
     isFadingToSleep = false;
@@ -284,6 +290,17 @@ void LEDManager::wakeUp() {
   }
   // Réinitialiser le timer d'activité
   lastActivityTime = millis();
+  
+  // Si on sortait du mode sommeil, vérifier le WiFi et relancer le retry si nécessaire
+  if (wasSleeping) {
+    #ifdef HAS_WIFI
+    if (!WiFiManager::isConnected() && !WiFiManager::isRetryThreadActive()) {
+      // WiFi non connecté et pas de retry en cours, démarrer le retry
+      Serial.println("[LED] Sortie du sleep mode - verification WiFi...");
+      WiFiManager::startRetryThread();
+    }
+    #endif
+  }
 }
 
 void LEDManager::updateWakeFade() {

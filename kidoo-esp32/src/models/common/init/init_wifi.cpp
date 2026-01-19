@@ -48,7 +48,11 @@ bool InitManager::initWiFi() {
     } else {
       // Connexion échouée mais WiFi initialisé
       systemStatus.wifi = INIT_SUCCESS;  // WiFi est initialisé, juste pas connecté
-      Serial.println("[INIT] WiFi initialise (non connecte - verifiez config.json)");
+      Serial.println("[INIT] WiFi initialise (non connecte - demarrage retry automatique)");
+      
+      // Démarrer le thread de retry automatique
+      WiFiManager::startRetryThread();
+      
       return true;
     }
   } else {

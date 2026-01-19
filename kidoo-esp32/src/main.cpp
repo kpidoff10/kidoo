@@ -6,6 +6,10 @@
 #include "models/common/managers/audio/audio_manager.h"
 #include "models/model_config.h"
 
+#ifdef HAS_WIFI
+#include "models/common/managers/wifi/wifi_manager.h"
+#endif
+
 void setup() {
   // Forcer la fréquence CPU à 240MHz pour de meilleures performances audio
   // Par défaut, l'ESP32 peut tourner à 160MHz ou 80MHz selon la configuration
@@ -37,6 +41,17 @@ void loop() {
   #ifdef HAS_PUBNUB
   // Maintenir la connexion PubNub et traiter les messages
   PubNubManager::loop();
+  
+  // Vérifier si PubNub doit se connecter automatiquement quand le WiFi devient disponible
+  // (si PubNub est initialisé mais pas connecté, et que le WiFi est maintenant connecté)
+  if (PubNubManager::isInitialized() && !PubNubManager::isConnected()) {
+    #ifdef HAS_WIFI
+    if (WiFiManager::isConnected()) {
+      // WiFi est connecté, tenter de connecter PubNub
+      PubNubManager::connect();
+    }
+    #endif
+  }
   #endif
   
   // Mettre à jour le potentiomètre (détection de changement)
