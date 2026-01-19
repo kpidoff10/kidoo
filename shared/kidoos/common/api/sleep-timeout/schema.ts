@@ -5,19 +5,19 @@
 
 import { z } from 'zod';
 
+export const SLEEP_TIMEOUT_LIMITS = {
+  min: 5000,
+  max: 300000,
+} as const;
+
 export const sleepTimeoutCommandSchema = z.object({
   value: z
     .number()
     .int()
     .refine(
-      (val) => val === 0 || (val >= 5000 && val <= 300000),
-      'Le délai doit être 0 (désactivé) ou entre 5000 et 300000 ms'
+      (val) => val === 0 || (val >= SLEEP_TIMEOUT_LIMITS.min && val <= SLEEP_TIMEOUT_LIMITS.max),
+      `Le délai doit être 0 (désactivé) ou entre ${SLEEP_TIMEOUT_LIMITS.min} et ${SLEEP_TIMEOUT_LIMITS.max} ms`
     ),
 });
 
 export type SleepTimeoutCommandInput = z.infer<typeof sleepTimeoutCommandSchema>;
-
-export const SLEEP_TIMEOUT_LIMITS = {
-  min: 5000,
-  max: 300000,
-} as const;

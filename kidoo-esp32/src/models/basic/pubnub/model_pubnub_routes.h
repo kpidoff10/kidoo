@@ -8,16 +8,18 @@
  * Routes PubNub spécifiques au modèle Kidoo Basic
  * 
  * Actions disponibles:
+ * - get-info: Récupérer les informations complètes de l'appareil
  * - brightness: Gérer la luminosité des LEDs
- * - sleep: Gérer le mode veille
+ * - sleep-timeout: Gérer le délai de mise en veille
+ * - reboot: Redémarrer l'appareil
  * - led: Contrôler les LEDs (couleur, effet)
- * - status: Demander le statut de l'appareil
  * 
  * Format des messages:
- * { "action": "brightness", "value": 50 }
- * { "action": "sleep", "timeout": 30000 }
+ * { "action": "get-info" }
+ * { "action": "brightness", "params": { "value": 50 } }
+ * { "action": "sleep-timeout", "params": { "value": 30000 } }
+ * { "action": "reboot", "params": { "delay": 1000 } }
  * { "action": "led", "color": "#FF0000", "effect": "solid" }
- * { "action": "status" }
  */
 
 class ModelBasicPubNubRoutes {
@@ -36,10 +38,11 @@ public:
 
 private:
   // Handlers pour chaque action
+  static bool handleGetInfo(const JsonObject& json);
   static bool handleBrightness(const JsonObject& json);
-  static bool handleSleep(const JsonObject& json);
+  static bool handleSleepTimeout(const JsonObject& json);
+  static bool handleReboot(const JsonObject& json);
   static bool handleLed(const JsonObject& json);
-  static bool handleStatus(const JsonObject& json);
 };
 
 #endif // MODEL_BASIC_PUBNUB_ROUTES_H

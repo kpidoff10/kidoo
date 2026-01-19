@@ -290,8 +290,8 @@ void SerialCommands::cmdBrightness(const String& args) {
       return;
     }
     
-    // Convertir % en valeur brute (0-255)
-    uint8_t brightness = (uint8_t)((percent * 255) / 100);
+    // Convertir % en valeur brute (0-255) avec arrondi correct
+    uint8_t brightness = (uint8_t)((percent * 255 + 50) / 100);
     
     if (LEDManager::setBrightness(brightness)) {
       // Mettre à jour et sauvegarder la configuration

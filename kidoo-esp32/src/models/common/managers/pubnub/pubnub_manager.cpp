@@ -25,7 +25,7 @@ static const char* PUBNUB_ORIGIN = "ps.pndsn.com";
 
 // Structure pour les messages à publier
 struct PublishMessage {
-  char message[256];
+  char message[512];  // Augmenté pour supporter get-info
 };
 
 bool PubNubManager::init() {
@@ -316,39 +316,33 @@ bool PubNubManager::publishInternal(const char* message) {
   
   HTTPClient http;
   
-  // Encoder le message pour l'URL
-  String encodedMessage;
-  
+  // Préparer le message JSON
+  String jsonMessage;
   if (message[0] == '{' || message[0] == '[') {
-    encodedMessage = message;
+    jsonMessage = message;
   } else {
-    encodedMessage = "\"";
-    encodedMessage += message;
-    encodedMessage += "\"";
+    jsonMessage = "\"";
+    jsonMessage += message;
+    jsonMessage += "\"";
   }
   
-  // URL encode
-  encodedMessage.replace("\"", "%22");
-  encodedMessage.replace(" ", "%20");
-  encodedMessage.replace("{", "%7B");
-  encodedMessage.replace("}", "%7D");
-  encodedMessage.replace(":", "%3A");
-  encodedMessage.replace(",", "%2C");
-  
-  char url[512];
-  snprintf(url, sizeof(url),
-    "http://%s/publish/%s/%s/0/%s/0/%s",
-    PUBNUB_ORIGIN,
-    DEFAULT_PUBNUB_PUBLISH_KEY,
-    DEFAULT_PUBNUB_SUBSCRIBE_KEY,
-    channel,
-    encodedMessage.c_str()
-  );
+  // Construire l'URL (sans le message - on utilise POST)
+  String url = "http://";
+  url += PUBNUB_ORIGIN;
+  url += "/publish/";
+  url += DEFAULT_PUBNUB_PUBLISH_KEY;
+  url += "/";
+  url += DEFAULT_PUBNUB_SUBSCRIBE_KEY;
+  url += "/0/";
+  url += channel;
+  url += "/0";
   
   http.begin(url);
-  http.setTimeout(3000);
+  http.setTimeout(5000);
+  http.addHeader("Content-Type", "application/json");
   
-  int httpCode = http.GET();
+  // Utiliser POST pour envoyer le message dans le body (pas de limite URL)
+  int httpCode = http.POST(jsonMessage);
   http.end();
   
   if (httpCode == HTTP_CODE_OK) {
