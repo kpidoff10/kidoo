@@ -3,6 +3,8 @@
 #include "../led/led_manager.h"
 #include "../init/init_manager.h"
 #include "../sd/sd_manager.h"
+#include <SD.h>
+#include <ArduinoJson.h>
 #include "../ble/ble_manager.h"
 #include "../wifi/wifi_manager.h"
 #include "../pubnub/pubnub_manager.h"
@@ -137,6 +139,12 @@ void SerialCommands::processCommand(const String& command) {
     cmdAudioVolume(args);
   } else if (cmd == "audio" || cmd == "audio-info") {
     cmdAudioInfo();
+  } else if (cmd == "config-get" || cmd == "cfg-get") {
+    cmdConfigGet(args);
+  } else if (cmd == "config-set" || cmd == "cfg-set") {
+    cmdConfigSet(args);
+  } else if (cmd == "config-list" || cmd == "cfg-list" || cmd == "config") {
+    cmdConfigList();
   } else {
     // Essayer les commandes spécifiques au modèle
     if (!ModelSerialCommands::processCommand(command)) {
@@ -221,6 +229,10 @@ void SerialCommands::printHelp() {
     Serial.println("  audio, audio-info - Afficher l'etat de l'audio");
   }
   #endif
+  
+  Serial.println("  config-list, config - Afficher toutes les cles de config.json");
+  Serial.println("  config-get <key>   - Lire une cle de config.json");
+  Serial.println("  config-set <key> <value> - Definir une cle dans config.json");
   
   Serial.println("========================================");
   
@@ -1194,4 +1206,298 @@ void SerialCommands::cmdAudioInfo() {
 #else
   AudioManager::printInfo();
 #endif
+}
+
+void SerialCommands::cmdConfigList() {
+  if (!SDManager::isAvailable()) {
+    Serial.println("[CONFIG] Carte SD non disponible");
+    return;
+  }
+  
+  if (!SDManager::configFileExists()) {
+    Serial.println("[CONFIG] Fichier config.json non trouve");
+    return;
+  }
+  
+  // Ouvrir et lire le fichier config.json
+  File configFile = SD.open("/config.json", FILE_READ);
+  if (!configFile) {
+    Serial.println("[CONFIG] Erreur ouverture config.json");
+    return;
+  }
+  
+  // Lire le contenu
+  size_t fileSize = configFile.size();
+  if (fileSize == 0) {
+    configFile.close();
+    Serial.println("[CONFIG] Fichier config.json vide");
+    return;
+  }
+  
+  char* jsonBuffer = new char[fileSize + 1];
+  if (!jsonBuffer) {
+    configFile.close();
+    Serial.println("[CONFIG] Erreur allocation memoire");
+    return;
+  }
+  
+  size_t bytesRead = configFile.readBytes(jsonBuffer, fileSize);
+  jsonBuffer[bytesRead] = '\0';
+  configFile.close();
+  
+  // Parser le JSON
+  StaticJsonDocument<2048> doc;
+  DeserializationError error = deserializeJson(doc, jsonBuffer);
+  delete[] jsonBuffer;
+  
+  if (error) {
+    Serial.print("[CONFIG] Erreur parsing JSON: ");
+    Serial.println(error.c_str());
+    return;
+  }
+  
+  // Afficher toutes les clés
+  Serial.println("");
+  Serial.println("========== config.json ==========");
+  
+  JsonObject root = doc.as<JsonObject>();
+  for (JsonPair kv : root) {
+    Serial.print("  ");
+    Serial.print(kv.key().c_str());
+    Serial.print(" = ");
+    
+    if (kv.value().is<const char*>()) {
+      // Masquer les mots de passe
+      String key = kv.key().c_str();
+      if (key.indexOf("password") >= 0 || key.indexOf("secret") >= 0) {
+        Serial.println("********");
+      } else {
+        Serial.println(kv.value().as<const char*>());
+      }
+    } else if (kv.value().is<int>()) {
+      Serial.println(kv.value().as<int>());
+    } else if (kv.value().is<float>()) {
+      Serial.println(kv.value().as<float>());
+    } else if (kv.value().is<bool>()) {
+      Serial.println(kv.value().as<bool>() ? "true" : "false");
+    } else {
+      Serial.println("(objet/tableau)");
+    }
+  }
+  
+  Serial.println("=================================");
+}
+
+void SerialCommands::cmdConfigGet(const String& args) {
+  if (!SDManager::isAvailable()) {
+    Serial.println("[CONFIG] Carte SD non disponible");
+    return;
+  }
+  
+  if (args.length() == 0) {
+    Serial.println("[CONFIG] Usage: config-get <key>");
+    Serial.println("[CONFIG] Exemple: config-get pubnub_subscribe_key");
+    return;
+  }
+  
+  if (!SDManager::configFileExists()) {
+    Serial.println("[CONFIG] Fichier config.json non trouve");
+    return;
+  }
+  
+  // Ouvrir et lire le fichier
+  File configFile = SD.open("/config.json", FILE_READ);
+  if (!configFile) {
+    Serial.println("[CONFIG] Erreur ouverture config.json");
+    return;
+  }
+  
+  size_t fileSize = configFile.size();
+  char* jsonBuffer = new char[fileSize + 1];
+  if (!jsonBuffer) {
+    configFile.close();
+    Serial.println("[CONFIG] Erreur allocation memoire");
+    return;
+  }
+  
+  size_t bytesRead = configFile.readBytes(jsonBuffer, fileSize);
+  jsonBuffer[bytesRead] = '\0';
+  configFile.close();
+  
+  // Parser le JSON
+  StaticJsonDocument<2048> doc;
+  DeserializationError error = deserializeJson(doc, jsonBuffer);
+  delete[] jsonBuffer;
+  
+  if (error) {
+    Serial.print("[CONFIG] Erreur parsing JSON: ");
+    Serial.println(error.c_str());
+    return;
+  }
+  
+  // Chercher la clé
+  String key = args;
+  key.trim();
+  
+  if (!doc.containsKey(key)) {
+    Serial.print("[CONFIG] Cle '");
+    Serial.print(key);
+    Serial.println("' non trouvee");
+    return;
+  }
+  
+  Serial.print("[CONFIG] ");
+  Serial.print(key);
+  Serial.print(" = ");
+  
+  JsonVariant value = doc[key];
+  if (value.is<const char*>()) {
+    // Masquer les mots de passe
+    if (key.indexOf("password") >= 0 || key.indexOf("secret") >= 0) {
+      Serial.println("********");
+    } else {
+      Serial.println(value.as<const char*>());
+    }
+  } else if (value.is<int>()) {
+    Serial.println(value.as<int>());
+  } else if (value.is<float>()) {
+    Serial.println(value.as<float>());
+  } else if (value.is<bool>()) {
+    Serial.println(value.as<bool>() ? "true" : "false");
+  } else {
+    Serial.println("(objet/tableau)");
+  }
+}
+
+void SerialCommands::cmdConfigSet(const String& args) {
+  if (!SDManager::isAvailable()) {
+    Serial.println("[CONFIG] Carte SD non disponible");
+    return;
+  }
+  
+  if (args.length() == 0) {
+    Serial.println("[CONFIG] Usage: config-set <key> <value>");
+    Serial.println("[CONFIG] Exemples:");
+    Serial.println("[CONFIG]   config-set pubnub_subscribe_key sub-c-xxx");
+    Serial.println("[CONFIG]   config-set pubnub_publish_key pub-c-xxx");
+    Serial.println("[CONFIG]   config-set my_custom_key my_value");
+    Serial.println("[CONFIG]   config-set led_brightness 128");
+    return;
+  }
+  
+  // Séparer la clé et la valeur
+  int spaceIndex = args.indexOf(' ');
+  if (spaceIndex <= 0) {
+    Serial.println("[CONFIG] Erreur: format invalide. Utilisez: config-set <key> <value>");
+    return;
+  }
+  
+  String key = args.substring(0, spaceIndex);
+  String value = args.substring(spaceIndex + 1);
+  key.trim();
+  value.trim();
+  
+  if (key.length() == 0 || value.length() == 0) {
+    Serial.println("[CONFIG] Erreur: cle ou valeur vide");
+    return;
+  }
+  
+  // Lire le fichier existant ou créer un nouveau document
+  StaticJsonDocument<2048> doc;
+  
+  if (SDManager::configFileExists()) {
+    File configFile = SD.open("/config.json", FILE_READ);
+    if (configFile) {
+      size_t fileSize = configFile.size();
+      if (fileSize > 0) {
+        char* jsonBuffer = new char[fileSize + 1];
+        if (jsonBuffer) {
+          size_t bytesRead = configFile.readBytes(jsonBuffer, fileSize);
+          jsonBuffer[bytesRead] = '\0';
+          deserializeJson(doc, jsonBuffer);
+          delete[] jsonBuffer;
+        }
+      }
+      configFile.close();
+    }
+  }
+  
+  // Déterminer le type de valeur et l'ajouter
+  // Essayer de parser comme nombre entier
+  bool isInt = true;
+  bool isFloat = false;
+  bool hasDecimal = false;
+  
+  for (unsigned int i = 0; i < value.length(); i++) {
+    char c = value.charAt(i);
+    if (c == '-' && i == 0) continue;
+    if (c == '.') {
+      if (hasDecimal) {
+        isInt = false;
+        isFloat = false;
+        break;
+      }
+      hasDecimal = true;
+      isFloat = true;
+      isInt = false;
+      continue;
+    }
+    if (!isDigit(c)) {
+      isInt = false;
+      isFloat = false;
+      break;
+    }
+  }
+  
+  // Vérifier si c'est un booléen
+  String valueLower = value;
+  valueLower.toLowerCase();
+  bool isBool = (valueLower == "true" || valueLower == "false");
+  
+  // Ajouter la valeur avec le bon type
+  if (isBool) {
+    doc[key] = (valueLower == "true");
+    Serial.print("[CONFIG] ");
+    Serial.print(key);
+    Serial.print(" = ");
+    Serial.print(valueLower == "true" ? "true" : "false");
+    Serial.println(" (bool)");
+  } else if (isInt) {
+    doc[key] = value.toInt();
+    Serial.print("[CONFIG] ");
+    Serial.print(key);
+    Serial.print(" = ");
+    Serial.print(value.toInt());
+    Serial.println(" (int)");
+  } else if (isFloat) {
+    doc[key] = value.toFloat();
+    Serial.print("[CONFIG] ");
+    Serial.print(key);
+    Serial.print(" = ");
+    Serial.print(value.toFloat());
+    Serial.println(" (float)");
+  } else {
+    doc[key] = value;
+    Serial.print("[CONFIG] ");
+    Serial.print(key);
+    Serial.print(" = ");
+    Serial.print(value);
+    Serial.println(" (string)");
+  }
+  
+  // Sauvegarder le fichier
+  File configFile = SD.open("/config.json", FILE_WRITE);
+  if (!configFile) {
+    Serial.println("[CONFIG] Erreur: impossible d'ouvrir config.json en ecriture");
+    return;
+  }
+  
+  size_t bytesWritten = serializeJson(doc, configFile);
+  configFile.close();
+  
+  if (bytesWritten > 0) {
+    Serial.println("[CONFIG] Sauvegarde OK");
+  } else {
+    Serial.println("[CONFIG] Erreur lors de la sauvegarde");
+  }
 }
