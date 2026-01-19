@@ -5,6 +5,7 @@
 
 // Schémas
 export * from './schemas/auth';
+export * from './schemas/commands';  // Exporte depuis commands/index.ts
 export * from './schemas/kidoo';
 export * from './schemas/multimedia';
 export * from './schemas/tag';
