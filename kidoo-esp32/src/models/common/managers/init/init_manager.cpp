@@ -319,10 +319,12 @@ void InitManager::printStatus() {
         Serial.println("En cours");
         break;
       case INIT_SUCCESS:
-        Serial.println("OK");
         if (WiFiManager::isConnected()) {
+          Serial.println("OK");
           Serial.print("[INIT]   -> IP: ");
           Serial.println(WiFiManager::getLocalIP());
+        } else {
+          Serial.println("OK (non connecte)");
         }
         break;
       case INIT_FAILED:
