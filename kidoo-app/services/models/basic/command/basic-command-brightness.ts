@@ -23,7 +23,7 @@ export class BasicBrightnessAction extends CommonKidooActions {
 
     const result = await this.sendCommandAndWaitForResponse(
       {
-        command: 'BRIGHTNESS',
+        command: 'BRIGHTNESS_SET',
         percent: brightness.percent,
       },
       'BRIGHTNESS_SET'
@@ -57,7 +57,7 @@ export class BasicBrightnessAction extends CommonKidooActions {
   static async getBrightness(timeout: number = 10000): Promise<BrightnessGetResponse> {
     const result = await this.sendCommandAndWaitForResponse(
       {
-        command: 'GET_BRIGHTNESS',
+        command: 'BRIGHTNESS_GET',
       },
       'BRIGHTNESS_GET',
       timeout

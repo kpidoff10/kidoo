@@ -1,0 +1,195 @@
+---
+description: "Structure et conventions du projet kidoo-esp32. Organisation des fichiers par modèle (Basic, Mini) avec code commun, conventions de nommage, et bonnes pratiques PlatformIO/Arduino."
+alwaysApply: true
+globs:
+  - kidoo-esp32/**/*
+---
+
+# Structure du Projet kidoo-esp32
+
+## ⚠️ IMPORTANT : Avant de créer un nouveau composant
+
+**TOUJOURS demander à l'utilisateur** si le nouveau composant/manager/module doit être :
+- **Common** (`src/models/common/`) : Disponible pour tous les modèles (Basic, Mini, etc.)
+- **Model-specific** (`src/models/{basic|mini}/`) : Uniquement pour un modèle particulier
+
+**Exemples de questions à poser** :
+- "Ce composant sera-t-il disponible pour tous les modèles (common) ou uniquement pour le modèle Basic ?"
+- "Dois-je créer ce manager dans `common/` ou dans `basic/` ?"
+
+**NE PAS créer directement** sans avoir clarifié cette information avec l'utilisateur.
+
+## Organisation générale
+
+```
+kidoo-esp32/
+├── platformio.ini          # Configuration PlatformIO (environments: basic, mini)
+├── color/                  # Définitions de couleurs communes
+│   └── colors.h
+├── src/
+│   ├── main.cpp            # Point d'entrée Arduino
+│   └── models/
+│       ├── common/         # Code commun à tous les modèles
+│       │   ├── config/
+│       │   │   └── default_config.h
+│       │   ├── init/       # Fonctions d'initialisation communes
+│       │   │   ├── init_serial.cpp
+│       │   │   ├── init_sd.cpp
+│       │   │   ├── init_led.cpp
+│       │   │   └── init_nfc.cpp
+│       │   └── managers/   # Managers communs
+│       │       ├── init/   # InitManager (orchestre tout)
+│       │       ├── led/    # LEDManager (thread séparé)
+│       │       ├── sd/     # SDManager
+│       │       ├── serial/ # SerialManager + SerialCommands
+│       │       ├── log/    # LogManager (logs sur Serial + SD)
+│       │       └── nfc/    # NFCManager
+│       ├── basic/          # Code spécifique au modèle Basic
+│       │   ├── config/
+│       │   │   ├── config.h        # Pins et configuration hardware
+│       │   │   └── default_config.h
+│       │   ├── init/
+│       │   │   ├── init_model.h
+│       │   │   └── init_model.cpp
+│       │   └── serial/
+│       │       ├── model_serial_commands.h
+│       │       └── model_serial_commands.cpp
+│       ├── mini/           # Code spécifique au modèle Mini
+│       │   ├── config/
+│       │   ├── init/
+│       │   └── serial/
+│       ├── model_config.h      # Inclut la bonne config selon le modèle
+│       ├── model_init.h        # Inclut la bonne init selon le modèle
+│       └── model_serial_commands.h  # Inclut les bonnes commandes selon le modèle
+```
+
+## Séparation Common vs Model-Specific
+
+### Common (`src/models/common/`)
+- **Managers** : LED, SD, Serial, Log, NFC
+- **Initialisation** : Fonctions d'init communes (init_serial.cpp, init_sd.cpp, etc.)
+- **Configuration commune** : Valeurs par défaut partagées (default_config.h)
+
+### Model-Specific (`src/models/{basic|mini}/`)
+- **Configuration hardware** : Pins GPIO, nombre de LEDs, composants disponibles
+- **Initialisation modèle** : `init_model.h/cpp` pour setup spécifique
+- **Commandes série** : Commandes spécifiques au modèle (ex: `nfc-test` pour Basic)
+
+## Conventions de nommage
+
+### Fichiers
+- **Headers** : `snake_case.h` (ex: `led_manager.h`, `init_manager.h`)
+- **Implémentations** : `snake_case.cpp` (ex: `led_manager.cpp`)
+- **Configuration** : `config.h`, `default_config.h`
+
+### Classes
+- **PascalCase** : `LEDManager`, `SDManager`, `InitManager`
+- **Méthodes statiques** : `init()`, `isAvailable()`, `getConfig()`
+
+### Variables et macros
+- **Constantes** : `UPPER_SNAKE_CASE` (ex: `NUM_LEDS`, `DEFAULT_LED_BRIGHTNESS`)
+- **Pins** : `UPPER_SNAKE_CASE_PIN` (ex: `LED_DATA_PIN`, `SD_CS_PIN`)
+- **Variables statiques membres** : `camelCase` (ex: `currentBrightness`, `isSleeping`)
+
+## Compilation par modèle
+
+PlatformIO utilise des **environments** avec `build_flags` :
+
+```ini
+[env:basic]
+build_flags = -DKIDOO_MODEL_BASIC
+
+[env:mini]
+build_flags = -DKIDOO_MODEL_MINI
+```
+
+Les fichiers de configuration incluent automatiquement le bon modèle via `#ifdef` :
+
+```cpp
+#ifdef KIDOO_MODEL_BASIC
+  #include "basic/config/config.h"
+#elif defined(KIDOO_MODEL_MINI)
+  #include "mini/config/config.h"
+#endif
+```
+
+## Managers
+
+### Structure d'un Manager
+
+```
+src/models/common/managers/{manager}/
+├── {manager}_manager.h
+└── {manager}_manager.cpp
+```
+
+### Exemple de Manager
+
+```cpp
+// led_manager.h
+class LEDManager {
+public:
+  static bool init();
+  static bool isAvailable();
+  static bool setBrightness(uint8_t brightness);
+  
+private:
+  static bool initialized;
+  static uint8_t currentBrightness;
+};
+```
+
+## Imports
+
+### Ordre des includes
+
+1. Header du fichier (ex: `"led_manager.h"`)
+2. Headers de managers (ex: `"../init/init_manager.h"`)
+3. Configuration (ex: `"../../../model_config.h"`)
+4. Bibliothèques Arduino/FastLED/etc.
+5. Standard C++
+
+```cpp
+#include "led_manager.h"
+#include "../init/init_manager.h"
+#include "../sd/sd_manager.h"
+#include "../../../model_config.h"
+#include <FastLED.h>
+#include <Arduino.h>
+```
+
+### Chemins relatifs
+
+- Depuis `common/managers/led/` vers `common/managers/init/` : `../init/init_manager.h`
+- Depuis `common/managers/` vers `model_config.h` : `../../../model_config.h`
+- Depuis `common/init/` vers `color/colors.h` : `../../../../../color/colors.h`
+
+## Configuration
+
+### Fichiers de configuration
+
+- **`common/config/default_config.h`** : Valeurs par défaut communes (ex: `DEFAULT_SLEEP_TIMEOUT_MS`)
+- **`{model}/config/config.h`** : Configuration hardware spécifique (pins, nombre de LEDs)
+- **`{model}/config/default_config.h`** : Valeurs par défaut spécifiques au modèle
+
+### Structure d'un fichier de configuration
+
+```cpp
+// basic/config/config.h
+#define LED_DATA_PIN 2
+#define NUM_LEDS 144
+#define HAS_NFC true
+
+// Pins NFC
+#define NFC_SDA_PIN 21
+#define NFC_SCL_PIN 22
+```
+
+## Règles strictes
+
+1. **Code commun dans `common/`** - Éviter la duplication entre modèles
+2. **Configuration dans `config.h`** - Pins et hardware dans le fichier de config du modèle
+3. **Managers statiques** - Utiliser des classes statiques pour les managers
+4. **Initialisation via InitManager** - Tous les composants via `InitManager::init()`
+5. **Conditional compilation** - Utiliser `#ifdef KIDOO_MODEL_*` pour le code spécifique au modèle
+6. **Thread LED séparé** - LEDManager tourne dans un thread FreeRTOS dédié

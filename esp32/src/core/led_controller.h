@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include <FastLED.h>
 #include "../config/config.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 class LEDController {
 public:
@@ -14,9 +16,17 @@ public:
   static int getNumLeds();
   
   // Obtenir le tableau de LEDs (pour les effets)
+  // ATTENTION: Toujours utiliser lock() avant et unlock() après modification
   static CRGB* getLeds();
   
+  // Verrouiller l'accès aux LEDs (à appeler avant toute modification)
+  static void lock();
+  
+  // Déverrouiller l'accès aux LEDs (à appeler après toute modification)
+  static void unlock();
+  
   // Appliquer les changements (appeler FastLED.show())
+  // Cette fonction verrouille automatiquement le mutex
   static void show();
   
   // Définir la luminosité (0-255)
@@ -36,6 +46,7 @@ private:
   static int numLeds;
   static CRGB* leds;
   static uint8_t brightness;
+  static SemaphoreHandle_t ledsMutex;  // Mutex pour protéger l'accès aux LEDs
 };
 
 #endif // LED_CONTROLLER_H

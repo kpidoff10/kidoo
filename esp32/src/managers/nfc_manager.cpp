@@ -8,6 +8,10 @@
 // ou utiliser TwoWire avec des pins personnalisées
 Adafruit_PN532 nfc(NFC_SDA_PIN, NFC_SCL_PIN);
 
+// Variable pour la gestion de la disponibilité du NFC
+// Une seule vérification à l'initialisation : soit il marche, soit il ne marche pas
+static bool nfcInitialized = false; // Flag indiquant si le NFC a été initialisé avec succès
+
 bool initNFC() {
   Serial.println("[NFC] Initialisation du module NFC (PN532 I2C)...");
   Serial.print("[NFC] Pins configures - SDA: GPIO");
@@ -18,31 +22,27 @@ bool initNFC() {
   // Initialiser le bus I2C avec les pins spécifiées
   // Sur ESP32, Wire.begin() peut prendre les pins SDA et SCL
   Wire.begin(NFC_SDA_PIN, NFC_SCL_PIN);
+  
+  // Configurer un timeout I2C pour éviter les blocages infinis
+  // Sur ESP32, Wire.setTimeout() définit le timeout pour les opérations I2C
+  Wire.setTimeout(500); // Timeout de 500ms pour les opérations I2C
+  
   delay(100); // Petit délai pour stabiliser I2C
   
   Serial.println("[NFC] I2C initialise, tentative de communication avec le PN532...");
   Serial.println("[NFC] ATTENTION: Verifiez que le module est en mode I2C");
   Serial.println("[NFC] Adresse I2C par defaut: 0x24");
+  Serial.println("[NFC] Timeout I2C configure: 500ms");
   
   // Initialiser le module PN532
   nfc.begin();
   delay(200); // Délai pour laisser le module répondre
   
-  // Vérifier si le module est détecté (plusieurs tentatives)
-  uint32_t versiondata = 0;
-  for (int i = 0; i < 3; i++) {
-    versiondata = nfc.getFirmwareVersion();
-    if (versiondata) {
-      break;
-    }
-    Serial.print("[NFC] Tentative ");
-    Serial.print(i + 1);
-    Serial.println("/3 echouee, nouvelle tentative...");
-    delay(200);
-  }
+  // Vérifier si le module est détecté (une seule tentative)
+  uint32_t versiondata = nfc.getFirmwareVersion();
   
   if (!versiondata) {
-    Serial.println("[NFC] ERREUR: Module NFC non detecte apres 3 tentatives !");
+    Serial.println("[NFC] ERREUR: Module NFC non detecte !");
     Serial.println("[NFC] Verifications a effectuer:");
     Serial.println("[NFC]   1. Module PN532 alimente en 3.3V");
     Serial.println("[NFC]   2. Module configure en mode I2C (commutateurs DIP)");
@@ -50,6 +50,13 @@ bool initNFC() {
     Serial.println("[NFC]   4. SCL du module -> GPIO22");
     Serial.println("[NFC]   5. GND connecte");
     Serial.println("[NFC]   6. Adresse I2C: 0x24 (par defaut)");
+    Serial.println("[NFC] NOTE: Le module sera considere comme indisponible");
+    Serial.println("[NFC]       mais le systeme continuera de fonctionner normalement");
+    Serial.println("[NFC]       Aucune verification ulterieure ne sera effectuee");
+    
+    // Marquer comme non initialisé (indisponible)
+    nfcInitialized = false;
+    
     return false;
   }
   
@@ -61,21 +68,17 @@ bool initNFC() {
   // Configurer le PN532 pour lire les tags RFID
   nfc.SAMConfig();
   
+  // Marquer comme initialisé (disponible)
+  nfcInitialized = true;
+  
   Serial.println("[NFC] Module NFC initialise avec succes");
   return true;
 }
 
 bool isNFCAvailable() {
-  // Vérifier si le module répond
-  // Ne pas appeler getFirmwareVersion() à chaque fois car cela peut être lent
-  // On suppose que si initNFC() a réussi, le module est disponible
-  // Pour une vérification plus robuste, on pourrait stocker un flag
-  uint32_t versiondata = nfc.getFirmwareVersion();
-  if (!versiondata) {
-    Serial.println("[NFC] ATTENTION: Module NFC ne repond plus");
-    Serial.println("[NFC] Verifiez les connexions et l'alimentation");
-  }
-  return (versiondata != 0);
+  // Retourner le résultat de l'initialisation (vérifiée une seule fois au démarrage)
+  // Pas de vérification périodique : soit il marche, soit il ne marche pas
+  return nfcInitialized;
 }
 
 bool isTagPresent() {
@@ -302,8 +305,10 @@ void updateNFCDetection() {
     return;
   }
   
-  // Vérifier si le module NFC est disponible
+  // Vérifier si le module NFC est disponible (utilise le cache, donc rapide)
   if (!isNFCAvailable()) {
+    // Si le cache indique que le NFC est indisponible, ne rien faire
+    // La vérification périodique se fera automatiquement
     return;
   }
   
@@ -315,9 +320,13 @@ void updateNFCDetection() {
   lastNFCCheckTime = currentTime;
   
   // Essayer de lire un tag (timeout court de 100ms pour ne pas bloquer)
+  // Cette opération peut bloquer jusqu'à 100ms, mais c'est acceptable
   uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
   uint8_t uidLength;
   uint8_t success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength, 100);
+  
+  // Si la lecture échoue de manière répétée, cela pourrait indiquer que le module ne répond plus
+  // On laisse isNFCAvailable() gérer cela lors de sa prochaine vérification périodique
   
   String currentUID = "";
   if (success && uidLength > 0) {

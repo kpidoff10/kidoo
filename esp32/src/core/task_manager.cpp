@@ -15,8 +15,8 @@ static TaskHandle_t saveTaskHandle = nullptr;
 // Priorités des tâches
 #define LED_TASK_PRIORITY 1
 #define SAVE_TASK_PRIORITY 2
-#define LED_TASK_STACK_SIZE 4096
-#define SAVE_TASK_STACK_SIZE 4096
+#define LED_TASK_STACK_SIZE 2048  // Réduit de 4096 à 2048 pour économiser la mémoire
+#define SAVE_TASK_STACK_SIZE 2048  // Réduit de 4096 à 2048 pour économiser la mémoire
 
 // Tâche dédiée pour les LEDs - tourne en continu
 void ledTask(void* parameter) {
@@ -84,8 +84,16 @@ bool initTaskManager() {
 void startTaskManager() {
   Serial.println("[TASK] Démarrage des tâches...");
   
+  // Afficher la mémoire libre avant de créer les tâches
+  Serial.print("[TASK] Mémoire heap libre avant création: ");
+  Serial.print(ESP.getFreeHeap());
+  Serial.println(" bytes");
+  
+  // Attendre un peu pour s'assurer que la tâche orange boot est bien terminée
+  vTaskDelay(pdMS_TO_TICKS(500));
+  
   // Créer la tâche LED (sur le core 1 pour éviter les conflits avec WiFi/BLE sur core 0)
-  xTaskCreatePinnedToCore(
+  BaseType_t result = xTaskCreatePinnedToCore(
     ledTask,
     "LED_Task",
     LED_TASK_STACK_SIZE,
@@ -95,15 +103,21 @@ void startTaskManager() {
     1  // Core 1
   );
   
-  if (ledTaskHandle == nullptr) {
-    Serial.println("[TASK] ERREUR: Impossible de créer la tâche LED");
+  if (result != pdPASS || ledTaskHandle == nullptr) {
+    Serial.print("[TASK] ERREUR: Impossible de créer la tâche LED (code: ");
+    Serial.print(result);
+    Serial.print(", mémoire libre: ");
+    Serial.print(ESP.getFreeHeap());
+    Serial.println(" bytes)");
     return;
   }
   
-  Serial.println("[TASK] Tâche LED créée sur le core 1");
+  Serial.print("[TASK] Tâche LED créée sur le core 1 (mémoire libre: ");
+  Serial.print(ESP.getFreeHeap());
+  Serial.println(" bytes)");
   
   // Créer la tâche de sauvegarde (sur le core 0)
-  xTaskCreatePinnedToCore(
+  BaseType_t result2 = xTaskCreatePinnedToCore(
     saveTask,
     "Save_Task",
     SAVE_TASK_STACK_SIZE,
@@ -113,12 +127,18 @@ void startTaskManager() {
     0  // Core 0
   );
   
-  if (saveTaskHandle == nullptr) {
-    Serial.println("[TASK] ERREUR: Impossible de créer la tâche de sauvegarde");
+  if (result2 != pdPASS || saveTaskHandle == nullptr) {
+    Serial.print("[TASK] ERREUR: Impossible de créer la tâche de sauvegarde (code: ");
+    Serial.print(result2);
+    Serial.print(", mémoire libre: ");
+    Serial.print(ESP.getFreeHeap());
+    Serial.println(" bytes)");
     return;
   }
   
-  Serial.println("[TASK] Tâche de sauvegarde créée sur le core 0");
+  Serial.print("[TASK] Tâche de sauvegarde créée sur le core 0 (mémoire libre: ");
+  Serial.print(ESP.getFreeHeap());
+  Serial.println(" bytes)");
   Serial.println("[TASK] Toutes les tâches démarrées avec succès");
 }
 

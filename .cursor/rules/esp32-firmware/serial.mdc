@@ -1,0 +1,197 @@
+---
+description: "Règles pour les commandes série ESP32. Commandes communes, commandes spécifiques au modèle, et système de menus hiérarchiques."
+alwaysApply: false
+globs:
+  - kidoo-esp32/src/models/common/managers/serial/**/*
+  - kidoo-esp32/src/models/**/serial/**/*
+---
+
+# Règles des Commandes Série ESP32
+
+## Architecture des commandes
+
+Les commandes série sont organisées en **2 niveaux** :
+
+1. **Common** (`common/managers/serial/serial_commands.cpp`) : Commandes communes à tous les modèles
+2. **Model-specific** (`{model}/serial/model_serial_commands.cpp`) : Commandes spécifiques au modèle
+
+### Inclusion automatique
+
+`src/models/model_serial_commands.h` inclut automatiquement les bonnes commandes :
+
+```cpp
+#ifdef KIDOO_MODEL_BASIC
+  #include "basic/serial/model_serial_commands.h"
+  #define ModelSerialCommands ModelBasicSerialCommands
+#elif defined(KIDOO_MODEL_MINI)
+  #include "mini/serial/model_serial_commands.h"
+  #define ModelSerialCommands ModelMiniSerialCommands
+#endif
+```
+
+## Commandes communes
+
+### Liste des commandes communes
+
+- `help`, `?` : Afficher l'aide
+- `reboot [ms]` : Redémarrer l'ESP32 (délai optionnel)
+- `info`, `system` : Informations système
+- `memory`, `mem` : Utilisation de la mémoire
+- `clear`, `cls` : Effacer l'écran
+- `brightness [%]` : Afficher ou définir la luminosité (0-100%)
+- `sleep [timeout]` : Afficher ou définir le timeout sleep mode (ms)
+
+### Format des commandes communes
+
+```cpp
+void SerialCommands::cmdBrightness(const String& args) {
+  if (args.length() == 0) {
+    // Consulter
+    uint8_t percent = (LEDManager::getCurrentBrightness() * 100) / 255;
+    Serial.print("Luminosite actuelle: ");
+    Serial.println(percent + "%");
+  } else {
+    // Définir et sauvegarder
+    int percent = args.toInt();
+    uint8_t brightness = (percent * 255) / 100;
+    
+    if (LEDManager::setBrightness(brightness)) {
+      SDConfig config = InitManager::getConfig();
+      config.led_brightness = brightness;
+      InitManager::updateConfig(config);  // Sauvegarde sur SD
+      Serial.println("Luminosite definie a " + String(percent) + "% (sauvegarde dans config.json)");
+    }
+  }
+}
+```
+
+### Sauvegarde de configuration
+
+Les commandes qui modifient la config **sauvegardent automatiquement** :
+
+```cpp
+SDConfig config = InitManager::getConfig();
+config.led_brightness = brightness;
+if (SDManager::isAvailable() && InitManager::updateConfig(config)) {
+  Serial.println("(sauvegarde dans config.json)");
+}
+```
+
+## Commandes spécifiques au modèle
+
+### Structure
+
+```cpp
+// basic/serial/model_serial_commands.cpp
+bool ModelBasicSerialCommands::processCommand(const String& command) {
+  String cmd = command;
+  cmd.toLowerCase();
+  
+  if (cmd == "nfc-test" || cmd == "nfc") {
+    // Test du NFC (uniquement pour Basic)
+    Serial.println("Test NFC...");
+    // ...
+    return true;
+  }
+  
+  return false;  // Commande non reconnue
+}
+```
+
+### Disponibilité
+
+- **Commandes Basic** : Disponibles seulement si compilation avec `KIDOO_MODEL_BASIC`
+- **Commandes Mini** : Disponibles seulement si compilation avec `KIDOO_MODEL_MINI`
+
+## Traitement des commandes
+
+### Flow de traitement
+
+```
+SerialCommands::update() (dans loop())
+  → SerialCommands::processCommand()
+    → Commandes communes (brightness, sleep, etc.)
+    → ModelSerialCommands::processCommand() (si pas commune)
+      → Commandes spécifiques au modèle (nfc-test, etc.)
+```
+
+### Format
+
+```cpp
+void SerialCommands::processCommand(const String& command) {
+  String cmd = command;
+  String args = "";
+  
+  // Séparer commande et arguments
+  int spaceIndex = command.indexOf(' ');
+  if (spaceIndex > 0) {
+    cmd = command.substring(0, spaceIndex);
+    args = command.substring(spaceIndex + 1);
+  }
+  
+  cmd.toLowerCase();
+  args.trim();
+  
+  // Traiter les commandes communes
+  if (cmd == "brightness") {
+    cmdBrightness(args);
+  } else {
+    // Essayer les commandes spécifiques au modèle
+    ModelSerialCommands::processCommand(command);
+  }
+}
+```
+
+## Aide (help)
+
+### Aide commune
+
+`SerialCommands::printHelp()` affiche les commandes communes :
+
+```
+========================================
+     COMMANDES SERIAL DISPONIBLES
+========================================
+  help, ?          - Afficher cette aide
+  brightness [%]   - Afficher ou definir la luminosite (0-100%)
+  sleep [timeout]  - Afficher ou definir le timeout sleep mode (ms, min: 5000, 0=desactive)
+========================================
+```
+
+### Aide spécifique au modèle
+
+`ModelSerialCommands::printHelp()` affiche les commandes spécifiques :
+
+```cpp
+void ModelBasicSerialCommands::printHelp() {
+  Serial.println("  COMMANDES SPECIFIQUES BASIC");
+  Serial.println("  nfc-test, nfc   - Tester la detection du module NFC");
+}
+```
+
+## Conventions
+
+### Nommage
+
+- **Commandes** : `kebab-case` ou `snake_case` (ex: `nfc-test`, `basic-info`)
+- **Aliases** : Supportés (ex: `nfc-test` et `nfc`)
+
+### Arguments
+
+- **Luminosité** : En pourcentage (0-100%), pas en valeurs brutes (0-255)
+- **Sleep timeout** : En millisecondes (0 = désactivé, min: 5000 ms)
+
+### Messages
+
+- **Succès** : `"[SERIAL] Luminosite definie a: 50% (sauvegarde dans config.json)"`
+- **Erreur** : `"[SERIAL] Erreur: La luminosite doit etre entre 0 et 100%"`
+- **Info** : `"[SERIAL] Luminosite actuelle: 50%"`
+
+## Règles strictes
+
+1. **Commandes communes dans `SerialCommands`** - Tous les modèles
+2. **Commandes spécifiques dans `ModelSerialCommands`** - Un modèle seulement
+3. **Sauvegarde automatique** - Modifications de config sauvegardées sur SD
+4. **Luminosité en %** - Toujours afficher/définir en pourcentage
+5. **Validation des arguments** - Vérifier les valeurs avant application
+6. **Messages clairs** - Indiquer si sauvegarde réussie ou échouée

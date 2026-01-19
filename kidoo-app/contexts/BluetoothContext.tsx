@@ -163,10 +163,11 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
         });
 
         if (result.success && result.device) {
-          // Demander un MTU plus grand (512 bytes) pour éviter la fragmentation
+          // Demander un MTU plus grand (247 bytes max standard BLE) pour éviter la fragmentation
+          // Note: 512 bytes était trop élevé et causait des problèmes de mémoire sur l'ESP32
           try {
-            await result.device.requestMTU(512);
-            console.log('MTU négocié: 512 bytes');
+            await result.device.requestMTU(247);
+            console.log('MTU négocié: 247 bytes');
           } catch (mtuError) {
             console.debug('Erreur lors de la négociation MTU (non critique):', mtuError);
             // Continuer même si la négociation MTU échoue

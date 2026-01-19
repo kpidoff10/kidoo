@@ -6,16 +6,26 @@ bool LEDController::initialized = false;
 int LEDController::numLeds = NUM_LEDS_DEFINE;
 CRGB* LEDController::leds = nullptr;
 uint8_t LEDController::brightness = DEFAULT_BRIGHTNESS;
+SemaphoreHandle_t LEDController::ledsMutex = nullptr;
 
 bool LEDController::init() {
   if (initialized) {
     return true;
   }
   
+  // Créer le mutex pour protéger l'accès aux LEDs
+  ledsMutex = xSemaphoreCreateMutex();
+  if (ledsMutex == nullptr) {
+    Serial.println("[LED] ERREUR: Impossible de creer le mutex pour les LEDs");
+    return false;
+  }
+  
   // Allouer le tableau de LEDs
   leds = new CRGB[numLeds];
   if (!leds) {
     Serial.println("[LED] ERREUR: Impossible d'allouer la memoire pour les LEDs");
+    vSemaphoreDelete(ledsMutex);
+    ledsMutex = nullptr;
     return false;
   }
   
@@ -27,6 +37,7 @@ bool LEDController::init() {
   Serial.print("[LED] Controleur initialise avec ");
   Serial.print(numLeds);
   Serial.println(" LEDs");
+  Serial.println("[LED] Mutex cree pour proteger l'acces aux LEDs");
   
   return true;
 }
@@ -37,6 +48,18 @@ int LEDController::getNumLeds() {
 
 CRGB* LEDController::getLeds() {
   return leds;
+}
+
+void LEDController::lock() {
+  if (ledsMutex != nullptr) {
+    xSemaphoreTake(ledsMutex, portMAX_DELAY);
+  }
+}
+
+void LEDController::unlock() {
+  if (ledsMutex != nullptr) {
+    xSemaphoreGive(ledsMutex);
+  }
 }
 
 void LEDController::show() {

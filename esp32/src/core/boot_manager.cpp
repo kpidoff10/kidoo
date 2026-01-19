@@ -189,6 +189,9 @@ void BootManager::initNetworkSystems() {
   // Initialiser la tâche NFC pour le traitement asynchrone
   initNFCTask();
   
+  // Initialiser la tâche de traitement des commandes BLE
+  initBLECommandTask();
+  
   // Initialiser MQTT si WiFi est connecté
   // Note: Le Kidoo ID doit être configuré via setKidooId() avant d'appeler initMQTT()
   // Pour l'instant, on initialise MQTT dans le loop() après vérification de la connexion WiFi

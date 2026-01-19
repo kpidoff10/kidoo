@@ -2,10 +2,10 @@
  * Action pour gérer le mode sommeil du modèle Basic
  */
 
-import { KidooActionResult } from '@/types/type';
-import { SleepModeOptions, SleepTimeoutOptions } from './type';
-import { CommonKidooActions } from '../../common/command';
 import type { SleepTimeoutGetResponse, SleepTimeoutSetResponse } from '@/types/bluetooth';
+import { KidooActionResult } from '@/types/type';
+import { CommonKidooActions } from '../../common/command';
+import { SleepModeOptions, SleepTimeoutOptions } from './type';
 
 /**
  * Actions pour le mode sommeil
@@ -55,7 +55,7 @@ export class BasicSleepModeAction extends CommonKidooActions {
 
     const result = await this.sendCommandAndWaitForResponse(
       {
-        command: 'SLEEP_TIMEOUT',
+        command: 'SLEEP_TIMEOUT_SET',
         timeout: timeout.timeout,
       },
       'SLEEP_TIMEOUT_SET'
@@ -88,7 +88,7 @@ export class BasicSleepModeAction extends CommonKidooActions {
   static async getSleepTimeout(): Promise<SleepTimeoutGetResponse> {
     const result = await this.sendCommandAndWaitForResponse(
       {
-        command: 'GET_SLEEP_TIMEOUT',
+        command: 'SLEEP_TIMEOUT_GET',
       },
       'SLEEP_TIMEOUT_GET'
     );

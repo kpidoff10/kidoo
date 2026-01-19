@@ -17,7 +17,7 @@ export class BasicColorAction extends CommonKidooActions {
   static async setColor(color: ColorOptions): Promise<KidooActionResult> {
     return this.sendCommandWithValidation(
       {
-        command: 'COLOR',
+        command: 'COLOR_SET',
         r: color.r,
         g: color.g,
         b: color.b,

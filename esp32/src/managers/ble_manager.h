@@ -27,4 +27,7 @@ void processBLECommands();
 // Fonction pour mettre à jour l'état dans StateManager (à appeler périodiquement)
 void updateBLEState();
 
+// Fonction pour initialiser la tâche de traitement des commandes BLE (à appeler dans setup)
+void initBLECommandTask();
+
 #endif // BLE_MANAGER_H
