@@ -108,7 +108,7 @@ private:
   // Configuration
   static const int SUBSCRIBE_INTERVAL_MS = 100;  // Intervalle entre les polls (le serveur garde la connexion)
   static const int STACK_SIZE = 8192;            // Taille de la stack du thread
-  static const int TASK_PRIORITY = 1;            // Priorité du thread (basse)
+  static const int TASK_PRIORITY = 0;            // Priorité du thread (très basse - lowest priority)
   static const int PUBLISH_QUEUE_SIZE = 5;       // Taille de la file de publication
 };
 
