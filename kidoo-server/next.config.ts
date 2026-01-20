@@ -12,6 +12,20 @@ const nextConfig: NextConfig = {
     config.resolve.alias = config.resolve.alias || {};
     config.resolve.alias['@/shared'] = path.resolve(__dirname, '../shared');
     
+    // Résoudre @prisma/client-runtime-utils depuis kidoo-server/node_modules
+    // car le client Prisma généré dans shared/ en a besoin
+    config.resolve.alias['@prisma/client-runtime-utils'] = path.resolve(
+      __dirname,
+      'node_modules/@prisma/client-runtime-utils'
+    );
+    
+    // Ajouter node_modules de kidoo-server aux modules à résoudre
+    // pour que les dépendances de shared/ puissent être trouvées
+    config.resolve.modules = [
+      ...(config.resolve.modules || []),
+      path.resolve(__dirname, 'node_modules'),
+    ];
+    
     return config;
   },
   

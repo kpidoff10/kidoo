@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createKidooInputSchema } from '@/shared';
+import { createKidooInputSchema } from '@/shared/schemas/kidoo';
 import { requireAuth } from '@/lib/auth-helpers';
 
 /**

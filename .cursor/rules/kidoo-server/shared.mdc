@@ -1,149 +1,193 @@
----
-description: "Règles pour les schémas et types partagés entre kidoo-server et kidoo-app. JAMAIS de duplication, utiliser @/shared pour importer depuis le dossier shared/."
-alwaysApply: false
-globs:
-  - kidoo-server/lib/shared.ts
-  - kidoo-server/app/api/**/*.ts
-  - kidoo-server/app/actions/**/*.ts
-  - shared/**/*
----
+# Règles pour les Schémas et Types Partagés
 
-# Règles du Module Shared
+## Architecture shared/
 
-## Architecture
-
-Le dossier `shared/` contient les schémas et types partagés entre `kidoo-app` et `kidoo-server` :
+Le dossier `shared/` contient les schémas Zod et types partagés entre `kidoo-server` et `kidoo-app` :
 
 ```
 shared/
-├── schemas/          # Schémas Zod de validation
-│   ├── auth.ts
-│   └── kidoo.ts
-├── types/            # Types TypeScript
-│   ├── api/          # Types de réponses API
-│   ├── kidoo.ts
-│   └── user.ts
-└── index.ts          # Export centralisé
+├── schemas/                      # Schémas de validation Zod
+│   ├── auth.ts                   # Schémas authentification
+│   ├── kidoo.ts                  # Schémas CRUD Kidoo
+│   ├── tag.ts                    # Schémas tags
+│   └── api/                      # Schémas par route API
+│       └── kidoos/
+│           ├── brightness/
+│           │   ├── schema.ts     # Schéma Zod + constantes
+│           │   ├── type.ts       # Types de réponse
+│           │   └── index.ts      # Re-exports
+│           └── sleep-timeout/
+│               ├── schema.ts
+│               ├── type.ts
+│               └── index.ts
+└── types/
+    └── prisma/                   # Client Prisma généré
+        ├── index.d.ts            # Types TypeScript
+        ├── index.js              # Client JS
+        └── schema.prisma         # Copie du schéma
 ```
 
-## Utilisation dans kidoo-server
+## Schémas par route API
 
-### Import depuis shared
+Chaque route API avec body a un dossier dans `shared/schemas/api/` avec 3 fichiers :
 
-```typescript
-// ✅ CORRECT - Utiliser le wrapper
-import { loginSchema, registerSchema, createKidooInputSchema } from '@/shared';
-import type { Kidoo, CreateKidooInput } from '@/shared';
-
-// Le fichier lib/shared.ts réexporte depuis ../../shared
-```
-
-**Règle** : Utiliser `@/shared` pour importer, pas de chemins relatifs vers `../../shared`.
-
-## Schémas de validation
+### 1. schema.ts - Schéma Zod + constantes
 
 ```typescript
-import { registerSchema, createKidooInputSchema } from '@/shared';
+/**
+ * Schéma pour la commande brightness
+ */
 
-// Dans une route API
-const validationResult = createKidooInputSchema.safeParse(body);
-if (!validationResult.success) {
-  const firstError = validationResult.error.issues[0];
-  return NextResponse.json(
-    {
-      success: false,
-      error: firstError.message,
-      field: firstError.path[0] as string,
-    },
-    { status: 400 }
-  );
-}
-
-// Dans une Server Action
-const validationResult = registerSchema.safeParse(data);
-if (!validationResult.success) {
-  // Gérer l'erreur
-}
-```
-
-## Types API
-
-```typescript
-import type { 
-  GetKidoosResponse, 
-  CreateKidooResponse,
-  CreateKidooError 
-} from '@/shared';
-```
-
-## Structure des schémas
-
-### Schémas Zod
-
-```typescript
-// shared/schemas/auth.ts
 import { z } from 'zod';
 
-export const loginSchema = z.object({
-  email: z.string().email('Email invalide'),
-  password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères'),
+// Constantes exportées pour réutilisation (UI, validation côté client)
+export const BRIGHTNESS_LIMITS = {
+  min: 1,
+  max: 100,
+} as const;
+
+// Schéma Zod
+export const brightnessCommandSchema = z.object({
+  value: z.number()
+    .int()
+    .min(BRIGHTNESS_LIMITS.min, `Minimum ${BRIGHTNESS_LIMITS.min}%`)
+    .max(BRIGHTNESS_LIMITS.max, `Maximum ${BRIGHTNESS_LIMITS.max}%`),
 });
 
+// Type inféré
+export type BrightnessCommandInput = z.infer<typeof brightnessCommandSchema>;
+```
+
+### 2. type.ts - Types de réponse
+
+```typescript
+/**
+ * Types de réponse pour la commande brightness
+ */
+
+export interface BrightnessResponse {
+  brightness: number;
+}
+```
+
+### 3. index.ts - Re-exports
+
+```typescript
+export * from './schema';
+export * from './type';
+```
+
+## Schémas généraux
+
+### auth.ts
+
+```typescript
+import { z } from 'zod';
+
+export const emailSchema = z.string().email('Email invalide');
+
+export const passwordSchema = z.string()
+  .min(8, 'Le mot de passe doit contenir au moins 8 caractères');
+
+export const registerSchema = z.object({
+  email: emailSchema,
+  password: passwordSchema,
+  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+});
+
+export const loginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, 'Le mot de passe est requis'),
+});
+
+export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 ```
 
-### Types API
+### kidoo.ts
 
 ```typescript
-// shared/types/api/kidoo.ts
-export interface GetKidoosResponse extends ApiSuccess<Kidoo[]> {
-  data: Kidoo[];
-}
+import { z } from 'zod';
 
-export interface CreateKidooResponse extends ApiSuccess<Kidoo> {
-  data: Kidoo;
-}
+export const createKidooInputSchema = z.object({
+  name: z.string().min(1, 'Le nom est requis').max(100, 'Nom trop long'),
+  model: z.string().min(1, 'Le modèle est requis'),
+  macAddress: z.string().optional(),
+  deviceId: z.string().uuid(),
+  firmwareVersion: z.string().optional(),
+});
 
-export interface CreateKidooError extends ApiError {
-  field?: 'name' | 'deviceId' | 'macAddress';
+export const updateKidooInputSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  macAddress: z.string().optional(),
+  wifiSSID: z.string().optional(),
+});
+
+export type CreateKidooInput = z.infer<typeof createKidooInputSchema>;
+export type UpdateKidooInput = z.infer<typeof updateKidooInputSchema>;
+```
+
+## Imports dans kidoo-server
+
+```typescript
+// Schémas auth
+import { loginSchema, registerSchema } from '@/shared/schemas/auth';
+
+// Schémas kidoo
+import { createKidooInputSchema, updateKidooInputSchema } from '@/shared/schemas/kidoo';
+
+// Schémas API spécifiques
+import { brightnessCommandSchema, BRIGHTNESS_LIMITS } from '@/shared/schemas/api/kidoos/brightness';
+
+// Types Prisma
+import { Kidoo, User, Tag } from '@/shared/types/prisma';
+```
+
+## Création d'un nouveau schéma API
+
+Pour une nouvelle route `/api/kidoos/[id]/ma-route` :
+
+1. Créer le dossier `shared/schemas/api/kidoos/ma-route/`
+
+2. Créer `schema.ts` :
+```typescript
+import { z } from 'zod';
+
+export const MA_ROUTE_LIMITS = {
+  min: 0,
+  max: 100,
+} as const;
+
+export const maRouteSchema = z.object({
+  value: z.number().min(MA_ROUTE_LIMITS.min).max(MA_ROUTE_LIMITS.max),
+});
+
+export type MaRouteInput = z.infer<typeof maRouteSchema>;
+```
+
+3. Créer `type.ts` :
+```typescript
+export interface MaRouteResponse {
+  result: number;
 }
 ```
 
-## Configuration Webpack
-
-**IMPORTANT** : Pour que `@/shared` fonctionne, utiliser Webpack :
-
-```bash
-# Développement
-npm run dev
-
-# Build
-npm run build
+4. Créer `index.ts` :
+```typescript
+export * from './schema';
+export * from './type';
 ```
 
-Les scripts utilisent `--webpack` pour résoudre correctement les modules externes.
-
-**Règle** : Ne pas utiliser Turbopack pour le développement, utiliser Webpack.
+5. Utiliser dans la route :
+```typescript
+import { maRouteSchema } from '@/shared/schemas/api/kidoos/ma-route';
+```
 
 ## Règles strictes
 
-1. **JAMAIS de duplication** - Les schémas/types sont dans `shared/`
-2. **Utiliser @/shared** - Pas de chemins relatifs vers `../../shared`
-3. **Schémas Zod partagés** - Pour la validation côté client et serveur
-4. **Types cohérents** - Les types API doivent correspondre aux réponses
-5. **Exports centralisés** - Tout exporter via `shared/index.ts`
-6. **Utiliser Webpack** - Pour résoudre les modules externes
-
-## Ajouter un nouveau schéma/type
-
-1. **Créer dans shared/** - `shared/schemas/monSchema.ts` ou `shared/types/monType.ts`
-2. **Exporter dans index.ts** - Ajouter l'export dans `shared/index.ts`
-3. **Utiliser dans les deux projets** - kidoo-app et kidoo-server
-
-## Validation
-
-Les schémas Zod sont utilisés pour :
-- **Validation côté client** - Dans les formulaires (kidoo-app)
-- **Validation côté serveur** - Dans les routes API et Server Actions (kidoo-server)
-
-**Règle** : Un seul schéma pour les deux, pas de duplication.
+1. **JAMAIS de duplication** - Schémas uniquement dans `shared/`
+2. **Structure 3 fichiers** - schema.ts + type.ts + index.ts pour chaque route API
+3. **Constantes exportées** - `LIMITS` pour réutilisation côté client
+4. **Types inférés** - Utiliser `z.infer<typeof schema>` 
+5. **Messages en français** - Erreurs Zod lisibles par l'utilisateur
+6. **Import depuis @/shared/** - Jamais de chemins relatifs

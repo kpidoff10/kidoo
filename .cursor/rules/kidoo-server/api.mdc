@@ -1,116 +1,131 @@
----
-description: "Règles API pour kidoo-server. Toujours utiliser requireAuth pour l'authentification, valider avec les schémas Zod partagés, et retourner des réponses standardisées."
-alwaysApply: false
-globs:
-  - kidoo-server/app/api/**/*.ts
-  - kidoo-server/lib/auth-helpers.ts
----
-
-# Règles du Module API Routes
-
-## Architecture
-
-Les routes API sont dans `app/api/` :
-- Routes Next.js App Router avec handlers HTTP (GET, POST, PUT, DELETE)
-- Authentification via `requireAuth` depuis `lib/auth-helpers.ts`
-- Validation avec les schémas Zod partagés depuis `@/shared`
-- Format de réponse standardisé
+# Règles API pour kidoo-server
 
 ## Structure d'une route API
 
+Chaque route API doit suivre ce pattern :
+
 ```typescript
+/**
+ * Route API pour [description]
+ * [METHOD] /api/[path]
+ * 
+ * Body: { ... } (si applicable)
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-helpers';
-import { createKidooInputSchema } from '@/shared';
+import { monSchema } from '@/shared/schemas/...';
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     // 1. Vérifier l'authentification
     const authResult = requireAuth(request);
     if (!authResult.success) {
       return authResult.response;
     }
-
     const { userId } = authResult;
 
-    // 2. Logique métier
-    const kidoos = await prisma.kidoo.findMany({
-      where: { userId },
-    });
+    // 2. Récupérer les params
+    const { id } = await params;
 
-    // 3. Retourner la réponse standardisée
+    // 3. Valider le body (si POST/PUT/PATCH)
+    const body = await request.json();
+    const validation = monSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: '...', details: validation.error.issues },
+        { status: 400 }
+      );
+    }
+
+    // 4. Vérifier ownership
+    const resource = await prisma.kidoo.findUnique({ where: { id } });
+    if (!resource) {
+      return NextResponse.json(
+        { success: false, error: 'Ressource non trouvée' },
+        { status: 404 }
+      );
+    }
+    if (resource.userId !== userId) {
+      return NextResponse.json(
+        { success: false, error: 'Accès non autorisé' },
+        { status: 403 }
+      );
+    }
+
+    // 5. Logique métier...
+
+    // 6. Retourner la réponse
     return NextResponse.json({
       success: true,
-      data: kidoos,
-      message: `${kidoos.length} kidoo(s) trouvé(s)`,
+      data: {...},
+      message: 'Description du succès',
     });
+
   } catch (error) {
     console.error('Erreur:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Une erreur est survenue',
-      },
+      { success: false, error: 'Une erreur est survenue' },
       { status: 500 }
     );
   }
 }
 ```
 
-## Authentification
+## Authentification obligatoire
 
-**TOUJOURS utiliser `requireAuth`** pour vérifier l'authentification :
+**TOUTES les routes (sauf auth) doivent utiliser `requireAuth`** :
 
 ```typescript
 import { requireAuth } from '@/lib/auth-helpers';
 
-const authResult = requireAuth(request);
-if (!authResult.success) {
-  return authResult.response; // Retourne automatiquement 401
+export async function GET(request: NextRequest) {
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return authResult.response;
+  }
+  const { userId } = authResult;
+  // ...
 }
-
-const { userId } = authResult;
 ```
 
-**Règle** : Ne pas créer de logique d'authentification custom, utiliser `requireAuth`.
+## Validation obligatoire avec schémas partagés
 
-## Validation
-
-**TOUJOURS valider avec les schémas Zod partagés** :
+**TOUTES les routes avec body doivent valider avec un schéma Zod de `@/shared/schemas/`** :
 
 ```typescript
-import { createKidooInputSchema } from '@/shared';
+import { brightnessCommandSchema } from '@/shared/schemas/api/kidoos/brightness';
 
 const body = await request.json();
-const validationResult = createKidooInputSchema.safeParse(body);
+const validation = brightnessCommandSchema.safeParse(body);
 
-if (!validationResult.success) {
-  const firstError = validationResult.error.issues[0];
+if (!validation.success) {
   return NextResponse.json(
     {
       success: false,
-      error: firstError.message,
-      field: firstError.path[0] as string,
+      error: 'Message d\'erreur utilisateur',
+      details: validation.error.issues,
     },
     { status: 400 }
   );
 }
 
-const { name, deviceId } = validationResult.data;
+const { value } = validation.data;
 ```
 
-**Règle** : Utiliser les schémas depuis `@/shared`, pas de validation custom.
-
-## Format de réponse
+## Format des réponses
 
 ### Succès
 
 ```typescript
 return NextResponse.json({
   success: true,
-  data: T,           // Les données retournées
-  message?: string, // Message optionnel
+  data: { ... },           // Données retournées
+  message: 'Description',  // Message optionnel
 });
 ```
 
@@ -120,70 +135,66 @@ return NextResponse.json({
 return NextResponse.json(
   {
     success: false,
-    error: string,      // Message d'erreur
-    field?: string,     // Champ en erreur (pour validation)
+    error: 'Message d\'erreur',
+    field: 'nomDuChamp',           // Optionnel, pour erreurs de validation
+    details: [...],                // Optionnel, en dev uniquement
   },
-  { status: 400 | 401 | 403 | 404 | 409 | 500 }
+  { status: 400 | 401 | 403 | 404 | 500 }
 );
 ```
 
-## Codes de statut HTTP
+### Codes de statut
 
-- **200** : Succès (GET, PUT)
-- **201** : Créé (POST)
-- **400** : Erreur de validation
-- **401** : Non authentifié (géré par `requireAuth`)
-- **403** : Accès refusé (ex: kidoo n'appartient pas à l'utilisateur)
-- **404** : Ressource non trouvée
-- **409** : Conflit (ex: email déjà utilisé)
-- **500** : Erreur serveur
+| Code | Usage |
+|------|-------|
+| 200 | Succès GET/PUT/PATCH/DELETE |
+| 201 | Succès POST (création) |
+| 400 | Erreur de validation |
+| 401 | Non authentifié |
+| 403 | Non autorisé (ownership) |
+| 404 | Ressource non trouvée |
+| 409 | Conflit (ex: email déjà utilisé) |
+| 500 | Erreur serveur |
+| 502 | Erreur PubNub |
+| 503 | Service non configuré |
 
-## Gestion des erreurs
+## Routes avec PubNub
 
-**TOUJOURS utiliser try/catch** et logger les erreurs :
+Pour les routes qui envoient des commandes à l'ESP32 :
 
 ```typescript
-try {
-  // Logique
-} catch (error) {
-  console.error('Erreur lors de la récupération des kidoos:', error);
+import { sendCommand, isPubNubConfigured } from '@/lib/pubnub';
+
+// 1. Vérifier que le Kidoo a une adresse MAC
+if (!kidoo.macAddress) {
   return NextResponse.json(
-    {
-      success: false,
-      error: 'Une erreur est survenue lors de la récupération des kidoos',
-    },
-    { status: 500 }
+    { success: false, error: 'Kidoo non configuré (adresse MAC manquante)' },
+    { status: 400 }
+  );
+}
+
+// 2. Vérifier PubNub
+if (!isPubNubConfigured()) {
+  return NextResponse.json(
+    { success: false, error: 'PubNub non configuré sur le serveur' },
+    { status: 503 }
+  );
+}
+
+// 3. Envoyer la commande
+const sent = await sendCommand(kidoo.macAddress, 'brightness', { value });
+
+if (!sent) {
+  return NextResponse.json(
+    { success: false, error: 'Échec de l\'envoi de la commande au Kidoo' },
+    { status: 502 }
   );
 }
 ```
 
-## Vérification de propriété
+## Conversion des types pour JSON
 
-Pour les ressources appartenant à un utilisateur :
-
-```typescript
-const kidoo = await prisma.kidoo.findUnique({
-  where: { id },
-});
-
-if (!kidoo) {
-  return NextResponse.json(
-    { success: false, error: 'Kidoo non trouvé' },
-    { status: 404 }
-  );
-}
-
-if (kidoo.userId !== userId) {
-  return NextResponse.json(
-    { success: false, error: 'Vous n\'avez pas accès à ce Kidoo' },
-    { status: 403 }
-  );
-}
-```
-
-## Conversion des dates
-
-Prisma retourne des objets `Date`, mais JSON ne les supporte pas. Convertir en ISO strings :
+### Dates → ISO strings
 
 ```typescript
 const kidooWithISOStrings = {
@@ -194,25 +205,21 @@ const kidooWithISOStrings = {
 };
 ```
 
-## Routes dynamiques
-
-Pour les routes avec paramètres (ex: `/api/kidoos/[id]`) :
+### BigInt → Number
 
 ```typescript
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params; // Next.js 16: params est une Promise
-  // ...
-}
+const config = {
+  storageTotalBytes: kidoo.configBasic.storageTotalBytes 
+    ? Number(kidoo.configBasic.storageTotalBytes) 
+    : null,
+};
 ```
 
 ## Règles strictes
 
-1. **Toujours utiliser `requireAuth`** - Pas d'authentification custom
-2. **Valider avec Zod** - Utiliser les schémas partagés depuis `@/shared`
-3. **Format de réponse standardisé** - `{ success, data/error, field? }`
-4. **Gérer les erreurs** - Toujours try/catch avec logging
-5. **Vérifier la propriété** - Pour les ressources utilisateur
-6. **Convertir les dates** - En ISO strings pour JSON
+1. **`requireAuth` obligatoire** - Sauf routes auth publiques
+2. **Validation Zod obligatoire** - Schémas depuis `@/shared/schemas/`
+3. **Vérifier ownership** - `resource.userId !== userId` → 403
+4. **Format de réponse standard** - `{ success, data?, error?, message? }`
+5. **Convertir dates et BigInt** - Pour compatibilité JSON
+6. **Gérer les erreurs** - try/catch + logs + réponse 500

@@ -5,6 +5,12 @@
 
 #ifdef HAS_WIFI
 #include <WiFi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#endif
+
+#ifdef HAS_PUBNUB
+#include "../pubnub/pubnub_manager.h"
 #endif
 
 // Variables statiques
@@ -12,6 +18,11 @@ bool WiFiManager::initialized = false;
 bool WiFiManager::available = false;
 WiFiConnectionStatus WiFiManager::connectionStatus = WIFI_STATUS_DISCONNECTED;
 char WiFiManager::currentSSID[64] = "";
+
+// Thread de retry
+TaskHandle_t WiFiManager::retryTaskHandle = nullptr;
+bool WiFiManager::retryThreadRunning = false;
+unsigned long WiFiManager::retryStartTime = 0;
 
 bool WiFiManager::init() {
   if (initialized) {
@@ -127,6 +138,11 @@ bool WiFiManager::connect(const char* ssid, const char* password, uint32_t timeo
   Serial.println();
   connectionStatus = WIFI_STATUS_CONNECTED;
   
+  // Arrêter le thread de retry si actif (connexion réussie)
+  if (retryThreadRunning) {
+    stopRetryThread();
+  }
+  
   Serial.println("[WIFI] ========================================");
   Serial.println("[WIFI] Connecte avec succes !");
   Serial.print("[WIFI] SSID: ");
@@ -138,6 +154,14 @@ bool WiFiManager::connect(const char* ssid, const char* password, uint32_t timeo
   Serial.println(" dBm");
   Serial.println("[WIFI] ========================================");
   
+  // Déclencher la connexion PubNub si disponible
+  #ifdef HAS_PUBNUB
+  if (PubNubManager::isInitialized() && !PubNubManager::isConnected()) {
+    Serial.println("[WIFI] Connexion automatique PubNub...");
+    PubNubManager::connect();
+  }
+  #endif
+  
   return true;
 #endif
 }
@@ -146,6 +170,11 @@ void WiFiManager::disconnect() {
 #ifdef HAS_WIFI
   if (!available) {
     return;
+  }
+  
+  // Arrêter le thread de retry si actif
+  if (retryThreadRunning) {
+    stopRetryThread();
   }
   
   WiFi.disconnect();
@@ -246,8 +275,168 @@ void WiFiManager::printInfo() {
         Serial.println("Echec de connexion");
         break;
     }
+    
+    Serial.print("[WIFI] Thread retry actif: ");
+    Serial.println(retryThreadRunning ? "Oui" : "Non");
   }
 #endif
   
   Serial.println("[WIFI] ================================");
+}
+
+void WiFiManager::startRetryThread() {
+#ifdef HAS_WIFI
+  if (!available || retryThreadRunning) {
+    return;
+  }
+  
+  // Vérifier si déjà connecté
+  if (isConnected()) {
+    return;
+  }
+  
+  // Vérifier qu'il y a un SSID configuré
+  const SDConfig& config = InitManager::getConfig();
+  if (strlen(config.wifi_ssid) == 0) {
+    Serial.println("[WIFI] Pas de SSID configure, retry impossible");
+    return;
+  }
+  
+  Serial.println("[WIFI] Demarrage du thread de retry automatique...");
+  retryStartTime = millis();
+  retryThreadRunning = true;
+  
+  // Créer le thread FreeRTOS
+  BaseType_t result = xTaskCreatePinnedToCore(
+    retryThreadFunction,  // Fonction du thread
+    "WiFiRetryTask",     // Nom du thread
+    RETRY_STACK_SIZE,    // Taille de la stack
+    nullptr,             // Paramètre
+    RETRY_TASK_PRIORITY, // Priorité
+    &retryTaskHandle,    // Handle
+    1                    // Core 1 (laisser Core 0 pour autres tâches)
+  );
+  
+  if (result != pdPASS) {
+    Serial.println("[WIFI] Erreur creation thread retry");
+    retryThreadRunning = false;
+    retryTaskHandle = nullptr;
+  }
+#endif
+}
+
+void WiFiManager::stopRetryThread() {
+#ifdef HAS_WIFI
+  if (!retryThreadRunning) {
+    return;
+  }
+  
+  retryThreadRunning = false;
+  
+  if (retryTaskHandle != nullptr) {
+    vTaskDelay(pdMS_TO_TICKS(100)); // Laisser le temps au thread de s'arrêter
+    vTaskDelete(retryTaskHandle);
+    retryTaskHandle = nullptr;
+  }
+  
+  Serial.println("[WIFI] Thread retry arrete");
+#endif
+}
+
+bool WiFiManager::isRetryThreadActive() {
+#ifdef HAS_WIFI
+  return retryThreadRunning;
+#else
+  return false;
+#endif
+}
+
+void WiFiManager::retryThreadFunction(void* parameter) {
+#ifdef HAS_WIFI
+  Serial.println("[WIFI-RETRY] Thread actif");
+  
+  const SDConfig& config = InitManager::getConfig();
+  uint32_t retryDelay = RETRY_INITIAL_DELAY_MS; // Commence à 5 secondes
+  int attemptCount = 0;
+  
+  while (retryThreadRunning) {
+    // Vérifier si on a dépassé la durée maximale (1 minute)
+    if (millis() - retryStartTime >= RETRY_MAX_DURATION_MS) {
+      Serial.println("[WIFI-RETRY] Duree maximale atteinte (1 minute), arret du retry");
+      retryThreadRunning = false;
+      break;
+    }
+    
+    // Vérifier si on est déjà connecté (peut arriver si connecté manuellement)
+    if (WiFiManager::isConnected()) {
+      Serial.println("[WIFI-RETRY] WiFi connecte, arret du retry");
+      
+      // Déclencher la connexion PubNub si disponible
+      #ifdef HAS_PUBNUB
+      if (PubNubManager::isInitialized() && !PubNubManager::isConnected()) {
+        Serial.println("[WIFI-RETRY] Connexion automatique PubNub...");
+        PubNubManager::connect();
+      }
+      #endif
+      
+      retryThreadRunning = false;
+      break;
+    }
+    
+    // Tenter de se connecter
+    attemptCount++;
+    Serial.print("[WIFI-RETRY] Tentative ");
+    Serial.print(attemptCount);
+    Serial.print(" (delai: ");
+    Serial.print(retryDelay / 1000);
+    Serial.println("s)");
+    
+    // Utiliser connect() avec les paramètres de la config
+    // Cette méthode va bloquer jusqu'à 15 secondes (timeout)
+    if (WiFiManager::connect(config.wifi_ssid, config.wifi_password, DEFAULT_CONNECT_TIMEOUT_MS)) {
+      Serial.println("[WIFI-RETRY] Connexion reussie !");
+      
+      // Déclencher la connexion PubNub si disponible
+      #ifdef HAS_PUBNUB
+      if (PubNubManager::isInitialized() && !PubNubManager::isConnected()) {
+        Serial.println("[WIFI-RETRY] Connexion automatique PubNub...");
+        PubNubManager::connect();
+      }
+      #endif
+      
+      retryThreadRunning = false;
+      break;
+    }
+    
+    // Calculer le prochain délai avec backoff exponentiel
+    // 5s, 10s, 15s, 20s, 30s, 40s, 50s, 60s max
+    if (attemptCount == 1) {
+      retryDelay = 10000;  // 10s
+    } else if (attemptCount == 2) {
+      retryDelay = 15000;   // 15s
+    } else if (attemptCount == 3) {
+      retryDelay = 20000;   // 20s
+    } else if (attemptCount == 4) {
+      retryDelay = 30000;   // 30s
+    } else if (attemptCount == 5) {
+      retryDelay = 40000;   // 40s
+    } else if (attemptCount == 6) {
+      retryDelay = 50000;   // 50s
+    } else {
+      retryDelay = RETRY_MAX_DELAY_MS; // 60s max
+    }
+    
+    // Limiter le délai au maximum
+    if (retryDelay > RETRY_MAX_DELAY_MS) {
+      retryDelay = RETRY_MAX_DELAY_MS;
+    }
+    
+    // Attendre avant la prochaine tentative
+    vTaskDelay(pdMS_TO_TICKS(retryDelay));
+  }
+  
+  retryThreadRunning = false;
+  Serial.println("[WIFI-RETRY] Thread arrete");
+  vTaskDelete(nullptr);
+#endif
 }

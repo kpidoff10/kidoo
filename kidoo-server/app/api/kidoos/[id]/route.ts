@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-helpers';
-import { updateKidooInputSchema } from '@/shared';
+import { updateKidooInputSchema } from '@/shared/schemas/kidoo';
 
 /**
  * GET /api/kidoos/[id]
@@ -180,12 +180,6 @@ export async function PUT(
     }
     if (data.wifiSSID !== undefined) {
       updateData.wifiSSID = data.wifiSSID;
-    }
-    if (data.isConnected !== undefined) {
-      updateData.isConnected = data.isConnected;
-    }
-    if (data.lastConnected !== undefined) {
-      updateData.lastConnected = data.lastConnected ? new Date(data.lastConnected) : null;
     }
 
     // Mettre à jour le kidoo

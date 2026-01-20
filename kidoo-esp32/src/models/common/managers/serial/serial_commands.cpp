@@ -7,13 +7,17 @@
 #include <ArduinoJson.h>
 #include "../ble/ble_manager.h"
 #include "../wifi/wifi_manager.h"
+#ifdef HAS_PUBNUB
 #include "../pubnub/pubnub_manager.h"
+#endif
 #include "../rtc/rtc_manager.h"
 #include "../potentiometer/potentiometer_manager.h"
 #include "../nfc/nfc_manager.h"
 #include "../audio/audio_manager.h"
 #include "../../../model_serial_commands.h"
+#ifdef HAS_PUBNUB
 #include "../../../model_pubnub_routes.h"
+#endif
 #include "../../../model_config.h"
 #include <Arduino.h>
 
@@ -107,6 +111,7 @@ void SerialCommands::processCommand(const String& command) {
     cmdWiFiConnect();
   } else if (cmd == "wifi-disconnect") {
     cmdWiFiDisconnect();
+  #ifdef HAS_PUBNUB
   } else if (cmd == "pubnub" || cmd == "pubnub-status") {
     cmdPubNub();
   } else if (cmd == "pubnub-connect") {
@@ -117,6 +122,7 @@ void SerialCommands::processCommand(const String& command) {
     cmdPubNubPublish(args);
   } else if (cmd == "pubnub-routes" || cmd == "routes") {
     cmdPubNubRoutes();
+  #endif
   } else if (cmd == "rtc" || cmd == "time" || cmd == "date") {
     cmdRTC();
   } else if (cmd == "rtc-set" || cmd == "time-set") {
@@ -820,6 +826,7 @@ void SerialCommands::cmdMemoryDebug() {
   }
   
   // PubNub
+  #ifdef HAS_PUBNUB
   if (PubNubManager::isConnected()) {
     estimatedUsed += printComponent("PubNub (connecte):   ", 20, 30);
   } else if (PubNubManager::isInitialized()) {
@@ -827,6 +834,9 @@ void SerialCommands::cmdMemoryDebug() {
   } else {
     Serial.println("  PubNub:                    Non init (0%)");
   }
+  #else
+  Serial.println("  PubNub:                    Non disponible (0%)");
+  #endif
   
   // LEDs (FastLED)
   if (LEDManager::isInitialized()) {
@@ -1296,7 +1306,11 @@ void SerialCommands::cmdConfigGet(const String& args) {
   
   if (args.length() == 0) {
     Serial.println("[CONFIG] Usage: config-get <key>");
+    #ifdef HAS_PUBNUB
     Serial.println("[CONFIG] Exemple: config-get pubnub_subscribe_key");
+    #else
+    Serial.println("[CONFIG] Exemple: config-get wifi_ssid");
+    #endif
     return;
   }
   
@@ -1378,8 +1392,10 @@ void SerialCommands::cmdConfigSet(const String& args) {
   if (args.length() == 0) {
     Serial.println("[CONFIG] Usage: config-set <key> <value>");
     Serial.println("[CONFIG] Exemples:");
+    #ifdef HAS_PUBNUB
     Serial.println("[CONFIG]   config-set pubnub_subscribe_key sub-c-xxx");
     Serial.println("[CONFIG]   config-set pubnub_publish_key pub-c-xxx");
+    #endif
     Serial.println("[CONFIG]   config-set my_custom_key my_value");
     Serial.println("[CONFIG]   config-set led_brightness 128");
     return;

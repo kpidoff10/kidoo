@@ -16,7 +16,9 @@
 // ============================================
 
 // Pin de données pour la bande LED principale
-#define LED_DATA_PIN 2
+// ESP32-S3-WROOM: Utiliser un GPIO accessible (pas 48 qui est la LED intégrée)
+// GPIO 17 est généralement libre et fonctionne bien avec FastLED
+#define LED_DATA_PIN 17
 
 // Nombre de LEDs sur la bande principale
 #define NUM_LEDS 144
@@ -33,21 +35,21 @@
 // Configuration de la carte SD (SPI)
 // ============================================
 
-// Pins SPI pour la carte SD
-#define SD_MOSI_PIN 23      // GPIO 23 (VSPI MOSI)
-#define SD_MISO_PIN 19      // GPIO 19 (VSPI MISO)
-#define SD_SCK_PIN 18       // GPIO 18 (VSPI SCK)
-#define SD_CS_PIN 5         // GPIO 5 (Chip Select)
+// Pins SPI pour la carte SD (ESP32-S3)
+#define SD_MOSI_PIN 11      // GPIO 11 (SPI MOSI)
+#define SD_MISO_PIN 13      // GPIO 13 (SPI MISO)
+#define SD_SCK_PIN 12       // GPIO 12 (SPI SCK)
+#define SD_CS_PIN 10        // GPIO 10 (Chip Select)
 
 // ============================================
 // Configuration NFC (PN532 via I2C)
 // ============================================
 
-// Pins I2C pour le module NFC PN532
-#define NFC_SDA_PIN 21      // GPIO 21 (I2C SDA)
-#define NFC_SCL_PIN 22      // GPIO 22 (I2C SCL)
+// Pins I2C pour le module NFC PN532 (ESP32-S3)
+#define NFC_SDA_PIN 8       // GPIO 8 (I2C SDA)
+#define NFC_SCL_PIN 9       // GPIO 9 (I2C SCL)
 #define NFC_IRQ_PIN 4       // GPIO 4 (Interrupt - optionnel)
-#define NFC_RST_PIN 16      // GPIO 16 (Reset - optionnel)
+#define NFC_RST_PIN 5       // GPIO 5 (Reset - optionnel)
 
 // Adresse I2C du PN532 (généralement 0x24 en mode I2C)
 #define NFC_I2C_ADDRESS 0x24
@@ -56,9 +58,9 @@
 // Configuration RTC DS3231 (I2C)
 // ============================================
 
-// Le DS3231 utilise le même bus I2C que le NFC
-#define RTC_SDA_PIN 21      // GPIO 21 (I2C SDA)
-#define RTC_SCL_PIN 22      // GPIO 22 (I2C SCL)
+// Le DS3231 utilise le même bus I2C que le NFC (ESP32-S3)
+#define RTC_SDA_PIN 8       // GPIO 8 (I2C SDA)
+#define RTC_SCL_PIN 9       // GPIO 9 (I2C SCL)
 
 // Adresse I2C du DS3231 (fixe)
 #define RTC_I2C_ADDRESS 0x68
@@ -67,18 +69,18 @@
 // Configuration Potentiomètre WH148 (ADC)
 // ============================================
 
-// Pin analogique pour le potentiomètre
-#define POTENTIOMETER_PIN 34  // GPIO 34 (ADC1_CH6) - Input only
+// Pin analogique pour le potentiomètre (ESP32-S3)
+#define POTENTIOMETER_PIN 1   // GPIO 1 (ADC1_CH0)
 
 // ============================================
 // Configuration Audio (MAX98357 via I2S)
 // ============================================
 
-// Pins I2S pour le module audio MAX98357
+// Pins I2S pour le module audio MAX98357 (ESP32-S3)
 // Note: DOUT = Data Out de l'ESP32 vers DIN du MAX98357
-#define AUDIO_I2S_BCLK_PIN 27   // GPIO 27 (Bit Clock) - connexion BCLK du MAX98357
-#define AUDIO_I2S_LRC_PIN 26    // GPIO 26 (Left/Right Clock) - connexion LRC du MAX98357
-#define AUDIO_I2S_DIN_PIN 25    // GPIO 25 (Data Out) - connexion DIN du MAX98357
+#define AUDIO_I2S_BCLK_PIN 16   // GPIO 16 (Bit Clock) - connexion BCLK du MAX98357
+#define AUDIO_I2S_LRC_PIN 17    // GPIO 17 (Left/Right Clock) - connexion LRC du MAX98357
+#define AUDIO_I2S_DIN_PIN 18    // GPIO 18 (Data Out) - connexion DIN du MAX98357
 
 // Mode audio (1 = MONO, 2 = STEREO)
 // MONO : 1 haut-parleur, STEREO : 2 haut-parleurs
@@ -95,9 +97,9 @@
 #define HAS_SD_CARD true
 #define HAS_LED true        // Désactivé pour test
 #define HAS_WIFI true       // Désactivé pour test
-#define HAS_BLE false
+#define HAS_BLE true
 #define HAS_NFC false
-#define HAS_PUBNUB false
+#define HAS_PUBNUB true
 #define HAS_RTC false
 #define HAS_POTENTIOMETER true
 #define HAS_AUDIO true

@@ -182,10 +182,10 @@ bool AudioManager::playFile(const char* filePath) {
   // Jouer le fichier
   bool result = false;
   if (path.endsWith(".mp3")) {
-    result = audio->connecttoSD(filePath);
+    result = audio->connecttoFS(SD, filePath);
     Serial.println("[AUDIO] Format: MP3");
   } else if (path.endsWith(".wav")) {
-    result = audio->connecttoSD(filePath);
+    result = audio->connecttoFS(SD, filePath);
     Serial.println("[AUDIO] Format: WAV");
   } else {
     Serial.print("[AUDIO] ERREUR: Format non supporte: ");

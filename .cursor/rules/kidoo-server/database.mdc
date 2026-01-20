@@ -1,45 +1,24 @@
----
-description: "Règles Prisma et base de données pour kidoo-server. Utiliser le client Prisma singleton, PrismaPg adapter, et respecter les conventions de nommage."
-alwaysApply: false
-globs:
-  - kidoo-server/prisma/**/*
-  - kidoo-server/lib/prisma.ts
-  - kidoo-server/app/api/**/*.ts
-  - kidoo-server/app/actions/**/*.ts
----
+# Règles Prisma et Base de Données pour kidoo-server
 
-# Règles du Module Database (Prisma)
+## Architecture des types Prisma
 
-## Architecture
+Le client Prisma est **généré dans `shared/types/prisma/`** pour être partagé entre le serveur et l'app mobile :
 
-La base de données utilise :
-- **Prisma ORM** - ORM TypeScript
-- **PostgreSQL/Neon** - Base de données
-- **PrismaPg adapter** - Adapter PostgreSQL pour Prisma 7.x
-- **Client singleton** - Instance unique de PrismaClient
-
-## Client Prisma
-
-**TOUJOURS utiliser le client singleton** depuis `lib/prisma.ts` :
-
-```typescript
-import { prisma } from '@/lib/prisma';
-
-// ✅ CORRECT
-const users = await prisma.user.findMany();
-
-// ❌ INTERDIT - Ne pas créer de nouveau client
-const prisma = new PrismaClient();
+```prisma
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../shared/types/prisma"
+}
 ```
 
-**Règle** : Ne jamais créer de nouveau `PrismaClient`, utiliser l'instance exportée.
+## Client Prisma singleton
 
-## Configuration Prisma 7.x
-
-Prisma 7.x nécessite un adapter explicite :
+Toujours utiliser le client depuis `@/lib/prisma` :
 
 ```typescript
-import { PrismaClient } from '@prisma/client';
+// lib/prisma.ts
+import { PrismaClient } from '@/shared/types/prisma';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
@@ -49,177 +28,197 @@ const adapter = new PrismaPg(pool);
 export const prisma = new PrismaClient({ adapter });
 ```
 
-**Règle** : Toujours utiliser `PrismaPg` avec un `Pool` pour PostgreSQL.
+### Import correct
 
-## Schéma Prisma
+```typescript
+// ✅ CORRECT
+import { prisma } from '@/lib/prisma';
 
-Le schéma est dans `prisma/schema.prisma` :
+// ❌ INTERDIT - Ne jamais créer un nouveau client
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+```
+
+## Modèles de données
+
+### User
 
 ```prisma
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String?
-  name      String?
-  // ...
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  
+  kidoos        Kidoo[]
+  tags          Tag[]
+  files         File[]
 }
+```
 
+### Kidoo
+
+```prisma
 model Kidoo {
-  id          String   @id @default(cuid())
-  name        String
-  deviceId    String   @unique
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  // ...
+  id              String    @id @default(uuid())
+  name            String
+  model           String    @default("classic")
+  macAddress      String?
+  deviceId        String    @unique
+  firmwareVersion String?
+  isConnected     Boolean   @default(false)
+  wifiSSID        String?
+  userId          String?
+  
+  brightness      Int       @default(100)
+  sleepTimeout    Int       @default(30000)
+  
+  user            User?     @relation(...)
+  tags            Tag[]
+  configBasic     KidooConfigBasic?
 }
 ```
 
-## Requêtes Prisma
+### Tag
 
-### Requêtes de base
-
-```typescript
-// FindMany
-const kidoos = await prisma.kidoo.findMany({
-  where: { userId },
-  orderBy: { createdAt: 'desc' },
-});
-
-// FindUnique
-const kidoo = await prisma.kidoo.findUnique({
-  where: { id },
-});
-
-// Create
-const newKidoo = await prisma.kidoo.create({
-  data: {
-    name,
-    deviceId,
-    userId,
-  },
-});
-
-// Update
-const updated = await prisma.kidoo.update({
-  where: { id },
-  data: { name },
-});
-
-// Delete
-await prisma.kidoo.delete({
-  where: { id },
-});
+```prisma
+model Tag {
+  id        String   @id @default(uuid())
+  tagId     String?  @unique    # UUID écrit sur le tag NFC
+  uid       String?             # UID matériel du tag
+  name      String?
+  type      TagType?            # MUSIC, STORY, SOUND
+  kidooId   String
+  userId    String
+  
+  kidoo           Kidoo  @relation(...)
+  multimediaFiles File[]
+}
 ```
 
-### Relations
+### File
+
+```prisma
+model File {
+  id           String   @id @default(uuid())
+  tagId        String
+  userId       String
+  url          String              # URL Cloudflare R2
+  path         String              # Chemin dans le bucket
+  fileName     String
+  originalName String
+  size         Int
+  mimeType     String
+  order        Int      @default(0)
+  disabled     Boolean  @default(false)
+}
+```
+
+### KidooConfigBasic
+
+```prisma
+model KidooConfigBasic {
+  id                 String   @id @default(uuid())
+  kidooId            String   @unique
+  
+  storageTotalBytes  BigInt?
+  storageFreeBytes   BigInt?
+  storageUsedBytes   BigInt?
+  storageLastUpdated DateTime?
+  
+  kidoo              Kidoo    @relation(...)
+}
+```
+
+## Conventions de requêtes
+
+### Vérifier ownership
 
 ```typescript
-// Inclure les relations
+const kidoo = await prisma.kidoo.findUnique({ where: { id } });
+
+if (!kidoo) {
+  return NextResponse.json({ success: false, error: 'Non trouvé' }, { status: 404 });
+}
+
+if (kidoo.userId !== userId) {
+  return NextResponse.json({ success: false, error: 'Accès non autorisé' }, { status: 403 });
+}
+```
+
+### Include relations
+
+```typescript
 const kidoo = await prisma.kidoo.findUnique({
   where: { id },
   include: {
-    user: true,
-  },
-});
-
-// Select spécifique
-const user = await prisma.user.findUnique({
-  where: { email },
-  select: {
-    id: true,
-    email: true,
-    name: true,
+    configBasic: true,
+    tags: true,
   },
 });
 ```
 
-## Gestion des erreurs Prisma
-
-Gérer les erreurs Prisma spécifiques :
+### Select pour optimiser
 
 ```typescript
-try {
-  const user = await prisma.user.create({ data });
-} catch (error) {
-  if (error instanceof Error) {
-    // Erreur de contrainte unique
-    if (error.message.includes('Unique constraint')) {
-      return {
-        success: false,
-        error: 'Un compte avec cet email existe déjà',
-        field: 'email',
-      };
-    }
-  }
-  
-  // Erreur générique
-  return {
-    success: false,
-    error: 'Une erreur est survenue',
-  };
-}
+const user = await prisma.user.findUnique({
+  where: { email },
+  select: { id: true },  // Ne récupérer que l'id
+});
+```
+
+### Upsert pour config
+
+```typescript
+await prisma.kidooConfigBasic.upsert({
+  where: { kidooId },
+  update: { brightness: value },
+  create: { kidooId, brightness: value },
+});
+```
+
+## Conversion des types pour JSON
+
+### BigInt → Number
+
+Les BigInt ne sont pas sérialisables en JSON :
+
+```typescript
+const config = {
+  storageTotalBytes: kidoo.configBasic?.storageTotalBytes 
+    ? Number(kidoo.configBasic.storageTotalBytes) 
+    : null,
+};
+```
+
+### Date → ISO string
+
+```typescript
+const data = {
+  createdAt: kidoo.createdAt.toISOString(),
+  updatedAt: kidoo.updatedAt.toISOString(),
+  lastConnected: kidoo.lastConnected?.toISOString() || null,
+};
 ```
 
 ## Migrations
 
 ```bash
 # Créer une migration
-npm run db:migrate
+npx prisma migrate dev --name nom_migration
 
-# Appliquer les migrations (production)
-npm run db:migrate:deploy
+# Appliquer en production
+npx prisma migrate deploy
 
-# Push le schéma (dev uniquement)
-npm run db:push
-
-# Générer le client Prisma
-npm run db:generate
-```
-
-**Règle** : Utiliser les migrations pour les changements de schéma, pas `db:push` en production.
-
-## Variables d'environnement
-
-```env
-DATABASE_URL="postgresql://user:password@host:port/database?sslmode=require"
-```
-
-**Règle** : Toujours inclure `?sslmode=require` pour Neon/PostgreSQL cloud.
-
-## Conversion des dates
-
-Prisma retourne des objets `Date`, mais JSON ne les supporte pas :
-
-```typescript
-const kidooWithISOStrings = {
-  ...kidoo,
-  lastConnected: kidoo.lastConnected?.toISOString() || null,
-  createdAt: kidoo.createdAt.toISOString(),
-  updatedAt: kidoo.updatedAt.toISOString(),
-};
-```
-
-**Règle** : Toujours convertir les dates en ISO strings pour les réponses API.
-
-## Transactions
-
-Pour les opérations multiples :
-
-```typescript
-await prisma.$transaction(async (tx) => {
-  const user = await tx.user.create({ data: userData });
-  const kidoo = await tx.kidoo.create({
-    data: { ...kidooData, userId: user.id },
-  });
-  return { user, kidoo };
-});
+# Regénérer le client (dans shared/)
+npx prisma generate
 ```
 
 ## Règles strictes
 
-1. **Utiliser le client singleton** - Depuis `@/lib/prisma`
-2. **Adapter PrismaPg** - Pour PostgreSQL avec Prisma 7.x
-3. **Gérer les erreurs** - Spécifiquement les contraintes Prisma
-4. **Convertir les dates** - En ISO strings pour JSON
-5. **Utiliser les migrations** - Pas `db:push` en production
-6. **Select spécifique** - Pour optimiser les requêtes
+1. **Client singleton** - Toujours `import { prisma } from '@/lib/prisma'`
+2. **Types partagés** - Client généré dans `shared/types/prisma/`
+3. **Vérifier ownership** - `resource.userId !== userId` avant toute opération
+4. **Convertir BigInt** - `Number(bigint)` pour JSON
+5. **Convertir Date** - `.toISOString()` pour JSON
+6. **Cascade delete** - Relations configurées avec `onDelete: Cascade`

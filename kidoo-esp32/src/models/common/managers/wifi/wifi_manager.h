@@ -3,6 +3,11 @@
 
 #include <Arduino.h>
 
+#ifdef HAS_WIFI
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#endif
+
 /**
  * Gestionnaire WiFi commun
  * 
@@ -92,16 +97,50 @@ public:
    * Afficher les informations WiFi sur Serial
    */
   static void printInfo();
+  
+  /**
+   * Démarrer le thread de retry automatique WiFi
+   * Le thread tentera de se connecter avec un backoff exponentiel
+   * (5s, 10s, 15s, 20s, 30s, 40s, 50s, 60s max)
+   * Arrête après 1 minute sans connexion
+   */
+  static void startRetryThread();
+  
+  /**
+   * Arrêter le thread de retry automatique WiFi
+   */
+  static void stopRetryThread();
+  
+  /**
+   * Vérifier si le thread de retry est actif
+   * @return true si le thread est actif
+   */
+  static bool isRetryThreadActive();
 
 private:
+  // Fonction du thread FreeRTOS pour le retry
+  static void retryThreadFunction(void* parameter);
+  
   // Variables statiques
   static bool initialized;
   static bool available;
   static WiFiConnectionStatus connectionStatus;
   static char currentSSID[64];
   
+  // Thread de retry
+  static TaskHandle_t retryTaskHandle;
+  static bool retryThreadRunning;
+  static unsigned long retryStartTime;
+  
   // Timeout de connexion par défaut (15 secondes)
   static const uint32_t DEFAULT_CONNECT_TIMEOUT_MS = 15000;
+  
+  // Configuration du retry
+  static const uint32_t RETRY_MAX_DURATION_MS = 60000;  // 1 minute max
+  static const uint32_t RETRY_INITIAL_DELAY_MS = 5000;  // 5 secondes initial
+  static const uint32_t RETRY_MAX_DELAY_MS = 60000;     // 60 secondes max entre tentatives
+  static const int RETRY_STACK_SIZE = 4096;              // Taille de la stack
+  static const int RETRY_TASK_PRIORITY = 1;              // Priorité basse
 };
 
 #endif // WIFI_MANAGER_H

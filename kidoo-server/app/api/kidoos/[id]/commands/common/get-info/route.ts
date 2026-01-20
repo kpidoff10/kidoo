@@ -12,7 +12,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-helpers';
-import { sendCommand, isPubNubConfigured, getKidooChannel, waitForMessage } from '@/lib/pubnub';
+import { sendCommand, isPubNubConfigured, waitForMessage } from '@/lib/pubnub';
+import { Kidoo, KidooConfigBasic } from '@/shared/types/prisma';
 
 // Timeout pour attendre la réponse de l'ESP32 (en ms)
 const RESPONSE_TIMEOUT_MS = 5000;
@@ -21,7 +22,7 @@ const RESPONSE_TIMEOUT_MS = 5000;
  * POST /api/kidoos/[id]/commands/common/get-info
  * Demande au Kidoo d'envoyer ses informations
  */
-export async function POST(
+export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -114,27 +115,15 @@ export async function POST(
   }
 }
 
+// Type pour le kidoo avec sa config
+type KidooWithConfig = Pick<Kidoo, 'id' | 'name' | 'model' | 'macAddress'> & {
+  configBasic: Pick<KidooConfigBasic, 'storageTotalBytes' | 'storageFreeBytes' | 'storageUsedBytes' | 'storageLastUpdated' | 'updatedAt'> | null;
+};
+
 /**
  * Renvoie les données en cache de la base de données
  */
-function returnCachedData(
-  kidoo: { 
-    id: string; 
-    name: string; 
-    model: string; 
-    macAddress: string | null;
-    configBasic?: {
-      brightness: number;
-      sleepTimeout: number;
-      storageTotalBytes: bigint | null;
-      storageFreeBytes: bigint | null;
-      storageUsedBytes: bigint | null;
-      storageLastUpdated: Date | null;
-      updatedAt: Date;
-    } | null;
-  },
-  reason: string
-) {
+function returnCachedData(kidoo: KidooWithConfig, reason: string) {
   const config = kidoo.configBasic;
   
   // Construire les données depuis la base
@@ -144,8 +133,6 @@ function returnCachedData(
     mac: kidoo.macAddress,
     model: kidoo.model.toLowerCase(),
     // Données de la config si disponibles
-    brightness: config?.brightness ?? null,
-    sleepTimeout: config?.sleepTimeout ?? null,
     storage: config?.storageTotalBytes ? {
       total: Number(config.storageTotalBytes),
       free: Number(config.storageFreeBytes ?? 0),
@@ -171,15 +158,25 @@ async function updateKidooInfo(
   info: Record<string, unknown>
 ) {
   try {
-    // Pour le modèle Basic, mettre à jour la config
+    // Mettre à jour brightness et sleepTimeout sur le Kidoo (commun à tous les modèles)
+    const kidooUpdate: { brightness?: number; sleepTimeout?: number } = {};
+    if (typeof info.brightness === 'number') kidooUpdate.brightness = info.brightness;
+    if (typeof info.sleepTimeout === 'number') kidooUpdate.sleepTimeout = info.sleepTimeout;
+
+    if (Object.keys(kidooUpdate).length > 0) {
+      await prisma.kidoo.update({
+        where: { id: kidooId },
+        data: kidooUpdate,
+      });
+    }
+
+    // Pour le modèle Basic, mettre à jour la config storage
     if (model.toLowerCase() === 'basic') {
       const storage = info.storage as { total?: number; free?: number; used?: number } | undefined;
       
       await prisma.kidooConfigBasic.upsert({
         where: { kidooId },
         update: {
-          brightness: typeof info.brightness === 'number' ? info.brightness : undefined,
-          sleepTimeout: typeof info.sleepTimeout === 'number' ? info.sleepTimeout : undefined,
           storageTotalBytes: storage?.total ? BigInt(storage.total) : undefined,
           storageFreeBytes: storage?.free ? BigInt(storage.free) : undefined,
           storageUsedBytes: storage?.used ? BigInt(storage.used) : undefined,
@@ -187,17 +184,15 @@ async function updateKidooInfo(
         },
         create: {
           kidooId,
-          brightness: typeof info.brightness === 'number' ? info.brightness : 100,
-          sleepTimeout: typeof info.sleepTimeout === 'number' ? info.sleepTimeout : 30000,
           storageTotalBytes: storage?.total ? BigInt(storage.total) : null,
           storageFreeBytes: storage?.free ? BigInt(storage.free) : null,
           storageUsedBytes: storage?.used ? BigInt(storage.used) : null,
           storageLastUpdated: new Date(),
         },
       });
-      
-      console.log(`[GET-INFO] Base de données mise à jour pour ${kidooId}`);
     }
+      
+    console.log(`[GET-INFO] Base de données mise à jour pour ${kidooId}`);
   } catch (error) {
     console.error('[GET-INFO] Erreur lors de la mise à jour de la base:', error);
     // Ne pas faire échouer la requête si la mise à jour échoue
