@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <esp_psram.h>
 #include "models/common/managers/init/init_manager.h"
 #include "models/common/managers/serial/serial_commands.h"
 #include "models/common/managers/pubnub/pubnub_manager.h"
@@ -17,6 +18,27 @@ void setup() {
   Serial.print("[MAIN] CPU Frequency: ");
   Serial.print(getCpuFrequencyMhz());
   Serial.println(" MHz");
+  
+  // Initialiser et afficher les infos PSRAM (8MB OPI sur DevKitC-1-N16R8)
+  if (psramFound()) {
+    Serial.println("[MAIN] PSRAM detectee!");
+    Serial.print("[MAIN] PSRAM Size: ");
+    Serial.print(ESP.getPsramSize() / 1024 / 1024);
+    Serial.println(" MB");
+    Serial.print("[MAIN] PSRAM Free: ");
+    Serial.print(ESP.getFreePsram() / 1024 / 1024);
+    Serial.println(" MB");
+  } else {
+    Serial.println("[MAIN] WARNING: PSRAM non detectee!");
+  }
+  
+  // Afficher la mémoire interne
+  Serial.print("[MAIN] Heap Size: ");
+  Serial.print(ESP.getHeapSize() / 1024);
+  Serial.println(" KB");
+  Serial.print("[MAIN] Heap Free: ");
+  Serial.print(ESP.getFreeHeap() / 1024);
+  Serial.println(" KB");
   
   // Initialiser tous les composants du système via le gestionnaire d'initialisation
   if (!InitManager::init()) {

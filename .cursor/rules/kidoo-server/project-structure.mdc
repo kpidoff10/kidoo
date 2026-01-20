@@ -1,107 +1,81 @@
----
-description: "Structure et conventions du projet kidoo-server. Organisation des fichiers, conventions de nommage, et bonnes pratiques Next.js App Router."
-alwaysApply: true
-globs:
-  - kidoo-server/**/*
----
-
 # Structure du Projet kidoo-server
 
 ## Organisation générale
 
 ```
 kidoo-server/
-├── app/                 # Next.js App Router
-│   ├── api/            # Routes API
-│   │   ├── auth/       # Routes d'authentification
-│   │   └── kidoos/     # Routes Kidoos
-│   ├── actions/        # Server Actions
-│   │   └── auth.ts
-│   ├── layout.tsx      # Layout racine
-│   └── page.tsx        # Page d'accueil
-├── auth.ts             # Configuration NextAuth
-├── proxy.ts            # Proxy pour protection des routes
-├── lib/                # Utilitaires et helpers
-│   ├── prisma.ts       # Client Prisma singleton
-│   ├── auth-helpers.ts  # Helpers d'authentification
-│   └── shared.ts       # Wrapper pour types partagés
-├── prisma/             # Prisma
-│   ├── schema.prisma   # Schéma de base de données
-│   └── README.md
-└── types/              # Types TypeScript
-    └── next-auth.d.ts  # Types NextAuth
+├── app/                          # Next.js App Router
+│   ├── api/                      # Routes API
+│   │   ├── auth/                 # Routes d'authentification
+│   │   │   ├── [...nextauth]/    # Handlers NextAuth
+│   │   │   ├── mobile/           # Auth spécifique mobile
+│   │   │   │   ├── login/
+│   │   │   │   └── logout/
+│   │   │   └── register/
+│   │   └── kidoos/               # Routes Kidoos
+│   │       ├── route.ts          # GET (liste) + POST (créer)
+│   │       └── [id]/
+│   │           ├── route.ts      # GET + PUT + DELETE
+│   │           ├── brightness/   # Config luminosité
+│   │           ├── sleep-timeout/# Config sleep
+│   │           └── commands/     # Commandes PubNub
+│   │               └── common/
+│   │                   ├── get-info/
+│   │                   └── reboot/
+│   ├── actions/                  # Server Actions
+│   ├── layout.tsx
+│   └── page.tsx
+├── auth.ts                       # Configuration NextAuth
+├── lib/                          # Utilitaires et helpers
+│   ├── prisma.ts                 # Client Prisma singleton
+│   ├── auth-helpers.ts           # Helpers d'authentification
+│   └── pubnub.ts                 # Client PubNub
+├── prisma/
+│   └── schema.prisma             # Schéma de base de données
+└── types/
+    └── next-auth.d.ts            # Types NextAuth
 ```
 
 ## Conventions de nommage
 
 ### Fichiers
-- **Routes API** : `route.ts` (ex: `app/api/kidoos/route.ts`)
-- **Server Actions** : `camelCase.ts` (ex: `app/actions/auth.ts`)
-- **Helpers** : `kebab-case.ts` (ex: `lib/auth-helpers.ts`)
-- **Types** : `kebab-case.d.ts` (ex: `types/next-auth.d.ts`)
+- **Routes API** : `route.ts` dans chaque dossier de route
+- **Server Actions** : `camelCase.ts` (ex: `auth.ts`)
+- **Helpers** : `kebab-case.ts` (ex: `auth-helpers.ts`)
+- **Types** : `kebab-case.d.ts` (ex: `next-auth.d.ts`)
 
-### Routes API
-- **Handlers** : `GET`, `POST`, `PUT`, `DELETE` (noms de fonctions exportées)
-- **Fichiers** : `route.ts` dans chaque dossier de route
+### Fonctions
+- **Handlers API** : `GET`, `POST`, `PUT`, `PATCH`, `DELETE`
+- **Server Actions** : `camelCase` (ex: `registerUser`)
 
-### Server Actions
-- **Fonctions** : `camelCase` (ex: `registerUser`, `checkEmailAvailability`)
-- **Types de retour** : `PascalCase` (ex: `RegisterResult`)
+## Organisation des routes API
 
-## Routes API
-
-### Structure
+### Structure hiérarchique
 
 ```
-app/api/
-├── auth/
-│   ├── [...nextauth]/
-│   │   └── route.ts        # NextAuth handlers
+api/
+├── auth/                         # Authentification
+│   ├── [...nextauth]/route.ts    # NextAuth handlers
 │   ├── mobile/
-│   │   ├── login/
-│   │   │   └── route.ts
-│   │   └── logout/
-│   │       └── route.ts
-│   └── register/
-│       └── route.ts
+│   │   ├── login/route.ts        # POST - Login mobile
+│   │   └── logout/route.ts       # POST - Logout mobile
+│   └── register/route.ts         # POST - Inscription + GET - Check email
 └── kidoos/
-    ├── route.ts            # GET /api/kidoos, POST /api/kidoos
+    ├── route.ts                  # GET (liste) + POST (créer)
     └── [id]/
-        └── route.ts        # GET /api/kidoos/[id], etc.
+        ├── route.ts              # GET + PUT + DELETE (CRUD)
+        ├── brightness/route.ts   # PATCH - Config + PubNub
+        ├── sleep-timeout/route.ts
+        └── commands/             # Commandes PubNub temps réel
+            └── common/
+                ├── get-info/route.ts
+                └── reboot/route.ts
 ```
 
-### Format des handlers
+### Séparation config vs commands
 
-```typescript
-import { NextRequest, NextResponse } from 'next/server';
-
-export async function GET(request: NextRequest) {
-  // ...
-}
-
-export async function POST(request: NextRequest) {
-  // ...
-}
-```
-
-## Server Actions
-
-### Structure
-
-```
-app/actions/
-└── auth.ts
-```
-
-### Format
-
-```typescript
-'use server';
-
-export async function myAction(): Promise<ActionResult> {
-  // ...
-}
-```
+- **Config** (`/api/kidoos/[id]/brightness`) : Modifie la config en base + envoie commande PubNub
+- **Commands** (`/api/kidoos/[id]/commands/`) : Commandes temps réel via PubNub uniquement
 
 ## Imports
 
@@ -111,7 +85,7 @@ export async function myAction(): Promise<ActionResult> {
 // ✅ CORRECT - Utiliser les aliases
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-helpers';
-import { registerSchema } from '@/shared';
+import { brightnessCommandSchema } from '@/shared/schemas/api/kidoos/brightness';
 
 // ❌ INTERDIT - Imports relatifs
 import { prisma } from '../../lib/prisma';
@@ -119,10 +93,11 @@ import { prisma } from '../../lib/prisma';
 
 ### Ordre des imports
 
-1. React et Next.js
+1. Next.js (NextRequest, NextResponse)
 2. Bibliothèques externes
-3. Imports internes (lib, shared, types)
-4. Types
+3. Lib interne (@/lib/*)
+4. Shared (@/shared/*)
+5. Types
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server';
@@ -130,42 +105,15 @@ import bcrypt from 'bcryptjs';
 
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-helpers';
-import { registerSchema } from '@/shared';
-import type { RegisterInput } from '@/shared';
-```
-
-## Configuration
-
-### Variables d'environnement
-
-```env
-# Base de données
-DATABASE_URL="postgresql://..."
-
-# NextAuth
-NEXTAUTH_SECRET="..."
-NEXTAUTH_URL="http://localhost:3000"
-```
-
-### Next.js Config
-
-Le fichier `next.config.ts` configure Webpack pour résoudre `shared/` :
-
-```typescript
-webpack: (config) => {
-  config.resolve.alias = {
-    ...config.resolve.alias,
-    '@/shared': path.resolve(__dirname, '../shared'),
-  };
-  return config;
-},
+import { sendCommand, isPubNubConfigured } from '@/lib/pubnub';
+import { brightnessCommandSchema } from '@/shared/schemas/api/kidoos/brightness';
+import type { Kidoo } from '@prisma/client';
 ```
 
 ## Règles strictes
 
-1. **Respecter la structure** - Routes API dans `app/api/`, Server Actions dans `app/actions/`
+1. **Routes API dans `app/api/`** - Un fichier `route.ts` par route
 2. **Utiliser les path aliases** - `@/` au lieu de `../../`
-3. **Routes API avec route.ts** - Un fichier `route.ts` par route
-4. **Server Actions avec 'use server'** - Préfixe obligatoire
-5. **Client singleton** - Utiliser `prisma` depuis `@/lib/prisma`
-6. **Schémas partagés** - Utiliser `@/shared` pour les schémas Zod
+3. **Client Prisma singleton** - Toujours via `@/lib/prisma`
+4. **Types Prisma partagés** - Import depuis `@/shared/types/prisma`
+5. **Schémas partagés** - Import depuis `@/shared/schemas/`

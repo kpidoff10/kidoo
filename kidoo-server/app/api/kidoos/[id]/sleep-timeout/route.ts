@@ -1,23 +1,24 @@
 /**
- * Route API pour redémarrer un Kidoo
- * POST /api/kidoos/[id]/commands/common/reboot
+ * Route API pour modifier le délai de mise en veille d'un Kidoo
+ * PATCH /api/kidoos/[id]/commands/common/sleep-timeout
  * 
- * Body: { "delay": 1000 } (optionnel, en ms)
+ * Body: { "value": 30000 } (en ms, 0 = désactivé)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-helpers';
 import { sendCommand, isPubNubConfigured } from '@/lib/pubnub';
-import { rebootCommandSchema } from '@/shared/schemas/api/kidoos/reboot';
+import { sleepTimeoutCommandSchema, SLEEP_TIMEOUT_LIMITS } from '@/shared/schemas/api/kidoos/sleep-timeout';
+import { Kidoo } from '@prisma/client';
 
 /**
- * POST /api/kidoos/[id]/commands/common/reboot
- * Redémarre un Kidoo
+ * PATCH /api/kidoos/[id]/commands/common/sleep-timeout
+ * Modifie le délai de mise en veille d'un Kidoo
  */
-export async function POST(
+export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: Kidoo['id'] }> }
 ) {
   try {
     // Vérifier l'authentification
@@ -29,32 +30,27 @@ export async function POST(
     const { userId } = authResult;
     const { id } = await params;
 
-    // Récupérer et valider le body (peut être vide)
-    let body = {};
-    try {
-      body = await request.json();
-    } catch {
-      // Body vide ou invalide, on continue avec les valeurs par défaut
-    }
-    
-    const validation = rebootCommandSchema.safeParse(body);
+    // Récupérer et valider le body
+    const body = await request.json();
+    const validation = sleepTimeoutCommandSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Le délai doit être un nombre positif (optionnel)',
+          error: `Le délai doit être 0 (désactivé) ou entre ${SLEEP_TIMEOUT_LIMITS.min} et ${SLEEP_TIMEOUT_LIMITS.max} ms`,
           details: validation.error.issues,
         },
         { status: 400 }
       );
     }
 
-    const { delay } = validation.data;
+    const { value } = validation.data;
 
     // Vérifier que le Kidoo existe et appartient à l'utilisateur
     const kidoo = await prisma.kidoo.findUnique({
       where: { id },
+      include: { configBasic: true },
     });
 
     if (!kidoo) {
@@ -88,8 +84,7 @@ export async function POST(
     }
 
     // Envoyer la commande via PubNub
-    const commandParams = delay ? { delay } : undefined;
-    const sent = await sendCommand(kidoo.macAddress, 'reboot', commandParams);
+    const sent = await sendCommand(kidoo.macAddress, 'sleep-timeout', { value });
 
     if (!sent) {
       return NextResponse.json(
@@ -98,17 +93,23 @@ export async function POST(
       );
     }
 
-    const message = delay 
-      ? `Redémarrage dans ${delay}ms` 
-      : 'Redémarrage en cours';
+    // Mettre à jour la config en base (si modèle Basic)
+    await prisma.kidoo.update({
+      where: { id: kidoo.id },
+      data: { sleepTimeout: value },
+    });
+
+    const message = value === 0 
+      ? 'Mode veille désactivé' 
+      : `Délai de veille défini à ${value}ms`;
 
     return NextResponse.json({
       success: true,
-      data: { delay: delay || 0 },
+      data: { sleepTimeout: value },
       message,
     });
   } catch (error) {
-    console.error('Erreur lors du redémarrage:', error);
+    console.error('Erreur lors de la modification du délai de veille:', error);
     const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
 
     return NextResponse.json(

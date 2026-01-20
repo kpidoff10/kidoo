@@ -2,3 +2,8 @@
 
 # dependencies
 node_modules/
+
+# Prisma généré (mais on garde types.ts et README.md)
+generated/prisma/*
+!generated/prisma/types.ts
+!generated/README.md

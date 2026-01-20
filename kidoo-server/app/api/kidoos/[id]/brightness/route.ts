@@ -1,23 +1,24 @@
 /**
- * Route API pour redémarrer un Kidoo
- * POST /api/kidoos/[id]/commands/common/reboot
+ * Route API pour modifier la luminosité d'un Kidoo
+ * PATCH /api/kidoos/[id]/commands/common/brightness
  * 
- * Body: { "delay": 1000 } (optionnel, en ms)
+ * Body: { "value": 80 }
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-helpers';
 import { sendCommand, isPubNubConfigured } from '@/lib/pubnub';
-import { rebootCommandSchema } from '@/shared/schemas/api/kidoos/reboot';
+import { brightnessCommandSchema } from '@/shared/schemas/api/kidoos/brightness';
+import { Kidoo } from '@prisma/client';
 
 /**
- * POST /api/kidoos/[id]/commands/common/reboot
- * Redémarre un Kidoo
+ * PATCH/POST /api/kidoos/[id]/commands/common/brightness
+ * Modifie la luminosité d'un Kidoo
  */
-export async function POST(
+export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: Kidoo['id'] }> }
 ) {
   try {
     // Vérifier l'authentification
@@ -29,28 +30,22 @@ export async function POST(
     const { userId } = authResult;
     const { id } = await params;
 
-    // Récupérer et valider le body (peut être vide)
-    let body = {};
-    try {
-      body = await request.json();
-    } catch {
-      // Body vide ou invalide, on continue avec les valeurs par défaut
-    }
-    
-    const validation = rebootCommandSchema.safeParse(body);
+    // Récupérer et valider le body
+    const body = await request.json();
+    const validation = brightnessCommandSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Le délai doit être un nombre positif (optionnel)',
+          error: 'La luminosité doit être un nombre entre 10 et 100',
           details: validation.error.issues,
         },
         { status: 400 }
       );
     }
 
-    const { delay } = validation.data;
+    const { value } = validation.data;
 
     // Vérifier que le Kidoo existe et appartient à l'utilisateur
     const kidoo = await prisma.kidoo.findUnique({
@@ -88,8 +83,7 @@ export async function POST(
     }
 
     // Envoyer la commande via PubNub
-    const commandParams = delay ? { delay } : undefined;
-    const sent = await sendCommand(kidoo.macAddress, 'reboot', commandParams);
+    const sent = await sendCommand(kidoo.macAddress, 'brightness', { value });
 
     if (!sent) {
       return NextResponse.json(
@@ -98,17 +92,19 @@ export async function POST(
       );
     }
 
-    const message = delay 
-      ? `Redémarrage dans ${delay}ms` 
-      : 'Redémarrage en cours';
+    // Mettre à jour la config en base (si modèle Basic)
+    await prisma.kidoo.update({
+      where: { id: kidoo.id },
+      data: { brightness: value },
+    });
 
     return NextResponse.json({
       success: true,
-      data: { delay: delay || 0 },
-      message,
+      data: { brightness: value },
+      message: `Luminosité définie à ${value}%`,
     });
   } catch (error) {
-    console.error('Erreur lors du redémarrage:', error);
+    console.error('Erreur lors de la modification de la luminosité:', error);
     const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
 
     return NextResponse.json(

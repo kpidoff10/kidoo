@@ -26,7 +26,11 @@ uint32_t LEDManager::sleepTimeoutMs = 0;
 bool LEDManager::pulseNeedsReset = false;
 
 bool LEDManager::init() {
+  Serial.println("[LED] Debut init...");
+  Serial.printf("[LED] LED_DATA_PIN=%d, NUM_LEDS=%d\n", LED_DATA_PIN, NUM_LEDS);
+  
   if (initialized) {
+    Serial.println("[LED] Deja initialise");
     return true;
   }
   
@@ -36,26 +40,36 @@ bool LEDManager::init() {
   sleepTimeoutMs = config.sleep_timeout_ms;
   lastActivityTime = millis();
   isSleeping = false;
+  Serial.printf("[LED] Brightness=%d, SleepTimeout=%lu\n", currentBrightness, sleepTimeoutMs);
   
   // Allouer le tableau de LEDs
+  Serial.println("[LED] Allocation memoire...");
   leds = new CRGB[NUM_LEDS];
   if (!leds) {
+    Serial.println("[LED] ERREUR: Allocation memoire echouee!");
     return false;
   }
+  Serial.println("[LED] Memoire OK");
   
   // Initialiser FastLED
+  Serial.println("[LED] Init FastLED...");
   FastLED.addLeds<LED_TYPE, LED_DATA_PIN>(leds, NUM_LEDS);
   FastLED.setBrightness(currentBrightness);
+  Serial.println("[LED] FastLED OK");
   
   // Créer la queue de commandes
+  Serial.println("[LED] Creation queue...");
   commandQueue = xQueueCreate(QUEUE_SIZE, sizeof(LEDCommand));
   if (commandQueue == nullptr) {
+    Serial.println("[LED] ERREUR: Creation queue echouee!");
     delete[] leds;
     leds = nullptr;
     return false;
   }
+  Serial.println("[LED] Queue OK");
   
   // Créer le thread de gestion des LEDs
+  Serial.println("[LED] Creation task...");
   BaseType_t result = xTaskCreatePinnedToCore(
     ledTask,
     "LEDTask",
@@ -67,18 +81,21 @@ bool LEDManager::init() {
   );
   
   if (result != pdPASS) {
+    Serial.printf("[LED] ERREUR: Creation task echouee! Code=%d\n", result);
     vQueueDelete(commandQueue);
     commandQueue = nullptr;
     delete[] leds;
     leds = nullptr;
     return false;
   }
+  Serial.println("[LED] Task OK");
   
   initialized = true;
   
   // Éteindre toutes les LEDs au démarrage
   clear();
   
+  Serial.println("[LED] Init complete!");
   return true;
 }
 
@@ -173,6 +190,11 @@ void LEDManager::ledTask(void* parameter) {
       updateSleepFade();
     }
     
+    // Gérer l'animation de fade depuis sleep (réveil)
+    if (isFadingFromSleep) {
+      updateWakeFade();
+    }
+    
     // Mettre à jour les effets animés si nécessaire (seulement si pas en sleep et pas en fade)
     if (!isSleeping && !isFadingToSleep && !isFadingFromSleep) {
       unsigned long currentTime = millis();
@@ -207,6 +229,10 @@ void LEDManager::processCommand(const LEDCommand& cmd) {
     case LED_CMD_SET_BRIGHTNESS:
       currentBrightness = cmd.data.brightness;
       FastLED.setBrightness(currentBrightness);
+      // Réappliquer la couleur sur toutes les LEDs si pas d'effet actif
+      if (currentEffect == LED_EFFECT_NONE) {
+        fill_solid(leds, NUM_LEDS, currentColor);
+      }
       break;
       
     case LED_CMD_SET_EFFECT:
@@ -277,15 +303,16 @@ void LEDManager::wakeUp() {
     isSleeping = false;
     isFadingToSleep = false;
     
-    // Si on avait un effet avant le sleep, démarrer un fade-in progressif
+    // Démarrer un fade-in progressif pour le réveil
+    isFadingFromSleep = true;
+    sleepFadeStartTime = millis();
+    
+    // Restaurer l'effet s'il y en avait un
     if (savedEffect != LED_EFFECT_NONE) {
-      isFadingFromSleep = true;
-      sleepFadeStartTime = millis();
-      // Restaurer l'effet pour qu'il reprenne après le fade-in
       currentEffect = savedEffect;
     } else {
-      // Pas d'effet, restaurer directement
-      FastLED.setBrightness(currentBrightness);
+      // Pas d'effet, réappliquer la couleur sur toutes les LEDs
+      fill_solid(leds, NUM_LEDS, currentColor);
     }
   }
   // Réinitialiser le timer d'activité
@@ -320,12 +347,16 @@ void LEDManager::updateWakeFade() {
     
     // Restaurer la luminosité complète
     FastLED.setBrightness(currentBrightness);
+    
+    // S'assurer que toutes les LEDs ont la couleur si pas d'effet
+    if (currentEffect == LED_EFFECT_NONE) {
+      fill_solid(leds, NUM_LEDS, currentColor);
+    }
   } else {
     // Calculer le facteur de fade (0.0 -> 1.0)
     float fadeFactor = (float)elapsed / (float)SLEEP_FADE_DURATION_MS;
     
     // Simple: on remonte juste la luminosité globale
-    // Les couleurs actuelles des LEDs restent inchangées (effet en cours)
     uint8_t fadedBrightness = (uint8_t)(currentBrightness * fadeFactor);
     FastLED.setBrightness(fadedBrightness);
   }

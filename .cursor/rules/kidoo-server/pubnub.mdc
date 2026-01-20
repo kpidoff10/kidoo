@@ -1,0 +1,192 @@
+# Règles PubNub pour kidoo-server
+
+## Architecture
+
+PubNub est utilisé pour la communication temps réel entre le serveur et les ESP32 :
+
+```
+kidoo-server  ──[PubNub]──>  ESP32 (via macAddress)
+     │                            │
+     │<────[PubNub History]───────│
+     │      (réponse info)
+```
+
+## Client PubNub
+
+Le client est dans `lib/pubnub.ts` :
+
+```typescript
+import { sendCommand, isPubNubConfigured, waitForMessage } from '@/lib/pubnub';
+```
+
+### Fonctions disponibles
+
+| Fonction | Description |
+|----------|-------------|
+| `isPubNubConfigured()` | Vérifie si PubNub est configuré |
+| `sendCommand(mac, command, data?)` | Envoie une commande à un ESP32 |
+| `waitForMessage(mac, type, timeout)` | Attend une réponse via History API |
+
+## Utilisation dans une route API
+
+### Route config (modifie DB + envoie commande)
+
+```typescript
+import { sendCommand, isPubNubConfigured } from '@/lib/pubnub';
+
+export async function PATCH(request: NextRequest, { params }) {
+  // ... auth, validation ...
+
+  // 1. Vérifier que le Kidoo a une adresse MAC
+  if (!kidoo.macAddress) {
+    return NextResponse.json(
+      { success: false, error: 'Kidoo non configuré (adresse MAC manquante)' },
+      { status: 400 }
+    );
+  }
+
+  // 2. Vérifier PubNub
+  if (!isPubNubConfigured()) {
+    return NextResponse.json(
+      { success: false, error: 'PubNub non configuré sur le serveur' },
+      { status: 503 }
+    );
+  }
+
+  // 3. Envoyer la commande
+  const sent = await sendCommand(kidoo.macAddress, 'brightness', { value });
+
+  if (!sent) {
+    return NextResponse.json(
+      { success: false, error: 'Échec de l\'envoi de la commande au Kidoo' },
+      { status: 502 }
+    );
+  }
+
+  // 4. Mettre à jour la config en base
+  await prisma.kidoo.update({
+    where: { id: kidoo.id },
+    data: { brightness: value },
+  });
+
+  return NextResponse.json({
+    success: true,
+    data: { brightness: value },
+    message: `Luminosité définie à ${value}%`,
+  });
+}
+```
+
+### Route command avec réponse (get-info)
+
+```typescript
+import { sendCommand, isPubNubConfigured, waitForMessage } from '@/lib/pubnub';
+
+const RESPONSE_TIMEOUT_MS = 5000;
+
+export async function GET(request: NextRequest, { params }) {
+  // ... auth, vérifications ...
+
+  // 1. Envoyer la commande
+  const sent = await sendCommand(kidoo.macAddress, 'get-info');
+
+  if (!sent) {
+    return returnCachedData(kidoo, 'Échec de l\'envoi');
+  }
+
+  // 2. Attendre la réponse
+  const response = await waitForMessage(kidoo.macAddress, 'info', RESPONSE_TIMEOUT_MS);
+
+  if (response) {
+    // 3. Mettre à jour la base avec les nouvelles infos
+    await updateKidooInfo(kidoo.id, kidoo.model, response);
+    
+    return NextResponse.json({
+      success: true,
+      data: response,
+      source: 'live',
+      message: 'Informations récupérées en temps réel',
+    });
+  }
+
+  // 4. Timeout - renvoyer les données en cache
+  return returnCachedData(kidoo, 'Timeout - appareil peut-être hors ligne');
+}
+```
+
+## Commandes disponibles
+
+### Commandes communes (common)
+
+| Commande | Description | Réponse attendue |
+|----------|-------------|------------------|
+| `get-info` | Demande les infos du device | `{ type: 'info', ... }` |
+| `reboot` | Redémarre le device | Aucune |
+| `brightness` | Change la luminosité | Aucune |
+| `sleep-timeout` | Change le timeout de veille | Aucune |
+
+### Format des commandes
+
+```typescript
+// Commande simple
+await sendCommand(macAddress, 'reboot');
+
+// Commande avec données
+await sendCommand(macAddress, 'brightness', { value: 80 });
+```
+
+## Gestion des erreurs
+
+### Codes de statut
+
+| Code | Situation |
+|------|-----------|
+| 400 | macAddress manquante |
+| 502 | Échec d'envoi PubNub |
+| 503 | PubNub non configuré |
+
+### Pattern de fallback (cache)
+
+Quand PubNub échoue ou timeout, renvoyer les données de la base :
+
+```typescript
+function returnCachedData(kidoo, reason: string) {
+  return NextResponse.json({
+    success: true,
+    data: {
+      brightness: kidoo.brightness,
+      sleepTimeout: kidoo.sleepTimeout,
+      // ...
+    },
+    source: 'cache',
+    message: reason,
+  });
+}
+```
+
+## Structure des routes commands
+
+```
+api/kidoos/[id]/commands/
+└── common/                   # Commandes pour tous les modèles
+    ├── get-info/route.ts
+    └── reboot/route.ts
+```
+
+Possibilité future d'ajouter des commandes spécifiques par modèle :
+
+```
+api/kidoos/[id]/commands/
+├── common/
+├── basic/                    # Commandes spécifiques Basic
+└── mini/                     # Commandes spécifiques Mini
+```
+
+## Règles strictes
+
+1. **Vérifier macAddress** - Toujours avant d'envoyer une commande
+2. **Vérifier isPubNubConfigured()** - Avant tout appel PubNub
+3. **Gérer les échecs** - Retourner 502 si sendCommand échoue
+4. **Timeout avec fallback** - Renvoyer les données en cache si timeout
+5. **Indiquer la source** - `source: 'live' | 'cache'` dans la réponse
+6. **Logs** - Logger les commandes envoyées et réponses reçues

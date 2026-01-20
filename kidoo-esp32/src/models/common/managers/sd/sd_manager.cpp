@@ -87,6 +87,9 @@ uint64_t SDManager::getUsedSpace() {
 }
 
 bool SDManager::initSDCard() {
+  Serial.println("[SD] Initialisation carte SD...");
+  Serial.printf("[SD] Pins: MOSI=%d, MISO=%d, SCK=%d, CS=%d\n", SD_MOSI_PIN, SD_MISO_PIN, SD_SCK_PIN, SD_CS_PIN);
+  
   // Délai initial pour laisser la carte SD se stabiliser après un reboot
   // Particulièrement important après un SW_CPU_RESET
   delay(250);
@@ -97,6 +100,7 @@ bool SDManager::initSDCard() {
   delay(50);
   
   // Initialiser le bus SPI avec les pins configurés
+  Serial.println("[SD] Init SPI...");
   SPI.begin(SD_SCK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
   delay(100);
   

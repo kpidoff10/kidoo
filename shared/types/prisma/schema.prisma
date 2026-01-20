@@ -1,0 +1,175 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../shared/types/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TagType {
+  MUSIC
+  STORY
+  SOUND
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  avatar        String?
+  password      String? // Pour l'authentification par mot de passe
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  kidoos   Kidoo[]
+  tags     Tag[]
+  files    File[]
+
+  @@map("users")
+}
+
+model Kidoo {
+  id              String    @id @default(uuid())
+  name            String
+  model           String    @default("classic") // Modèle du Kidoo (classic, mini, pro, etc.)
+  macAddress      String?
+  deviceId        String    @unique // UUID du device BLE
+  firmwareVersion String?
+  lastConnected   DateTime?
+  isConnected     Boolean   @default(false)
+  wifiSSID        String? // Lecture seule, pour affichage uniquement (modification via Bluetooth uniquement)
+  userId          String?
+  isSynced        Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  brightness   Int @default(100) // Luminosité (10-100)
+  sleepTimeout Int @default(30000) // Timeout de sommeil en ms (5000-300000)
+
+  user        User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags        Tag[]
+  configBasic KidooConfigBasic? // Configuration spécifique au modèle Basic (relation 1:1)
+
+  @@index([userId])
+  @@index([deviceId])
+  @@index([model])
+  @@map("kidoos")
+}
+
+model Tag {
+  id        String   @id @default(uuid()) // Clé primaire générée par Prisma
+  tagId     String?  @unique // UUID généré par l'app et écrit sur le tag NFC (nullable temporairement pour migration)
+  uid       String? // UID du tag NFC (lecture seule, identifiant matériel du tag physique) - null jusqu'à la lecture du tag
+  name      String? // Nom optionnel pour le tag
+  type      TagType? // Type du tag (enum: MUSIC, STORY, SOUND)
+  kidooId   String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  kidoo           Kidoo  @relation(fields: [kidooId], references: [id], onDelete: Cascade)
+  user            User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  multimediaFiles File[]
+
+  @@index([kidooId])
+  @@index([userId])
+  @@index([uid])
+  @@index([tagId])
+  @@index([type])
+  @@map("tags")
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model File {
+  id           String   @id @default(uuid())
+  tagId        String // ID du tag associé
+  userId       String // ID de l'utilisateur qui a uploadé le fichier
+  url          String // URL publique du fichier (Cloudflare R2)
+  path         String // Chemin dans le bucket (ex: kidooId/tagId/filename)
+  fileName     String // Nom du fichier
+  originalName String // Nom original du fichier uploadé
+  size         Int // Taille du fichier en octets
+  mimeType     String // Type MIME du fichier (ex: audio/mpeg)
+  order        Int      @default(0) // Ordre d'affichage dans la liste (pour réorganisation)
+  disabled     Boolean  @default(false) // Indique si le fichier est désactivé (en pause)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tagId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([tagId, order]) // Index composite pour trier par tag et ordre
+  @@map("files")
+}
+
+// Configuration spécifique au modèle Basic
+// Note: Les configurations WiFi ne sont PAS stockées ici (restent sur le device, modifiables uniquement via Bluetooth)
+// Note: sleepTransitionMs est géré nativement par l'ESP32, pas stocké en base
+// Note: Les configurations LED (couleur et effet) ne sont PAS stockées ici (envoyées uniquement via Bluetooth en temps réel)
+model KidooConfigBasic {
+  id      String @id @default(uuid())
+  kidooId String @unique // Relation 1:1 avec Kidoo
+
+  // Données de stockage (dernières valeurs reçues de l'ESP32)
+  storageTotalBytes  BigInt? // Espace total en bytes (null si non disponible)
+  storageFreeBytes   BigInt? // Espace libre en bytes (null si non disponible)
+  storageUsedBytes   BigInt? // Espace utilisé en bytes (null si non disponible)
+  storageFreePercent Int? // Pourcentage d'espace libre (0-100, null si non disponible)
+  storageUsedPercent Int? // Pourcentage d'espace utilisé (0-100, null si non disponible)
+  storageLastUpdated DateTime? // Date de dernière mise à jour des données de stockage
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  kidoo Kidoo @relation(fields: [kidooId], references: [id], onDelete: Cascade)
+
+  @@index([kidooId])
+  @@map("kidoo_config_basic")
+}
