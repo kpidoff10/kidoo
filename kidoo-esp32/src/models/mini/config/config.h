@@ -2,13 +2,15 @@
 #define MODEL_MINI_CONFIG_H
 
 /**
- * Configuration du modèle Kidoo Mini
+ * Configuration du modèle Kidoo Mini (ESP32-C3)
+ * 
+ * ESP32-C3 : Single-core RISC-V 160MHz, pas de PSRAM
  * 
  * Ce fichier contient toutes les configurations spécifiques au modèle Mini :
  * - Pins GPIO pour les bandes LED
- * - Nombre de LEDs
+ * - Nombre de LEDs (réduit)
  * - Configuration de la carte SD
- * - Composants disponibles
+ * - Composants disponibles (limités par rapport au Basic)
  */
 
 // ============================================
@@ -16,10 +18,11 @@
 // ============================================
 
 // Pin de données pour la bande LED principale
-#define LED_DATA_PIN 2
+// ESP32-C3 : GPIO 8 est souvent utilisé pour les LEDs
+#define LED_DATA_PIN 8
 
 // Nombre de LEDs sur la bande principale (Mini a moins de LEDs)
-#define NUM_LEDS 60
+#define NUM_LEDS 30
 
 // Type de LED (WS2812B, WS2811, etc.)
 // Options: NEOPIXEL, WS2812B, WS2811, SK6812, etc.
@@ -33,19 +36,20 @@
 // Configuration de la carte SD (SPI)
 // ============================================
 
-// Pins SPI pour la carte SD (peuvent être différents sur Mini)
-#define SD_MOSI_PIN 23      // GPIO 23 (VSPI MOSI)
-#define SD_MISO_PIN 19      // GPIO 19 (VSPI MISO)
-#define SD_SCK_PIN 18       // GPIO 18 (VSPI SCK)
-#define SD_CS_PIN 5         // GPIO 5 (Chip Select)
+// Pins SPI pour la carte SD (ESP32-C3)
+// Note: ESP32-C3 a moins de GPIO disponibles
+#define SD_MOSI_PIN 6       // GPIO 6 (SPI MOSI)
+#define SD_MISO_PIN 5       // GPIO 5 (SPI MISO)
+#define SD_SCK_PIN 4        // GPIO 4 (SPI SCK)
+#define SD_CS_PIN 7         // GPIO 7 (Chip Select)
 
 // ============================================
-// Configuration RTC DS3231 (I2C)
+// Configuration RTC DS3231 (I2C) - Optionnel
 // ============================================
 
-// Le DS3231 utilise le bus I2C standard
-#define RTC_SDA_PIN 21      // GPIO 21 (I2C SDA)
-#define RTC_SCL_PIN 22      // GPIO 22 (I2C SCL)
+// Le DS3231 utilise le bus I2C standard (ESP32-C3)
+#define RTC_SDA_PIN 2       // GPIO 2 (I2C SDA)
+#define RTC_SCL_PIN 3       // GPIO 3 (I2C SCL)
 
 // Adresse I2C du DS3231 (fixe)
 #define RTC_I2C_ADDRESS 0x68
@@ -53,11 +57,17 @@
 // ============================================
 // Composants disponibles sur ce modèle
 // ============================================
+// ESP32-C3 : Single-core, pas de PSRAM, GPIO limités
+// On désactive les composants gourmands en ressources
 
 #define HAS_SD_CARD true
+#define HAS_LED true
 #define HAS_WIFI true
 #define HAS_BLE true
 #define HAS_PUBNUB true
-#define HAS_RTC true
+#define HAS_RTC false           // Optionnel sur Mini
+#define HAS_NFC false           // Pas de NFC sur Mini
+#define HAS_POTENTIOMETER false // Pas de potentiomètre sur Mini
+#define HAS_AUDIO false         // Pas d'audio sur Mini (I2S limité sur C3)
 
 #endif // MODEL_MINI_CONFIG_H

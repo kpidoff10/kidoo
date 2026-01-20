@@ -1,0 +1,203 @@
+# Règles pour les Formulaires
+
+## Stack technique
+- **react-hook-form** : Gestion du state des formulaires
+- **zod** : Validation des schémas
+- **@hookform/resolvers** : Intégration zod + react-hook-form
+
+## Structure d'un formulaire
+
+```tsx
+import React from 'react';
+import { View } from 'react-native';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
+import { TextInput, PasswordInput, Button } from '@/components/ui';
+import { useTheme } from '@/theme';
+
+// 1. Définir le schéma Zod
+const loginSchema = z.object({
+  email: z.string()
+    .min(1, 'auth.errors.emailRequired')
+    .email('auth.errors.emailInvalid'),
+  password: z.string()
+    .min(1, 'auth.errors.passwordRequired')
+    .min(8, 'auth.errors.passwordTooShort'),
+});
+
+// 2. Inférer le type depuis le schéma
+type LoginFormData = z.infer<typeof loginSchema>;
+
+// 3. Props du formulaire
+interface LoginFormProps {
+  onSubmit: (data: LoginFormData) => Promise<void>;
+  isLoading: boolean;
+}
+
+// 4. Composant formulaire
+export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
+  const { t } = useTranslation();
+  const { spacing } = useTheme();
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  return (
+    <View>
+      {/* 5. Utiliser Controller pour chaque champ */}
+      <Controller
+        control={control}
+        name="email"
+        render={({ field: { onChange, onBlur, value } }) => (
+          <TextInput
+            label={t('auth.login.email')}
+            placeholder={t('auth.login.emailPlaceholder')}
+            value={value}
+            onChangeText={onChange}
+            onBlur={onBlur}
+            error={errors.email ? t(errors.email.message as string) : undefined}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            containerStyle={{ marginBottom: spacing[4] }}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="password"
+        render={({ field: { onChange, onBlur, value } }) => (
+          <PasswordInput
+            label={t('auth.login.password')}
+            placeholder={t('auth.login.passwordPlaceholder')}
+            value={value}
+            onChangeText={onChange}
+            onBlur={onBlur}
+            error={errors.password ? t(errors.password.message as string) : undefined}
+            containerStyle={{ marginBottom: spacing[6] }}
+          />
+        )}
+      />
+
+      <Button
+        title={t('auth.login.submit')}
+        onPress={handleSubmit(onSubmit)}
+        loading={isLoading}
+        disabled={isLoading}
+        fullWidth
+      />
+    </View>
+  );
+}
+```
+
+## Schémas de validation courants
+
+### Email
+```typescript
+email: z.string()
+  .min(1, 'auth.errors.emailRequired')
+  .email('auth.errors.emailInvalid')
+```
+
+### Mot de passe
+```typescript
+password: z.string()
+  .min(1, 'auth.errors.passwordRequired')
+  .min(8, 'auth.errors.passwordTooShort')
+```
+
+### Confirmation mot de passe
+```typescript
+const schema = z.object({
+  password: z.string().min(8, 'auth.errors.passwordTooShort'),
+  confirmPassword: z.string().min(1, 'auth.errors.passwordRequired'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'auth.errors.passwordMismatch',
+  path: ['confirmPassword'],
+});
+```
+
+### Champ requis
+```typescript
+name: z.string().min(1, 'auth.errors.nameRequired')
+```
+
+### Champ optionnel
+```typescript
+bio: z.string().optional()
+```
+
+## Utiliser les schémas partagés
+
+Les schémas sont définis dans `@shared/` pour être réutilisés entre l'app et le serveur :
+
+```typescript
+import { loginSchema } from '@shared/auth/schema';
+
+const {
+  control,
+  handleSubmit,
+  formState: { errors },
+} = useForm({
+  resolver: zodResolver(loginSchema),
+});
+```
+
+## Afficher les erreurs
+
+```tsx
+<TextInput
+  // ...
+  error={errors.email ? t(errors.email.message as string) : undefined}
+/>
+```
+
+Les messages d'erreur sont des clés i18n (`auth.errors.emailInvalid`) qui sont traduites avec `t()`.
+
+## Gestion du submit
+
+```tsx
+// Dans le Screen parent
+const [isLoading, setIsLoading] = useState(false);
+
+const handleSubmit = async (data: LoginFormData) => {
+  setIsLoading(true);
+  try {
+    await login(data);
+    // Navigation automatique via AuthContext
+  } catch (error) {
+    // Erreur gérée dans AuthContext (toast)
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+return <LoginForm onSubmit={handleSubmit} isLoading={isLoading} />;
+```
+
+## Bonnes pratiques
+
+1. **Séparer le formulaire du screen** : Le formulaire gère uniquement l'UI et la validation, le screen gère la logique métier
+
+2. **Utiliser les clés i18n pour les erreurs** : Permet la traduction automatique
+
+3. **Désactiver le bouton pendant le chargement** : `disabled={isLoading}`
+
+4. **Afficher un indicateur de chargement** : `loading={isLoading}`
+
+5. **Utiliser `autoCapitalize="none"` pour les emails**
+
+6. **Utiliser `keyboardType` approprié** : `email-address`, `phone-pad`, `numeric`

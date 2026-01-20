@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-helpers';
 import { sendCommand, isPubNubConfigured } from '@/lib/pubnub';
-import { sleepTimeoutCommandSchema, SLEEP_TIMEOUT_LIMITS } from '@/shared/schemas/api/kidoos/sleep-timeout';
+import { sleepTimeoutCommandSchema, SLEEP_TIMEOUT_LIMITS } from '@/shared';
 import { Kidoo } from '@prisma/client';
 
 /**

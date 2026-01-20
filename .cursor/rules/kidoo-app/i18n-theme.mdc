@@ -1,0 +1,238 @@
+# Règles pour l'Internationalisation et le Thème
+
+## Internationalisation (i18n)
+
+### Configuration
+- Librairie : `react-i18next` + `expo-localization`
+- Langues : Français (fr), Anglais (en)
+- Détection automatique de la langue du système
+
+### Fichiers de traduction
+
+```
+src/i18n/
+├── fr.json    # Traductions françaises
+├── en.json    # Traductions anglaises
+└── index.ts   # Configuration i18next
+```
+
+### Structure des traductions
+
+```json
+{
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "retry": "Réessayer"
+  },
+  "auth": {
+    "login": {
+      "title": "Connexion",
+      "email": "Email",
+      "password": "Mot de passe"
+    },
+    "errors": {
+      "invalidCredentials": "Email ou mot de passe incorrect"
+    }
+  },
+  "home": {
+    "welcome": "Bienvenue",
+    "welcomeBack": "Bon retour, {{name}} !"
+  }
+}
+```
+
+### Utilisation
+
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function MyComponent() {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      {/* Traduction simple */}
+      <Text>{t('common.loading')}</Text>
+
+      {/* Avec interpolation */}
+      <Text>{t('home.welcomeBack', { name: 'John' })}</Text>
+
+      {/* Pour les erreurs de validation */}
+      <Text>{t(errors.email?.message as string)}</Text>
+    </>
+  );
+}
+```
+
+### Ajouter une traduction
+
+1. Ajouter la clé dans `fr.json` ET `en.json`
+2. Utiliser avec `t('ma.nouvelle.cle')`
+
+### Changer la langue
+
+```typescript
+import { changeLanguage } from '@/i18n';
+
+changeLanguage('en'); // ou 'fr'
+```
+
+## Thème (Light/Dark)
+
+### Configuration
+- Détection automatique du mode système via `useColorScheme()`
+- Couleurs définies dans `src/theme/colors.ts`
+
+### Utiliser le thème
+
+```tsx
+import { useTheme } from '@/theme';
+
+function MyComponent() {
+  const { colors, fonts, spacing, borderRadius, shadow, isDark } = useTheme();
+
+  return (
+    <View style={{ 
+      backgroundColor: colors.background,
+      padding: spacing[4],
+      borderRadius: borderRadius.lg,
+      ...shadow.md,
+    }}>
+      <Text style={{ 
+        color: colors.text,
+        fontSize: fonts.size.base,
+        fontWeight: fonts.weight.semibold,
+      }}>
+        Hello
+      </Text>
+    </View>
+  );
+}
+```
+
+### Couleurs disponibles
+
+```typescript
+colors: {
+  // Primary
+  primary, primaryLight, primaryDark,
+  
+  // Background
+  background, backgroundSecondary, backgroundTertiary,
+  
+  // Surface (cards, modals)
+  surface, surfaceSecondary,
+  
+  // Text
+  text, textSecondary, textTertiary, textInverse,
+  
+  // Border
+  border, borderLight,
+  
+  // Status
+  success, successLight,
+  warning, warningLight,
+  error, errorLight,
+  info, infoLight,
+  
+  // Online/Offline
+  online, offline,
+  
+  // Overlay
+  overlay,
+}
+```
+
+### Spacing (échelle de 4px)
+
+```typescript
+spacing: {
+  0: 0,
+  1: 4,
+  2: 8,
+  3: 12,
+  4: 16,
+  5: 20,
+  6: 24,
+  8: 32,
+  10: 40,
+  12: 48,
+}
+```
+
+### Border Radius
+
+```typescript
+borderRadius: {
+  none: 0,
+  sm: 4,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  '2xl': 24,
+  full: 9999,
+}
+```
+
+### Shadows
+
+```typescript
+shadow: {
+  sm: { ... },   // Légère
+  md: { ... },   // Moyenne
+  lg: { ... },   // Forte
+  xl: { ... },   // Très forte
+}
+
+// Utilisation
+<View style={shadow.md}>
+```
+
+### Fonts
+
+```typescript
+fonts: {
+  size: {
+    xs: 12,
+    sm: 14,
+    base: 16,
+    lg: 18,
+    xl: 20,
+    '2xl': 24,
+    '3xl': 30,
+    '4xl': 36,
+  },
+  weight: {
+    regular: '400',
+    medium: '500',
+    semibold: '600',
+    bold: '700',
+  },
+}
+```
+
+## Bonnes pratiques
+
+### Ne jamais hardcoder les couleurs
+
+```tsx
+// ❌ Mauvais
+<View style={{ backgroundColor: '#FFFFFF' }}>
+
+// ✅ Bon
+const { colors } = useTheme();
+<View style={{ backgroundColor: colors.background }}>
+```
+
+### Utiliser les clés de traduction pour les messages d'erreur
+
+```tsx
+// Dans le schema Zod
+const schema = z.object({
+  email: z.string().email('auth.errors.emailInvalid'),
+});
+
+// Dans le composant
+<Text>{t(errors.email?.message as string)}</Text>
+```

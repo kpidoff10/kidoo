@@ -1,0 +1,117 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "retry": "Réessayer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "back": "Retour",
+    "next": "Suivant",
+    "done": "Terminé",
+    "yes": "Oui",
+    "no": "Non",
+    "ok": "OK",
+    "search": "Rechercher",
+    "noResults": "Aucun résultat",
+    "offline": "Vous êtes hors ligne",
+    "required": "Requis"
+  },
+  "auth": {
+    "login": {
+      "title": "Connexion",
+      "subtitle": "Connectez-vous à votre compte",
+      "email": "Email",
+      "emailPlaceholder": "votre@email.com",
+      "password": "Mot de passe",
+      "passwordPlaceholder": "Votre mot de passe",
+      "submit": "Se connecter",
+      "noAccount": "Pas encore de compte ?",
+      "createAccount": "Créer un compte",
+      "forgotPassword": "Mot de passe oublié ?"
+    },
+    "register": {
+      "title": "Créer un compte",
+      "subtitle": "Rejoignez Kidoo",
+      "name": "Nom complet",
+      "namePlaceholder": "Votre nom",
+      "email": "Email",
+      "emailPlaceholder": "votre@email.com",
+      "password": "Mot de passe",
+      "passwordPlaceholder": "Créez un mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "confirmPasswordPlaceholder": "Confirmez votre mot de passe",
+      "submit": "Créer mon compte",
+      "hasAccount": "Déjà un compte ?",
+      "login": "Se connecter"
+    },
+    "errors": {
+      "invalidCredentials": "Email ou mot de passe incorrect",
+      "emailRequired": "L'email est requis",
+      "emailInvalid": "Email invalide",
+      "passwordRequired": "Le mot de passe est requis",
+      "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
+      "passwordMismatch": "Les mots de passe ne correspondent pas",
+      "nameRequired": "Le nom est requis"
+    }
+  },
+  "home": {
+    "title": "Accueil",
+    "welcome": "Bienvenue",
+    "welcomeBack": "Bon retour, {{name}} !",
+    "noKidoos": "Vous n'avez pas encore de Kidoo",
+    "addKidoo": "Ajouter un Kidoo"
+  },
+  "kidoos": {
+    "title": "Mes Kidoos",
+    "empty": "Aucun Kidoo",
+    "emptyDescription": "Ajoutez votre premier Kidoo pour commencer",
+    "online": "En ligne",
+    "offline": "Hors ligne",
+    "model": "Modèle",
+    "lastSeen": "Vu il y a {{time}}",
+    "actions": {
+      "view": "Voir",
+      "settings": "Paramètres",
+      "delete": "Supprimer"
+    }
+  },
+  "profile": {
+    "title": "Profil",
+    "editProfile": "Modifier le profil",
+    "settings": "Paramètres",
+    "logout": "Déconnexion",
+    "logoutConfirm": "Êtes-vous sûr de vouloir vous déconnecter ?",
+    "deleteAccount": "Supprimer mon compte",
+    "version": "Version {{version}}"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "appearance": "Apparence",
+    "darkMode": "Mode sombre",
+    "language": "Langue",
+    "notifications": "Notifications",
+    "security": "Sécurité",
+    "biometric": "Déverrouillage biométrique",
+    "about": "À propos"
+  },
+  "errors": {
+    "generic": "Une erreur est survenue",
+    "network": "Erreur de connexion",
+    "server": "Erreur serveur",
+    "notFound": "Non trouvé",
+    "unauthorized": "Non autorisé",
+    "tryAgain": "Veuillez réessayer"
+  },
+  "toast": {
+    "success": "Succès",
+    "saved": "Enregistré avec succès",
+    "deleted": "Supprimé avec succès",
+    "updated": "Mis à jour avec succès",
+    "error": "Erreur",
+    "networkError": "Erreur de connexion réseau"
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "search": "Search",
+    "noResults": "No results",
+    "offline": "You are offline",
+    "required": "Required"
+  },
+  "auth": {
+    "login": {
+      "title": "Login",
+      "subtitle": "Sign in to your account",
+      "email": "Email",
+      "emailPlaceholder": "your@email.com",
+      "password": "Password",
+      "passwordPlaceholder": "Your password",
+      "submit": "Sign in",
+      "noAccount": "Don't have an account?",
+      "createAccount": "Create account",
+      "forgotPassword": "Forgot password?"
+    },
+    "register": {
+      "title": "Create account",
+      "subtitle": "Join Kidoo",
+      "name": "Full name",
+      "namePlaceholder": "Your name",
+      "email": "Email",
+      "emailPlaceholder": "your@email.com",
+      "password": "Password",
+      "passwordPlaceholder": "Create a password",
+      "confirmPassword": "Confirm password",
+      "confirmPasswordPlaceholder": "Confirm your password",
+      "submit": "Create my account",
+      "hasAccount": "Already have an account?",
+      "login": "Sign in"
+    },
+    "errors": {
+      "invalidCredentials": "Invalid email or password",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Invalid email",
+      "passwordRequired": "Password is required",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "passwordMismatch": "Passwords do not match",
+      "nameRequired": "Name is required"
+    }
+  },
+  "home": {
+    "title": "Home",
+    "welcome": "Welcome",
+    "welcomeBack": "Welcome back, {{name}}!",
+    "noKidoos": "You don't have any Kidoo yet",
+    "addKidoo": "Add a Kidoo"
+  },
+  "kidoos": {
+    "title": "My Kidoos",
+    "empty": "No Kidoo",
+    "emptyDescription": "Add your first Kidoo to get started",
+    "online": "Online",
+    "offline": "Offline",
+    "model": "Model",
+    "lastSeen": "Seen {{time}} ago",
+    "actions": {
+      "view": "View",
+      "settings": "Settings",
+      "delete": "Delete"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "editProfile": "Edit profile",
+    "settings": "Settings",
+    "logout": "Logout",
+    "logoutConfirm": "Are you sure you want to logout?",
+    "deleteAccount": "Delete my account",
+    "version": "Version {{version}}"
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "darkMode": "Dark mode",
+    "language": "Language",
+    "notifications": "Notifications",
+    "security": "Security",
+    "biometric": "Biometric unlock",
+    "about": "About"
+  },
+  "errors": {
+    "generic": "An error occurred",
+    "network": "Connection error",
+    "server": "Server error",
+    "notFound": "Not found",
+    "unauthorized": "Unauthorized",
+    "tryAgain": "Please try again"
+  },
+  "toast": {
+    "success": "Success",
+    "saved": "Saved successfully",
+    "deleted": "Deleted successfully",
+    "updated": "Updated successfully",
+    "error": "Error",
+    "networkError": "Network connection error"
+  }
+}

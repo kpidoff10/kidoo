@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-helpers';
 import { sendCommand, isPubNubConfigured } from '@/lib/pubnub';
-import { brightnessCommandSchema } from '@/shared/schemas/api/kidoos/brightness';
+import { brightnessCommandSchema } from '@/shared';
 import { Kidoo } from '@prisma/client';
 
 /**

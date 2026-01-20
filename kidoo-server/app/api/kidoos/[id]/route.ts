@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth-helpers';
-import { updateKidooInputSchema } from '@/shared/schemas/kidoo';
+import { updateKidooInputSchema } from '@/shared';
 
 /**
  * GET /api/kidoos/[id]

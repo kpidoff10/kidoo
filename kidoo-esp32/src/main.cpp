@@ -1,44 +1,53 @@
 #include <Arduino.h>
-#include <esp_psram.h>
 #include "models/common/managers/init/init_manager.h"
 #include "models/common/managers/serial/serial_commands.h"
 #include "models/common/managers/pubnub/pubnub_manager.h"
 #include "models/common/managers/potentiometer/potentiometer_manager.h"
 #include "models/common/managers/audio/audio_manager.h"
 #include "models/model_config.h"
+#include "models/common/config/core_config.h"
 
 #ifdef HAS_WIFI
 #include "models/common/managers/wifi/wifi_manager.h"
 #endif
 
+/**
+ * Architecture multi-cœurs ESP32 (auto-détectée)
+ * ==============================================
+ * 
+ * La configuration s'adapte automatiquement au type de chip :
+ * 
+ * ESP32-S3 (Basic) : Dual-core + PSRAM
+ * - Core 0 : WiFi stack, PubNub, Audio, WiFi retry
+ * - Core 1 : loop(), LEDManager, BLE
+ * - PSRAM pour les buffers
+ * 
+ * ESP32-C3 (Mini) : Single-core RISC-V
+ * - Core 0 : Tout (seul cœur disponible)
+ * - Priorités ajustées pour éviter les conflits
+ * - Pas de PSRAM
+ * 
+ * Voir core_config.h pour la configuration complète.
+ */
+
 void setup() {
-  // Forcer la fréquence CPU à 240MHz pour de meilleures performances audio
-  // Par défaut, l'ESP32 peut tourner à 160MHz ou 80MHz selon la configuration
-  setCpuFrequencyMhz(240);
+  // Forcer la fréquence CPU maximale pour de meilleures performances
+  // ESP32-S3 : 240MHz, ESP32-C3 : 160MHz max
+  #if IS_SINGLE_CORE
+  setCpuFrequencyMhz(160);  // ESP32-C3 max = 160MHz
+  #else
+  setCpuFrequencyMhz(240);  // ESP32-S3 max = 240MHz
+  #endif
+  
   Serial.print("[MAIN] CPU Frequency: ");
   Serial.print(getCpuFrequencyMhz());
   Serial.println(" MHz");
   
-  // Initialiser et afficher les infos PSRAM (8MB OPI sur DevKitC-1-N16R8)
-  if (psramFound()) {
-    Serial.println("[MAIN] PSRAM detectee!");
-    Serial.print("[MAIN] PSRAM Size: ");
-    Serial.print(ESP.getPsramSize() / 1024 / 1024);
-    Serial.println(" MB");
-    Serial.print("[MAIN] PSRAM Free: ");
-    Serial.print(ESP.getFreePsram() / 1024 / 1024);
-    Serial.println(" MB");
-  } else {
-    Serial.println("[MAIN] WARNING: PSRAM non detectee!");
-  }
+  // Afficher l'architecture CPU détectée (depuis core_config.h)
+  printCoreArchitecture();
   
-  // Afficher la mémoire interne
-  Serial.print("[MAIN] Heap Size: ");
-  Serial.print(ESP.getHeapSize() / 1024);
-  Serial.println(" KB");
-  Serial.print("[MAIN] Heap Free: ");
-  Serial.print(ESP.getFreeHeap() / 1024);
-  Serial.println(" KB");
+  // Afficher les statistiques mémoire (depuis core_config.h)
+  printMemoryStats();
   
   // Initialiser tous les composants du système via le gestionnaire d'initialisation
   if (!InitManager::init()) {
@@ -54,14 +63,20 @@ void setup() {
 }
 
 void loop() {
-  // Le thread audio gère maintenant le traitement audio automatiquement
-  // avec priorité élevée, donc on n'a plus besoin de l'appeler ici
+  // ====================================================================
+  // loop() Arduino - Core dépend du chip
+  // ====================================================================
+  // - ESP32-S3 (Basic) : Core 1 (APP_CPU)
+  // - ESP32-C3 (Mini)  : Core 0 (seul cœur)
+  // Les threads FreeRTOS gèrent les tâches temps-réel indépendamment.
+  // ====================================================================
   
   // Traiter les commandes Serial en attente
   SerialCommands::update();
   
   #ifdef HAS_PUBNUB
-  // Maintenir la connexion PubNub et traiter les messages
+  // Note: PubNubManager::loop() ne fait plus rien - le thread gère tout
+  // On garde l'appel pour compatibilité mais il est vide
   PubNubManager::loop();
   
   // Vérifier si PubNub doit se connecter automatiquement quand le WiFi devient disponible
@@ -81,9 +96,14 @@ void loop() {
   PotentiometerManager::update();
   #endif
   
-  // Le thread LED gère tout de manière indépendante
-  // Le thread Audio gère maintenant l'audio de manière indépendante aussi
-  // Ici on peut mettre d'autres logiques (BLE, WiFi, etc.)
+  // ====================================================================
+  // Threads indépendants (gérés par FreeRTOS, ne pas appeler ici) :
+  // - LEDManager   : CORE_LED, PRIORITY_LED, animations temps-réel
+  // - AudioManager : CORE_AUDIO, PRIORITY_AUDIO, I2S/DMA
+  // - PubNubManager: CORE_PUBNUB, PRIORITY_PUBNUB, HTTP polling
+  // - WiFi retry   : CORE_WIFI_RETRY, PRIORITY_WIFI_RETRY, reconnexion
+  // (voir core_config.h pour les valeurs selon le chip)
+  // ====================================================================
   
   // Petite pause pour éviter de surcharger le CPU
   delay(10);

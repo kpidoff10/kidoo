@@ -4,14 +4,20 @@
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include "../../config/core_config.h"
 
 /**
- * Gestionnaire Audio (MAX98357 via I2S) dans un thread séparé
+ * Gestionnaire Audio (MAX98357 via I2S) dans un thread séparé (Core 0)
  * 
  * Ce module gère la lecture de fichiers audio (MP3, WAV, etc.)
  * depuis la carte SD et la sortie via I2S vers les amplificateurs MAX98357.
- * Le traitement audio se fait dans un thread dédié avec priorité élevée
+ * Le traitement audio se fait dans un thread dédié avec priorité très élevée
  * pour garantir une lecture fluide sans saccades.
+ * 
+ * Architecture :
+ * - Tourne sur Core 0 (CORE_AUDIO) avec le WiFi stack
+ * - Priorité très haute (PRIORITY_AUDIO) car l'I2S/DMA est sensible au timing
+ * - Évite les conflits avec LEDManager sur Core 1
  */
 
 class AudioManager {
@@ -102,9 +108,10 @@ private:
   static bool isPaused;
   static TaskHandle_t taskHandle;
   
-  // Configuration du thread
-  static const int TASK_STACK_SIZE = 4096;  // Taille de la pile (bytes)
-  static const int TASK_PRIORITY = 6;       // Priorité très élevée (0-25, plus élevé = plus prioritaire)
+  // Configuration du thread (centralisée dans core_config.h)
+  static const int TASK_STACK_SIZE = STACK_SIZE_AUDIO;
+  static const int TASK_PRIORITY = PRIORITY_AUDIO;
+  static const int TASK_CORE = CORE_AUDIO;  // Core 0 pour éviter conflits avec LED
   static const int AUDIO_UPDATE_INTERVAL_MS = 1; // Intervalle entre les mises à jour (ms)
   static const int AUDIO_LOOPS_PER_UPDATE = 4;  // Nombre d'appels loop() par mise à jour
 };

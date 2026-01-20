@@ -1,0 +1,168 @@
+# Règles pour les Composants React Native
+
+## Structure d'un composant
+
+```tsx
+/**
+ * Description du composant
+ */
+
+import React from 'react';
+import { View, StyleSheet, ViewStyle } from 'react-native';
+import { useTheme } from '@/theme';
+
+// Interface des props en haut
+export interface ButtonProps {
+  title: string;
+  onPress: () => void;
+  variant?: 'primary' | 'secondary';
+  style?: ViewStyle;
+}
+
+// Export nommé (pas de default)
+export function Button({ title, onPress, variant = 'primary', style }: ButtonProps) {
+  const { colors, spacing } = useTheme();
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.primary }, style]}>
+      {/* ... */}
+    </View>
+  );
+}
+
+// Styles en bas avec StyleSheet.create
+const styles = StyleSheet.create({
+  container: {
+    // Styles statiques uniquement
+  },
+});
+```
+
+## Règles importantes
+
+### Utiliser useTheme pour les styles dynamiques
+
+```tsx
+// ✅ Bon
+const { colors, spacing } = useTheme();
+<View style={{ backgroundColor: colors.background, padding: spacing[4] }}>
+
+// ❌ Mauvais - couleurs hardcodées
+<View style={{ backgroundColor: '#FFFFFF', padding: 16 }}>
+```
+
+### Décomposer les composants volumineux
+
+- Un composant ne devrait pas dépasser ~150 lignes
+- Extraire les sous-composants dans le même dossier ou `components/`
+
+### Props avec valeurs par défaut
+
+```tsx
+export function Card({ 
+  variant = 'default',  // Valeur par défaut dans la destructuration
+  padding = 'md',
+  children 
+}: CardProps) {
+```
+
+### Forwarding refs pour les inputs
+
+```tsx
+export const TextInput = forwardRef<RNTextInput, TextInputProps>(
+  ({ label, error, ...props }, ref) => {
+    return <RNTextInput ref={ref} {...props} />;
+  }
+);
+
+TextInput.displayName = 'TextInput';
+```
+
+## Composants UI disponibles
+
+### Button
+```tsx
+<Button 
+  title="Se connecter"
+  variant="primary" | "secondary" | "outline" | "ghost"
+  size="sm" | "md" | "lg"
+  loading={false}
+  disabled={false}
+  fullWidth
+  onPress={() => {}}
+/>
+```
+
+### TextInput / PasswordInput
+```tsx
+<TextInput
+  label="Email"
+  placeholder="votre@email.com"
+  error="Email invalide"
+  hint="Votre email professionnel"
+  required
+/>
+
+<PasswordInput
+  label="Mot de passe"
+  // Toggle show/hide intégré
+/>
+```
+
+### Card
+```tsx
+<Card variant="default" | "elevated" padding="none" | "sm" | "md" | "lg">
+  {children}
+</Card>
+```
+
+### Badge
+```tsx
+<Badge 
+  label="En ligne"
+  variant="success" | "warning" | "error" | "info" | "default"
+  size="sm" | "md"
+  dot  // Affiche un point coloré
+/>
+```
+
+### Typography
+```tsx
+<Title level="h1" | "h2" | "h3" | "h4" center>
+  Titre
+</Title>
+
+<Text 
+  variant="body" | "bodySmall" | "caption" | "label"
+  color="primary" | "secondary" | "tertiary" | "error"
+  bold
+  center
+>
+  Texte
+</Text>
+```
+
+### Loading
+```tsx
+<Spinner size="small" | "large" color="primary" | "secondary" | "white" />
+<ScreenLoader message="Chargement..." />
+```
+
+### Avatar
+```tsx
+<Avatar 
+  source={{ uri: 'https://...' }}
+  name="John Doe"  // Fallback avec initiales
+  size="sm" | "md" | "lg" | "xl"
+/>
+```
+
+### Toast
+```tsx
+import { showToast } from '@/components/ui';
+
+showToast.success({ title: 'Succès', message: 'Enregistré' });
+showToast.error({ title: 'Erreur', message: 'Échec' });
+showToast.warning({ title: 'Attention', message: '...' });
+showToast.info({ title: 'Info', message: '...' });
+```

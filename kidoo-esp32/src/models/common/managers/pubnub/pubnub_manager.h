@@ -2,13 +2,19 @@
 #define PUBNUB_MANAGER_H
 
 #include <Arduino.h>
+#include "../../config/core_config.h"
 
 /**
- * Gestionnaire PubNub (Thread séparé)
+ * Gestionnaire PubNub (Thread séparé sur Core 0)
  * 
  * Ce module gère la connexion à PubNub pour recevoir
  * des commandes à distance via HTTP.
  * Tourne dans un thread FreeRTOS séparé pour ne pas bloquer le loop principal.
+ * 
+ * Architecture :
+ * - Tourne sur Core 0 (CORE_PUBNUB) avec le WiFi stack
+ * - Priorité basse (PRIORITY_PUBNUB) car non critique en temps-réel
+ * - Partage Core 0 avec Audio et WiFi pour minimiser les context switches réseau
  */
 
 class PubNubManager {
@@ -105,10 +111,11 @@ private:
   // File d'attente pour les messages à publier
   static QueueHandle_t publishQueue;
   
-  // Configuration
+  // Configuration (centralisée dans core_config.h)
   static const int SUBSCRIBE_INTERVAL_MS = 100;  // Intervalle entre les polls (le serveur garde la connexion)
-  static const int STACK_SIZE = 8192;            // Taille de la stack du thread
-  static const int TASK_PRIORITY = 0;            // Priorité du thread (très basse - lowest priority)
+  static const int STACK_SIZE = STACK_SIZE_PUBNUB;
+  static const int TASK_PRIORITY = PRIORITY_PUBNUB;
+  static const int TASK_CORE = CORE_PUBNUB;      // Core 0 avec WiFi stack
   static const int PUBLISH_QUEUE_SIZE = 5;       // Taille de la file de publication
 };
 

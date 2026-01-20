@@ -1,5 +1,6 @@
 #include "pubnub_manager.h"
 #include "../../../model_config.h"
+#include "../../config/core_config.h"
 
 #ifdef HAS_PUBNUB
 
@@ -85,7 +86,8 @@ bool PubNubManager::connect() {
   // Reset le timetoken pour commencer fresh
   strcpy(timeToken, "0");
   
-  // Créer le thread FreeRTOS
+  // Créer le thread FreeRTOS sur Core 0 (même core que WiFi stack)
+  Serial.printf("[PUBNUB] Core=%d, Priority=%d, Stack=%d\n", TASK_CORE, TASK_PRIORITY, STACK_SIZE);
   BaseType_t result = xTaskCreatePinnedToCore(
     threadFunction,     // Fonction du thread
     "PubNubTask",       // Nom du thread
@@ -93,7 +95,7 @@ bool PubNubManager::connect() {
     nullptr,            // Paramètre
     TASK_PRIORITY,      // Priorité
     &taskHandle,        // Handle
-    0                   // Core 0 (laisser Core 1 pour WiFi/BLE)
+    TASK_CORE           // Core 0 avec WiFi stack (configuré dans core_config.h)
   );
   
   if (result != pdPASS) {

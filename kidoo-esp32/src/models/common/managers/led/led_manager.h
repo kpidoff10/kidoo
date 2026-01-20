@@ -7,12 +7,18 @@
 #include <freertos/task.h>
 #include <freertos/queue.h>
 #include "../../../model_config.h"
+#include "../../config/core_config.h"
 
 /**
- * Gestionnaire de LEDs dans un thread séparé
+ * Gestionnaire de LEDs dans un thread séparé (Core 1)
  * 
  * Ce module garantit que la gestion des LEDs ne s'arrête jamais,
  * même si d'autres parties du code buggent ou se bloquent.
+ * 
+ * Architecture :
+ * - Tourne sur Core 1 (CORE_LED) pour éviter les conflits avec WiFi/Audio sur Core 0
+ * - Utilise la PSRAM pour le buffer LED (si USE_PSRAM_FOR_LED_BUFFER = true)
+ * - Priorité élevée (PRIORITY_LED) pour des animations fluides
  */
 
 // Types de commandes pour le thread LED
@@ -105,10 +111,11 @@ private:
   static uint32_t sleepTimeoutMs;  // Timeout configuré pour le sleep mode
   static bool pulseNeedsReset;  // Flag pour réinitialiser l'effet PULSE
   
-  // Paramètres du thread
+  // Paramètres du thread (centralisés dans core_config.h)
   static const int QUEUE_SIZE = 10;
-  static const int TASK_STACK_SIZE = 4096;
-  static const int TASK_PRIORITY = 5;  // Priorité élevée pour garantir l'exécution
+  static const int TASK_STACK_SIZE = STACK_SIZE_LED;
+  static const int TASK_PRIORITY = PRIORITY_LED;
+  static const int TASK_CORE = CORE_LED;  // Core 1 pour temps-réel
   static const int UPDATE_INTERVAL_MS = 16;  // ~60 FPS pour les animations
 };
 

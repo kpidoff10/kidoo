@@ -1,0 +1,184 @@
+# Règles pour la Navigation React Native
+
+## Architecture de navigation
+
+```
+RootNavigator (Native Stack)
+├── [Non authentifié]
+│   ├── Login
+│   └── Register
+└── [Authentifié]
+    └── MainTabs (Bottom Tabs)
+        ├── Home (HomeScreen)
+        └── Kidoos (KidoosListScreen)
+        + ProfileSheet (Bottom Sheet via ref)
+```
+
+## Types de navigation
+
+Définis dans `src/navigation/types.ts` :
+
+```typescript
+export type RootStackParamList = {
+  Login: undefined;
+  Register: undefined;
+  MainTabs: undefined;
+  KidooDetail: { kidooId: string };  // Modal
+};
+
+export type MainTabsParamList = {
+  Home: undefined;
+  Kidoos: undefined;
+};
+
+// Pour le typage global
+declare global {
+  namespace ReactNavigation {
+    interface RootParamList extends RootStackParamList {}
+  }
+}
+```
+
+## Naviguer entre écrans
+
+### Navigation simple
+
+```tsx
+import { useNavigation } from '@react-navigation/native';
+
+function MyScreen() {
+  const navigation = useNavigation();
+
+  const goToRegister = () => {
+    navigation.navigate('Register');
+  };
+
+  const goBack = () => {
+    navigation.goBack();
+  };
+}
+```
+
+### Navigation avec paramètres
+
+```tsx
+// Naviguer
+navigation.navigate('KidooDetail', { kidooId: '123' });
+
+// Récupérer les params
+import { useRoute, RouteProp } from '@react-navigation/native';
+
+type KidooDetailRouteProp = RouteProp<RootStackParamList, 'KidooDetail'>;
+
+function KidooDetailScreen() {
+  const route = useRoute<KidooDetailRouteProp>();
+  const { kidooId } = route.params;
+}
+```
+
+## Bottom Tabs
+
+Configuration dans `AppNavigator.tsx` :
+
+```tsx
+<Tab.Navigator
+  screenOptions={{
+    headerRight: ProfileButton,  // Bouton profil à droite
+    headerStyle: { backgroundColor: colors.background },
+    tabBarStyle: { backgroundColor: colors.surface },
+    tabBarActiveTintColor: colors.primary,
+    tabBarInactiveTintColor: colors.textTertiary,
+  }}
+>
+  <Tab.Screen
+    name="Home"
+    component={HomeScreen}
+    options={{
+      title: t('home.title'),
+      tabBarIcon: ({ color, size }) => (
+        <Ionicons name="home-outline" size={size} color={color} />
+      ),
+    }}
+  />
+</Tab.Navigator>
+```
+
+## Bottom Sheet (Profile)
+
+Utilise `@gorhom/bottom-sheet` avec une ref :
+
+```tsx
+// Dans AppNavigator
+const profileSheetRef = useRef<BottomSheet>(null);
+
+const openProfileSheet = () => profileSheetRef.current?.expand();
+const closeProfileSheet = () => profileSheetRef.current?.close();
+
+return (
+  <>
+    <Tab.Navigator>...</Tab.Navigator>
+    <ProfileSheet ref={profileSheetRef} onClose={closeProfileSheet} />
+  </>
+);
+```
+
+## Thème de navigation
+
+Le thème React Navigation est synchronisé avec notre ThemeProvider :
+
+```tsx
+const navigationTheme = {
+  ...DefaultTheme,
+  dark: isDark,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: colors.primary,
+    background: colors.background,
+    card: colors.surface,
+    text: colors.text,
+    border: colors.border,
+    notification: colors.error,
+  },
+};
+
+<NavigationContainer theme={navigationTheme}>
+```
+
+## Ajouter un nouvel écran
+
+1. Créer le dossier dans `src/screens/feature/NewScreen/`
+2. Ajouter le type dans `navigation/types.ts`
+3. Ajouter le Screen dans le Navigator approprié
+4. Exporter depuis `screens/index.ts`
+
+```tsx
+// 1. screens/feature/NewScreen/NewScreen.tsx
+export function NewScreen() { ... }
+
+// 2. navigation/types.ts
+export type RootStackParamList = {
+  // ...
+  NewScreen: { someParam: string };
+};
+
+// 3. Dans le Navigator
+<Stack.Screen name="NewScreen" component={NewScreen} />
+
+// 4. screens/index.ts
+export { NewScreen } from './feature/NewScreen';
+```
+
+## Modals
+
+Pour les modals, utiliser `presentation: 'modal'` :
+
+```tsx
+<Stack.Screen
+  name="KidooDetail"
+  component={KidooDetailScreen}
+  options={{
+    presentation: 'modal',
+    headerShown: true,
+  }}
+/>
+```

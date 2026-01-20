@@ -8,12 +8,26 @@ import type { NextRequest } from 'next/server';
  * pour clarifier le rôle du fichier en tant qu'intermédiaire réseau.
  * 
  * Ce proxy gère :
+ * - CORS pour l'app mobile
  * - Les routes publiques (pas de vérification d'auth)
  * - Les routes API mobiles (authentification mobile)
  * - Les routes statiques et assets
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Gérer les requêtes preflight OPTIONS (CORS)
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Max-Age': '86400',
+      },
+    });
+  }
 
   // Routes publiques (pas de vérification d'auth nécessaire)
   const publicRoutes = [
@@ -36,14 +50,17 @@ export function proxy(request: NextRequest) {
     pathname.startsWith('/api/auth') ||
     pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico|css|js)$/);
 
-  // Pour les routes publiques et les routes statiques, pas de vérification
-  if (isPublicRoute || isMobileAuthRoute || isStaticRoute) {
-    return NextResponse.next();
+  // Créer la réponse
+  const response = NextResponse.next();
+
+  // Ajouter les headers CORS pour les routes API
+  if (pathname.startsWith('/api/')) {
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   }
 
-  // Pour les autres routes, laisser NextAuth gérer l'authentification via ses handlers
-  // Le middleware NextAuth sera appliqué automatiquement via les route handlers
-  return NextResponse.next();
+  return response;
 }
 
 // Configuration du matcher pour optimiser les performances

@@ -3,27 +3,32 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyAccessToken, extractTokenFromHeader } from './jwt';
 
 /**
  * Extrait l'userId depuis les headers de la requête
- * Cherche dans X-User-Id ou Authorization header
+ * Supporte JWT Bearer token et header X-User-Id
  * 
  * @param request - La requête Next.js
  * @returns L'userId ou null si non trouvé
  */
 export function getUserIdFromRequest(request: NextRequest): string | null {
-  // Priorité 1: Header X-User-Id (spécifique pour mobile)
+  // Priorité 1: JWT Bearer token
+  const authHeader = request.headers.get('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = extractTokenFromHeader(authHeader);
+    if (token) {
+      const payload = verifyAccessToken(token);
+      if (payload) {
+        return payload.userId;
+      }
+    }
+  }
+
+  // Priorité 2: Header X-User-Id (fallback pour compatibilité)
   const userIdHeader = request.headers.get('X-User-Id');
   if (userIdHeader) {
     return userIdHeader.trim();
-  }
-
-  // Priorité 2: Header Authorization (format: "Bearer userId" ou juste "userId")
-  const authHeader = request.headers.get('Authorization');
-  if (authHeader) {
-    // Supprimer "Bearer " si présent
-    const cleanAuth = authHeader.replace(/^Bearer\s+/i, '').trim();
-    return cleanAuth || null;
   }
 
   return null;

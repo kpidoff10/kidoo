@@ -2,6 +2,7 @@
 #include "../init/init_manager.h"
 #include "../sd/sd_manager.h"
 #include "../../../model_config.h"
+#include "../../config/core_config.h"
 
 #ifdef HAS_WIFI
 #include "../wifi/wifi_manager.h"
@@ -42,9 +43,22 @@ bool LEDManager::init() {
   isSleeping = false;
   Serial.printf("[LED] Brightness=%d, SleepTimeout=%lu\n", currentBrightness, sleepTimeoutMs);
   
-  // Allouer le tableau de LEDs
+  // Allouer le tableau de LEDs (en PSRAM si disponible et configuré)
   Serial.println("[LED] Allocation memoire...");
-  leds = new CRGB[NUM_LEDS];
+  #if USE_PSRAM_FOR_LED_BUFFER
+  if (psramFound()) {
+    leds = (CRGB*)ps_malloc(NUM_LEDS * sizeof(CRGB));
+    if (leds) {
+      Serial.printf("[LED] Buffer alloue en PSRAM (%d bytes)\n", NUM_LEDS * sizeof(CRGB));
+    }
+  }
+  #endif
+  
+  // Fallback sur heap classique si PSRAM non disponible ou désactivée
+  if (!leds) {
+    leds = new CRGB[NUM_LEDS];
+  }
+  
   if (!leds) {
     Serial.println("[LED] ERREUR: Allocation memoire echouee!");
     return false;
@@ -68,8 +82,9 @@ bool LEDManager::init() {
   }
   Serial.println("[LED] Queue OK");
   
-  // Créer le thread de gestion des LEDs
+  // Créer le thread de gestion des LEDs sur Core 1 (temps-réel)
   Serial.println("[LED] Creation task...");
+  Serial.printf("[LED] Core=%d, Priority=%d, Stack=%d\n", TASK_CORE, TASK_PRIORITY, TASK_STACK_SIZE);
   BaseType_t result = xTaskCreatePinnedToCore(
     ledTask,
     "LEDTask",
@@ -77,7 +92,7 @@ bool LEDManager::init() {
     nullptr,
     TASK_PRIORITY,
     &taskHandle,
-    1
+    TASK_CORE  // Core 1 (configuré dans core_config.h)
   );
   
   if (result != pdPASS) {

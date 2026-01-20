@@ -1,0 +1,178 @@
+# Règles pour l'API et la gestion des données
+
+## Client API (Axios)
+
+### Configuration
+Le client est configuré dans `src/api/client.ts` avec :
+- Base URL dynamique (localhost pour web, IP pour mobile)
+- Interceptor pour ajouter le token JWT
+- Interceptor pour refresh token automatique
+
+### Ajouter un nouvel endpoint
+
+```typescript
+// src/api/newFeature.ts
+import { apiClient } from './client';
+
+export interface MyData {
+  id: string;
+  name: string;
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+export const myFeatureApi = {
+  async getAll(): Promise<MyData[]> {
+    const response = await apiClient.get<ApiResponse<MyData[]>>('/api/my-feature');
+    return response.data.data || [];
+  },
+
+  async getById(id: string): Promise<MyData> {
+    const response = await apiClient.get<ApiResponse<MyData>>(`/api/my-feature/${id}`);
+    return response.data.data;
+  },
+
+  async create(data: Partial<MyData>): Promise<MyData> {
+    const response = await apiClient.post<ApiResponse<MyData>>('/api/my-feature', data);
+    return response.data.data;
+  },
+};
+```
+
+**Important** : Le serveur retourne `{ success, data, message }`, donc extraire `response.data.data`.
+
+## React Query
+
+### Configuration
+- Cache 5 minutes (`staleTime`)
+- Persistance AsyncStorage (24h)
+- Retry 2 fois
+
+### Créer un hook de query
+
+```typescript
+// src/hooks/useMyFeature.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { myFeatureApi, MyData } from '@/api';
+import { showToast } from '@/components/ui/Toast';
+import { useTranslation } from 'react-i18next';
+
+const QUERY_KEY = ['myFeature'];
+
+export function useMyFeature() {
+  return useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: myFeatureApi.getAll,
+  });
+}
+
+export function useMyFeatureById(id: string) {
+  return useQuery({
+    queryKey: [...QUERY_KEY, id],
+    queryFn: () => myFeatureApi.getById(id),
+    enabled: !!id,
+  });
+}
+```
+
+### Mutation avec Optimistic Update
+
+```typescript
+export function useUpdateMyFeature() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<MyData> }) =>
+      myFeatureApi.update(id, data),
+    
+    // 1. Optimistic update AVANT la requête
+    onMutate: async ({ id, data }) => {
+      // Annuler les queries en cours
+      await queryClient.cancelQueries({ queryKey: QUERY_KEY });
+      
+      // Snapshot pour rollback
+      const previous = queryClient.getQueryData<MyData[]>(QUERY_KEY);
+      
+      // Update optimiste
+      queryClient.setQueryData<MyData[]>(QUERY_KEY, (old) =>
+        old?.map((item) => (item.id === id ? { ...item, ...data } : item))
+      );
+      
+      return { previous };
+    },
+    
+    // 2. Rollback si erreur
+    onError: (err, variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(QUERY_KEY, context.previous);
+      }
+      showToast.error({ title: t('toast.error'), message: t('errors.generic') });
+    },
+    
+    // 3. Toujours refetch après
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+    
+    onSuccess: () => {
+      showToast.success({ title: t('toast.success'), message: t('toast.updated') });
+    },
+  });
+}
+```
+
+### Utilisation dans un composant
+
+```tsx
+function MyScreen() {
+  const { data, isLoading, refetch, isRefetching } = useMyFeature();
+  const updateMutation = useUpdateMyFeature();
+
+  const handleUpdate = (id: string, newName: string) => {
+    updateMutation.mutate({ id, data: { name: newName } });
+  };
+
+  if (isLoading) return <ScreenLoader />;
+
+  return (
+    <FlatList
+      data={data}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+      }
+      // ...
+    />
+  );
+}
+```
+
+## Authentification
+
+### Tokens JWT
+- `accessToken` : 15 minutes
+- `refreshToken` : 7 jours
+- Stockés dans `expo-secure-store` (mobile) ou `localStorage` (web)
+
+### useAuth hook
+
+```tsx
+const { 
+  user,           // User | null
+  isLoading,      // boolean
+  isAuthenticated,// boolean
+  login,          // (data: LoginRequest) => Promise<void>
+  register,       // (data: RegisterRequest) => Promise<void>
+  logout,         // () => Promise<void>
+  updateUser,     // (data: { name?: string }) => Promise<void>
+} = useAuth();
+```
+
+### Protection des routes
+Le `RootNavigator` gère automatiquement la redirection :
+- Non authentifié → Login/Register
+- Authentifié → MainTabs

@@ -1,5 +1,6 @@
 #include "audio_manager.h"
 #include "../../../model_config.h"
+#include "../../config/core_config.h"
 #include "../sd/sd_manager.h"
 #include <Arduino.h>
 #include <SD.h>
@@ -42,7 +43,9 @@ bool AudioManager::init() {
     return false;
   }
   
-  // Créer le thread dédié pour le traitement audio
+  // Créer le thread dédié pour le traitement audio sur Core 0
+  // Core 0 est partagé avec le WiFi stack, mais l'audio a une priorité très haute
+  Serial.printf("[AUDIO] Core=%d, Priority=%d, Stack=%d\n", TASK_CORE, TASK_PRIORITY, TASK_STACK_SIZE);
   BaseType_t result = xTaskCreatePinnedToCore(
     audioTask,
     "AudioTask",
@@ -50,7 +53,7 @@ bool AudioManager::init() {
     nullptr,
     TASK_PRIORITY,
     &taskHandle,
-    0  // Core 0 pour éviter les conflits avec le thread LED (core 1)
+    TASK_CORE  // Core 0 (configuré dans core_config.h)
   );
   
   if (result != pdPASS) {

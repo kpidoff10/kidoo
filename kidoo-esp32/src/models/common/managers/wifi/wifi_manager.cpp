@@ -1,5 +1,6 @@
 #include "wifi_manager.h"
 #include "../../../model_config.h"
+#include "../../config/core_config.h"
 #include "../init/init_manager.h"
 #include "../sd/sd_manager.h"
 
@@ -306,7 +307,8 @@ void WiFiManager::startRetryThread() {
   retryStartTime = millis();
   retryThreadRunning = true;
   
-  // Créer le thread FreeRTOS
+  // Créer le thread FreeRTOS sur Core 0 (même core que WiFi stack)
+  Serial.printf("[WIFI-RETRY] Core=%d, Priority=%d, Stack=%d\n", RETRY_TASK_CORE, RETRY_TASK_PRIORITY, RETRY_STACK_SIZE);
   BaseType_t result = xTaskCreatePinnedToCore(
     retryThreadFunction,  // Fonction du thread
     "WiFiRetryTask",     // Nom du thread
@@ -314,7 +316,7 @@ void WiFiManager::startRetryThread() {
     nullptr,             // Paramètre
     RETRY_TASK_PRIORITY, // Priorité
     &retryTaskHandle,    // Handle
-    1                    // Core 1 (laisser Core 0 pour autres tâches)
+    RETRY_TASK_CORE      // Core 0 avec WiFi stack (configuré dans core_config.h)
   );
   
   if (result != pdPASS) {

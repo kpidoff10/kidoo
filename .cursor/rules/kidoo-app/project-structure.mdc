@@ -1,0 +1,142 @@
+# Structure du Projet kidoo-app
+
+## Organisation générale
+
+```
+kidoo-app/
+├── index.tsx                 # Point d'entrée Expo
+├── package.json
+├── tsconfig.json
+├── babel.config.js           # Config Babel avec alias
+├── app.json                  # Config Expo
+├── .env                      # Variables d'environnement
+├── android/                  # Build natif Android
+├── ios/                      # Build natif iOS
+└── src/
+    ├── App.tsx               # Composant racine avec providers
+    ├── api/                  # Clients API (axios)
+    │   ├── client.ts         # Config axios + interceptors
+    │   ├── auth.ts           # Endpoints auth
+    │   ├── kidoos.ts         # Endpoints kidoos
+    │   └── index.ts
+    ├── components/
+    │   ├── ui/               # Composants réutilisables
+    │   │   ├── Button/
+    │   │   ├── Input/
+    │   │   ├── Card/
+    │   │   ├── Typography/
+    │   │   ├── Badge/
+    │   │   ├── Loading/
+    │   │   ├── Toast/
+    │   │   ├── Avatar/
+    │   │   └── index.ts
+    │   ├── ErrorBoundary/
+    │   ├── layout/           # OfflineBanner, etc.
+    │   └── index.ts
+    ├── contexts/             # React Contexts
+    │   ├── AuthContext.tsx
+    │   ├── NetworkContext.tsx
+    │   └── index.ts
+    ├── hooks/                # Custom hooks
+    │   ├── useKidoos.ts
+    │   └── index.ts
+    ├── i18n/                 # Internationalisation
+    │   ├── fr.json
+    │   ├── en.json
+    │   └── index.ts
+    ├── lib/                  # Configuration
+    │   └── queryClient.ts    # React Query config
+    ├── navigation/           # React Navigation
+    │   ├── types.ts
+    │   ├── RootNavigator.tsx
+    │   ├── AppNavigator.tsx
+    │   └── index.ts
+    ├── screens/              # Écrans par feature
+    │   ├── auth/
+    │   │   ├── LoginScreen/
+    │   │   └── RegisterScreen/
+    │   ├── home/
+    │   │   └── HomeScreen/
+    │   ├── kidoos/
+    │   │   └── KidoosListScreen/
+    │   ├── profile/
+    │   │   └── ProfileSheet/
+    │   └── index.ts
+    ├── theme/                # Thème (colors, fonts, spacing)
+    │   ├── colors.ts
+    │   ├── fonts.ts
+    │   ├── spacing.ts
+    │   ├── ThemeContext.tsx
+    │   └── index.ts
+    └── utils/                # Utilitaires
+        └── storage.ts        # Secure storage
+```
+
+## Conventions de nommage
+
+### Fichiers et dossiers
+- **Composants** : PascalCase (`Button.tsx`, `KidooCard.tsx`)
+- **Hooks** : camelCase avec préfixe `use` (`useKidoos.ts`)
+- **Utils** : camelCase (`storage.ts`)
+- **Dossiers screens** : camelCase pour la feature, PascalCase pour le screen (`auth/LoginScreen/`)
+
+### Exports
+- Utiliser des **exports nommés** (pas de `export default`)
+- Chaque dossier a un `index.ts` qui ré-exporte
+
+### Structure d'un Screen
+
+```
+screens/
+└── auth/
+    └── LoginScreen/
+        ├── index.ts              # Export
+        ├── LoginScreen.tsx       # Composant principal
+        ├── LoginForm.tsx         # Sous-composant
+        └── components/           # Composants spécifiques
+            └── SocialButtons.tsx
+```
+
+## Alias TypeScript
+
+Configurés dans `tsconfig.json` et `babel.config.js` :
+
+- `@/*` → `src/*`
+- `@shared/*` → `../shared/*`
+
+```typescript
+import { Button } from '@/components/ui';
+import { loginSchema } from '@shared/auth/schema';
+```
+
+## Providers (ordre dans App.tsx)
+
+```tsx
+<GestureHandlerRootView>
+  <SafeAreaProvider>
+    <ThemeProvider>
+      <ErrorBoundary>
+        <PersistQueryClientProvider>
+          <NetworkProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </NetworkProvider>
+        </PersistQueryClientProvider>
+      </ErrorBoundary>
+    </ThemeProvider>
+  </SafeAreaProvider>
+</GestureHandlerRootView>
+```
+
+## Scripts npm
+
+```bash
+npm start              # Dev server avec dev-client
+npm run start:go       # Dev server avec Expo Go
+npm run web            # Web
+npm run android        # Build + run Android
+npm run ios            # Build + run iOS
+npm run prebuild       # Générer dossiers natifs
+npm run prebuild:clean # Regénérer dossiers natifs
+```

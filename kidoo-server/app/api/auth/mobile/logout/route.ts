@@ -1,11 +1,22 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * POST /api/auth/mobile/logout
- * Déconnexion (pour compatibilité, l'app mobile gère la déconnexion localement)
+ * Déconnexion (côté client, les tokens sont simplement supprimés)
+ * 
+ * Note: Avec les JWT stateless, la déconnexion se fait côté client
+ * en supprimant les tokens. Ce endpoint existe pour la cohérence de l'API
+ * et pourrait être utilisé pour une blacklist de tokens si nécessaire.
  */
-export async function POST() {
-  // Pour l'app mobile, la déconnexion est gérée localement via AsyncStorage
-  // Cette route existe pour compatibilité et pour pouvoir invalider des tokens si nécessaire
-  return NextResponse.json({ success: true, message: 'Déconnexion réussie' });
+export async function POST(request: NextRequest) {
+  // Pour l'instant, on retourne simplement un succès
+  // Le client supprimera les tokens de son côté
+  
+  // TODO: Implémenter une blacklist de refresh tokens si nécessaire
+  // pour une vraie invalidation côté serveur
+  
+  return NextResponse.json({
+    success: true,
+    message: 'Déconnexion réussie',
+  });
 }

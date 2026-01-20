@@ -2,6 +2,7 @@
 #define WIFI_MANAGER_H
 
 #include <Arduino.h>
+#include "../../config/core_config.h"
 
 #ifdef HAS_WIFI
 #include <freertos/FreeRTOS.h>
@@ -9,10 +10,15 @@
 #endif
 
 /**
- * Gestionnaire WiFi commun
+ * Gestionnaire WiFi commun (Core 0)
  * 
  * Ce module gère l'initialisation et les opérations WiFi
- * pour tous les modèles supportant le WiFi
+ * pour tous les modèles supportant le WiFi.
+ * 
+ * Architecture :
+ * - Le WiFi stack ESP-IDF tourne automatiquement sur Core 0
+ * - Le thread de retry tourne aussi sur Core 0 (CORE_WIFI_RETRY)
+ * - Priorité très basse (PRIORITY_WIFI_RETRY) pour ne pas bloquer l'audio
  */
 
 // États de connexion WiFi
@@ -135,12 +141,13 @@ private:
   // Timeout de connexion par défaut (15 secondes)
   static const uint32_t DEFAULT_CONNECT_TIMEOUT_MS = 15000;
   
-  // Configuration du retry
+  // Configuration du retry (centralisée dans core_config.h)
   static const uint32_t RETRY_MAX_DURATION_MS = 60000;  // 1 minute max
   static const uint32_t RETRY_INITIAL_DELAY_MS = 5000;  // 5 secondes initial
   static const uint32_t RETRY_MAX_DELAY_MS = 60000;     // 60 secondes max entre tentatives
-  static const int RETRY_STACK_SIZE = 4096;              // Taille de la stack
-  static const int RETRY_TASK_PRIORITY = 1;              // Priorité basse
+  static const int RETRY_STACK_SIZE = STACK_SIZE_WIFI_RETRY;
+  static const int RETRY_TASK_PRIORITY = PRIORITY_WIFI_RETRY;
+  static const int RETRY_TASK_CORE = CORE_WIFI_RETRY;   // Core 0 avec WiFi stack
 };
 
 #endif // WIFI_MANAGER_H

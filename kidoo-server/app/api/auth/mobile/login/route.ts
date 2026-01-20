@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { loginSchema } from '@/shared';
+import { generateTokens } from '@/lib/jwt';
 
 /**
  * POST /api/auth/mobile/login
- * Authentification mobile avec retour d'informations utilisateur
+ * Authentification mobile avec JWT tokens
  */
 export async function POST(request: NextRequest) {
   try {
@@ -58,15 +59,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Retourner les informations utilisateur (sans le mot de passe)
+    // Générer les tokens JWT
+    const tokens = generateTokens({
+      userId: user.id,
+      email: user.email,
+    });
+
+    // Retourner les informations utilisateur avec les tokens
     return NextResponse.json({
-      success: true,
-      message: 'Connexion réussie',
       user: {
         id: user.id,
         email: user.email,
         name: user.name || '',
       },
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
     });
   } catch (error) {
     console.error('Erreur lors de la connexion:', error);
