@@ -98,6 +98,7 @@ void loop() {
   // ====================================================================
   // Threads indépendants (gérés par FreeRTOS, ne pas appeler ici) :
   // - LEDManager   : CORE_LED, PRIORITY_LED, animations temps-réel
+  // - AudioManager : CORE_AUDIO, PRIORITY_AUDIO, lecture I2S temps-réel
   // - PubNubManager: CORE_PUBNUB, PRIORITY_PUBNUB, HTTP polling
   // - WiFi retry   : CORE_WIFI_RETRY, PRIORITY_WIFI_RETRY, reconnexion
   // (voir core_config.h pour les valeurs selon le chip)

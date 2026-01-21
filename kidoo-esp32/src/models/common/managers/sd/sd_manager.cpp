@@ -90,64 +90,20 @@ bool SDManager::initSDCard() {
   Serial.println("[SD] Initialisation carte SD...");
   Serial.printf("[SD] Pins: MOSI=%d, MISO=%d, SCK=%d, CS=%d\n", SD_MOSI_PIN, SD_MISO_PIN, SD_SCK_PIN, SD_CS_PIN);
   
-  // Délai initial pour laisser la carte SD se stabiliser après un reboot
-  // Particulièrement important après un SW_CPU_RESET
-  delay(250);
-  
   // Configurer la broche CS en sortie et la mettre à HIGH (désélectionner la carte)
   pinMode(SD_CS_PIN, OUTPUT);
   digitalWrite(SD_CS_PIN, HIGH);
-  delay(50);
   
   // Initialiser le bus SPI avec les pins configurés
-  Serial.println("[SD] Init SPI...");
-  SPI.begin(SD_SCK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
-  delay(100);
+  SPI.begin(SD_SCK_PIN, SD_MISO_PIN, SD_MOSI_PIN);
   
-  // Essayer d'initialiser la carte SD avec plusieurs tentatives
-  // Chaque tentative utilise différentes fréquences (de la plus lente à la plus rapide)
-  const int MAX_GLOBAL_RETRIES = 3;
-  uint32_t frequencies[] = {400000, 1000000, 4000000};
-  int numFrequencies = sizeof(frequencies) / sizeof(frequencies[0]);
-  
-  for (int retry = 0; retry < MAX_GLOBAL_RETRIES; retry++) {
-    if (retry > 0) {
-      Serial.print("[SD] Tentative ");
-      Serial.print(retry + 1);
-      Serial.print("/");
-      Serial.println(MAX_GLOBAL_RETRIES);
-      
-      // Réinitialiser complètement le bus SPI entre les tentatives
-      SD.end();
-      SPI.end();
-      delay(100 + (retry * 200)); // Délai croissant: 100ms, 300ms, 500ms
-      
-      // Réinitialiser CS
-      digitalWrite(SD_CS_PIN, HIGH);
-      delay(50);
-      
-      // Redémarrer SPI
-      SPI.begin(SD_SCK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
-      delay(100);
-    }
-    
-    // Essayer chaque fréquence
-    for (int i = 0; i < numFrequencies; i++) {
-      if (SD.begin(SD_CS_PIN, SPI, frequencies[i])) {
-        if (retry > 0) {
-          Serial.print("[SD] Succes a la tentative ");
-          Serial.print(retry + 1);
-          Serial.print(" avec frequence ");
-          Serial.print(frequencies[i] / 1000);
-          Serial.println(" kHz");
-        }
-        return true;
-      }
-      delay(100);
-    }
+  // Initialiser la carte SD (utilise la fréquence par défaut - plus rapide)
+  if (SD.begin(SD_CS_PIN)) {
+    Serial.println("[SD] Carte SD initialisee");
+    return true;
   }
   
-  Serial.println("[SD] ERREUR: Echec apres toutes les tentatives");
+  Serial.println("[SD] ERREUR: Impossible d'initialiser la carte SD");
   return false;
 }
 

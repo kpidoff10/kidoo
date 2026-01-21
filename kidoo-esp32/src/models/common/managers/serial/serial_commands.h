@@ -64,6 +64,15 @@ private:
   static void cmdConfigSet(const String& args);
   static void cmdConfigList();
   
+  // Commandes audio
+  static void cmdAudio();
+  static void cmdAudioPlay(const String& args);
+  static void cmdAudioStop();
+  static void cmdAudioPause();
+  static void cmdAudioResume();
+  static void cmdAudioVolume(const String& args);
+  static void cmdAudioList(const String& args);
+  
   static bool initialized;
   static String inputBuffer;
 };

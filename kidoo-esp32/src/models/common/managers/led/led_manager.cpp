@@ -192,6 +192,16 @@ uint8_t LEDManager::getCurrentBrightness() {
 
 void LEDManager::ledTask(void* parameter) {
   // Ce thread tourne en continu et ne s'arrête jamais
+  // IMPORTANT: On limite les appels à FastLED.show() pour ne pas interférer avec l'audio I2S
+  // FastLED.show() désactive brièvement les interruptions, ce qui peut causer des grésillements
+  
+  static unsigned long lastShowTime = 0;
+  static bool needsUpdate = true;  // Flag pour savoir si on doit appeler FastLED.show()
+  
+  // Intervalle minimum entre deux FastLED.show() (en ms)
+  // 33ms = ~30 FPS, suffisant pour les animations et évite les conflits avec I2S
+  const unsigned long SHOW_INTERVAL_MS = 33;
+  
   while (true) {
     // Traiter les commandes en attente
     LEDCommand cmd;
@@ -199,6 +209,7 @@ void LEDManager::ledTask(void* parameter) {
       processCommand(cmd);
       // Réveiller les LEDs si une commande est reçue
       wakeUp();
+      needsUpdate = true;
     }
     
     // Vérifier le sleep mode
@@ -207,11 +218,13 @@ void LEDManager::ledTask(void* parameter) {
     // Gérer l'animation de fade vers sleep
     if (isFadingToSleep) {
       updateSleepFade();
+      needsUpdate = true;
     }
     
     // Gérer l'animation de fade depuis sleep (réveil)
     if (isFadingFromSleep) {
       updateWakeFade();
+      needsUpdate = true;
     }
     
     // Mettre à jour les effets animés si nécessaire (seulement si pas en sleep et pas en fade)
@@ -220,16 +233,23 @@ void LEDManager::ledTask(void* parameter) {
       if (currentTime - lastUpdateTime >= UPDATE_INTERVAL_MS) {
         updateEffects();
         lastUpdateTime = currentTime;
+        needsUpdate = true;
       }
       // S'assurer que la luminosité maximale configurée est toujours respectée
       FastLED.setBrightness(currentBrightness);
     }
     
-    // Appliquer les changements aux LEDs
-    FastLED.show();
+    // Appliquer les changements aux LEDs SEULEMENT si nécessaire et pas trop souvent
+    // Cela évite de bloquer les interruptions I2S trop fréquemment
+    unsigned long currentTime = millis();
+    if (needsUpdate && (currentTime - lastShowTime >= SHOW_INTERVAL_MS)) {
+      FastLED.show();
+      lastShowTime = currentTime;
+      needsUpdate = false;
+    }
     
-    // Petite pause pour éviter de surcharger le CPU
-    vTaskDelay(pdMS_TO_TICKS(10));
+    // Pause plus longue pour laisser de la bande passante à l'audio
+    vTaskDelay(pdMS_TO_TICKS(5));
   }
   
   // Ne devrait jamais arriver ici

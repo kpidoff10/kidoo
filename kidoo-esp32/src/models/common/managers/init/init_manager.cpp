@@ -9,6 +9,9 @@
 #include "../pubnub/pubnub_manager.h"
 #include "../rtc/rtc_manager.h"
 #include "../potentiometer/potentiometer_manager.h"
+#ifdef HAS_AUDIO
+#include "../audio/audio_manager.h"
+#endif
 #include "../../../model_config.h"
 #include "../../../../../color/colors.h"
 #include "../../../model_init.h"
@@ -23,7 +26,8 @@ SystemStatus InitManager::systemStatus = {
   INIT_NOT_STARTED,  // wifi
   INIT_NOT_STARTED,  // pubnub
   INIT_NOT_STARTED,  // rtc
-  INIT_NOT_STARTED   // potentiometer
+  INIT_NOT_STARTED,  // potentiometer
+  INIT_NOT_STARTED   // audio
 };
 bool InitManager::initialized = false;
 SDConfig* InitManager::globalConfig = nullptr;
@@ -146,6 +150,14 @@ bool InitManager::init() {
   }
   #endif
   
+  // ÉTAPE 9 : Initialiser l'audio I2S (optionnel)
+  #ifdef HAS_AUDIO
+  if (HAS_AUDIO) {
+    initAudio();  // Lecteur audio depuis SD
+    delay(100);
+  }
+  #endif
+  
   initialized = true;
   
   if (allSuccess) {
@@ -195,6 +207,8 @@ InitStatus InitManager::getComponentStatus(const char* componentName) {
     return systemStatus.rtc;
   } else if (strcmp(componentName, "potentiometer") == 0) {
     return systemStatus.potentiometer;
+  } else if (strcmp(componentName, "audio") == 0) {
+    return systemStatus.audio;
   }
   // Ajouter d'autres composants ici
   
@@ -383,6 +397,29 @@ void InitManager::printStatus() {
         Serial.print("[INIT]   -> Valeur: ");
         Serial.print(PotentiometerManager::getLastValue());
         Serial.println("%");
+        break;
+      case INIT_FAILED:
+        Serial.println("Non disponible");
+        break;
+    }
+  }
+  #endif
+  
+  #ifdef HAS_AUDIO
+  if (HAS_AUDIO) {
+    Serial.print("[INIT] Audio: ");
+    switch (systemStatus.audio) {
+      case INIT_NOT_STARTED:
+        Serial.println("Non demarre");
+        break;
+      case INIT_IN_PROGRESS:
+        Serial.println("En cours");
+        break;
+      case INIT_SUCCESS:
+        Serial.println("OK");
+        Serial.print("[INIT]   -> Volume: ");
+        Serial.print(AudioManager::getVolume());
+        Serial.println("/21");
         break;
       case INIT_FAILED:
         Serial.println("Non disponible");

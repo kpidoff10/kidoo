@@ -69,17 +69,19 @@
   #define CORE_WIFI_RETRY   0
   #define CORE_LED          0
   #define CORE_BLE          0
+  #define CORE_AUDIO        0
   #define CORE_MAIN         0
 #else
   // ESP32/S3 Dual-core :
-  // Core 0 : WiFi stack + Réseau + BLE
+  // Core 0 : WiFi stack + Réseau + BLE + LED (tâches moins critiques)
   #define CORE_WIFI         0   // WiFi stack (automatique ESP-IDF)
   #define CORE_PUBNUB       0   // PubNub (HTTP, dépend WiFi)
   #define CORE_WIFI_RETRY   0   // WiFi retry thread
   #define CORE_BLE          0   // BLE sur Core 0 (partage avec WiFi, même radio)
+  #define CORE_LED          0   // LEDManager sur Core 0 (FastLED désactive les interruptions)
 
-  // Core 1 : Application + LED (temps-réel)
-  #define CORE_LED          1   // LEDManager (FastLED RMT, temps-réel)
+  // Core 1 : Audio uniquement (temps-réel critique, isolé)
+  #define CORE_AUDIO        1   // AudioManager (I2S, DOIT être isolé des LEDs)
   #define CORE_MAIN         1   // loop() Arduino (automatique)
 #endif
 
@@ -90,11 +92,14 @@
 #if IS_SINGLE_CORE
   // Single-core : Priorités espacées pour éviter la famine
   #define PRIORITY_LED        8   // Haute - animations temps-réel
+  #define PRIORITY_AUDIO      12  // Très haute - audio temps-réel (plus critique que LED)
   #define PRIORITY_PUBNUB     2   // Basse - réseau non critique
   #define PRIORITY_WIFI_RETRY 1   // Très basse - retry en background
 #else
   // Dual-core : Plus de marge car les tâches sont réparties
-  #define PRIORITY_LED        19  // Très haute - LED temps-réel critique (juste sous WiFi qui est 23)
+  // Audio a la priorité maximale pour éviter les claquements
+  #define PRIORITY_LED        10  // Moyenne - LEDs moins critiques que l'audio
+  #define PRIORITY_AUDIO      23  // Maximale - audio temps-réel (égal à WiFi)
   #define PRIORITY_PUBNUB     2   // Basse - réseau non critique
   #define PRIORITY_WIFI_RETRY 1   // Très basse - retry en background
 #endif
@@ -116,6 +121,7 @@
 // ============================================
 
 #define STACK_SIZE_LED          4096    // LEDManager
+#define STACK_SIZE_AUDIO        16384   // AudioManager (décodage MP3/streaming) - augmenté pour buffer
 #define STACK_SIZE_PUBNUB       8192    // PubNubManager (HTTP + JSON)
 #define STACK_SIZE_WIFI_RETRY   4096    // WiFi retry
 

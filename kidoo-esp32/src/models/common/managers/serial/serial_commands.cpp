@@ -13,6 +13,9 @@
 #include "../rtc/rtc_manager.h"
 #include "../potentiometer/potentiometer_manager.h"
 #include "../nfc/nfc_manager.h"
+#ifdef HAS_AUDIO
+#include "../audio/audio_manager.h"
+#endif
 #include "../../../model_serial_commands.h"
 #ifdef HAS_PUBNUB
 #include "../../../model_pubnub_routes.h"
@@ -142,6 +145,22 @@ void SerialCommands::processCommand(const String& command) {
     cmdConfigSet(args);
   } else if (cmd == "config-list" || cmd == "cfg-list" || cmd == "config") {
     cmdConfigList();
+  #ifdef HAS_AUDIO
+  } else if (cmd == "audio" || cmd == "audio-status") {
+    cmdAudio();
+  } else if (cmd == "play" || cmd == "audio-play") {
+    cmdAudioPlay(args);
+  } else if (cmd == "stop" || cmd == "audio-stop") {
+    cmdAudioStop();
+  } else if (cmd == "pause" || cmd == "audio-pause") {
+    cmdAudioPause();
+  } else if (cmd == "resume" || cmd == "audio-resume") {
+    cmdAudioResume();
+  } else if (cmd == "vol" || cmd == "audio-vol" || cmd == "audio-volume") {
+    cmdAudioVolume(args);
+  } else if (cmd == "ls" || cmd == "audio-list" || cmd == "list") {
+    cmdAudioList(args);
+  #endif
   } else {
     // Essayer les commandes spécifiques au modèle
     if (!ModelSerialCommands::processCommand(command)) {
@@ -221,6 +240,20 @@ void SerialCommands::printHelp() {
   Serial.println("  config-list, config - Afficher toutes les cles de config.json");
   Serial.println("  config-get <key>   - Lire une cle de config.json");
   Serial.println("  config-set <key> <value> - Definir une cle dans config.json");
+  
+  #ifdef HAS_AUDIO
+  if (HAS_AUDIO) {
+    Serial.println("");
+    Serial.println("--- Commandes Audio ---");
+    Serial.println("  audio              - Afficher le statut audio");
+    Serial.println("  play <fichier>     - Lire un fichier audio (ex: play /music/song.mp3)");
+    Serial.println("  stop               - Arreter la lecture");
+    Serial.println("  pause              - Mettre en pause");
+    Serial.println("  resume             - Reprendre la lecture");
+    Serial.println("  vol [0-100]        - Afficher ou definir le volume (%)");
+    Serial.println("  ls [dossier]       - Lister les fichiers audio (ex: ls /music)");
+  }
+  #endif
   
   Serial.println("========================================");
   
@@ -1399,4 +1432,169 @@ void SerialCommands::cmdConfigSet(const String& args) {
   } else {
     Serial.println("[CONFIG] Erreur lors de la sauvegarde");
   }
+}
+
+// ============================================
+// Commandes Audio
+// ============================================
+
+void SerialCommands::cmdAudio() {
+#ifdef HAS_AUDIO
+  AudioManager::printStatus();
+#else
+  Serial.println("[AUDIO] Audio non disponible sur ce modele");
+#endif
+}
+
+void SerialCommands::cmdAudioPlay(const String& args) {
+#ifdef HAS_AUDIO
+  if (args.length() == 0) {
+    Serial.println("[AUDIO] Usage: play <fichier>");
+    Serial.println("[AUDIO] Exemple: play /music/song.mp3");
+    return;
+  }
+  
+  String path = args;
+  // Ajouter le / au début si absent
+  if (!path.startsWith("/")) {
+    path = "/" + path;
+  }
+  
+  if (AudioManager::play(path.c_str())) {
+    Serial.printf("[AUDIO] Lecture de: %s\n", path.c_str());
+  }
+#else
+  Serial.println("[AUDIO] Audio non disponible sur ce modele");
+#endif
+}
+
+void SerialCommands::cmdAudioStop() {
+#ifdef HAS_AUDIO
+  AudioManager::stop();
+#else
+  Serial.println("[AUDIO] Audio non disponible sur ce modele");
+#endif
+}
+
+void SerialCommands::cmdAudioPause() {
+#ifdef HAS_AUDIO
+  if (AudioManager::isPlaying()) {
+    AudioManager::pause();
+  } else if (AudioManager::isPaused()) {
+    Serial.println("[AUDIO] Deja en pause");
+  } else {
+    Serial.println("[AUDIO] Aucune lecture en cours");
+  }
+#else
+  Serial.println("[AUDIO] Audio non disponible sur ce modele");
+#endif
+}
+
+void SerialCommands::cmdAudioResume() {
+#ifdef HAS_AUDIO
+  if (AudioManager::isPaused()) {
+    AudioManager::resume();
+  } else if (AudioManager::isPlaying()) {
+    Serial.println("[AUDIO] Lecture deja en cours");
+  } else {
+    Serial.println("[AUDIO] Aucune lecture en pause");
+  }
+#else
+  Serial.println("[AUDIO] Audio non disponible sur ce modele");
+#endif
+}
+
+void SerialCommands::cmdAudioVolume(const String& args) {
+#ifdef HAS_AUDIO
+  if (args.length() == 0) {
+    // Afficher le volume actuel
+    Serial.printf("[AUDIO] Volume actuel: %d%%\n", AudioManager::getVolume());
+    return;
+  }
+  
+  // Parser le volume
+  int volume = args.toInt();
+  
+  // Vérifier les limites (0-100%)
+  if (volume < 0 || volume > 100) {
+    Serial.println("[AUDIO] Erreur: le volume doit etre entre 0 et 100 (%)");
+    return;
+  }
+  
+  AudioManager::setVolume(volume);
+#else
+  Serial.println("[AUDIO] Audio non disponible sur ce modele");
+#endif
+}
+
+void SerialCommands::cmdAudioList(const String& args) {
+#ifdef HAS_AUDIO
+  if (!SDManager::isAvailable()) {
+    Serial.println("[AUDIO] Erreur: carte SD non disponible");
+    return;
+  }
+  
+  String path = args;
+  if (path.length() == 0) {
+    path = "/";
+  }
+  
+  // Ajouter le / au début si absent
+  if (!path.startsWith("/")) {
+    path = "/" + path;
+  }
+  
+  File dir = SD.open(path);
+  if (!dir) {
+    Serial.printf("[AUDIO] Erreur: impossible d'ouvrir %s\n", path.c_str());
+    return;
+  }
+  
+  if (!dir.isDirectory()) {
+    Serial.printf("[AUDIO] %s n'est pas un dossier\n", path.c_str());
+    dir.close();
+    return;
+  }
+  
+  Serial.printf("\n[AUDIO] Contenu de %s:\n", path.c_str());
+  Serial.println("----------------------------------------");
+  
+  int fileCount = 0;
+  int audioCount = 0;
+  
+  File file = dir.openNextFile();
+  while (file) {
+    String name = file.name();
+    
+    if (file.isDirectory()) {
+      Serial.printf("  [DIR]  %s/\n", name.c_str());
+    } else {
+      // Vérifier si c'est un fichier audio
+      String nameLower = name;
+      nameLower.toLowerCase();
+      bool isAudio = nameLower.endsWith(".mp3") || 
+                     nameLower.endsWith(".wav") ||
+                     nameLower.endsWith(".flac") ||
+                     nameLower.endsWith(".aac") ||
+                     nameLower.endsWith(".ogg");
+      
+      if (isAudio) {
+        Serial.printf("  [MP3]  %s (%d bytes)\n", name.c_str(), file.size());
+        audioCount++;
+      } else {
+        Serial.printf("  [---]  %s (%d bytes)\n", name.c_str(), file.size());
+      }
+      fileCount++;
+    }
+    
+    file = dir.openNextFile();
+  }
+  
+  dir.close();
+  
+  Serial.println("----------------------------------------");
+  Serial.printf("[AUDIO] %d fichiers (%d audio)\n", fileCount, audioCount);
+#else
+  Serial.println("[AUDIO] Audio non disponible sur ce modele");
+#endif
 }

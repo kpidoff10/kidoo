@@ -21,7 +21,7 @@
 #define LED_DATA_PIN 17
 
 // Nombre de LEDs sur la bande principale
-#define NUM_LEDS 144
+#define NUM_LEDS 40
 
 // Type de LED (WS2812B, WS2811, etc.)
 // Options: NEOPIXEL, WS2812B, WS2811, SK6812, etc.
@@ -73,6 +73,19 @@
 #define POTENTIOMETER_PIN 1   // GPIO 1 (ADC1_CH0)
 
 // ============================================
+// Configuration Audio I2S (MAX98357)
+// ============================================
+
+// Pins I2S pour l'amplificateur audio (ESP32-S3)
+// Note: GPIO 36-38 sont réservés pour PSRAM/Flash, ne pas utiliser !
+#define I2S_BCLK_PIN 39       // GPIO 39 (Bit Clock)
+#define I2S_LRC_PIN 40        // GPIO 40 (Left/Right Clock / Word Select)
+#define I2S_DOUT_PIN 41       // GPIO 41 (Data Out)
+
+// Volume par défaut en pourcentage (0-100%)
+#define DEFAULT_AUDIO_VOLUME 25
+
+// ============================================
 // Composants disponibles sur ce modèle
 // ============================================
 
@@ -84,5 +97,6 @@
 #define HAS_PUBNUB true
 #define HAS_RTC false
 #define HAS_POTENTIOMETER false
+#define HAS_AUDIO true
 
 #endif // MODEL_BASIC_CONFIG_H
