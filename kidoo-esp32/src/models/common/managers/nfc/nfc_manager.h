@@ -2,18 +2,28 @@
 #define NFC_MANAGER_H
 
 #include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/semphr.h>
 
 /**
- * Gestionnaire NFC commun
+ * Gestionnaire NFC avec thread dédié
  * 
- * Ce module gère l'initialisation et les opérations NFC
- * pour tous les modèles supportant le NFC
+ * Ce module gère l'initialisation et les opérations NFC dans un thread séparé
+ * pour ne pas bloquer l'audio ou les autres tâches.
+ * 
+ * Le thread détecte automatiquement les tags en arrière-plan et appelle
+ * un callback quand un tag est détecté.
  */
+
+// Callback appelé quand un tag est détecté
+// uid: buffer contenant l'UID, uidLength: longueur de l'UID
+typedef void (*NFCTagCallback)(uint8_t* uid, uint8_t uidLength);
 
 class NFCManager {
 public:
   /**
-   * Initialiser le gestionnaire NFC
+   * Initialiser le gestionnaire NFC et démarrer le thread de détection
    * @return true si l'initialisation est réussie, false sinon
    */
   static bool init();
@@ -36,8 +46,48 @@ public:
    */
   static uint32_t getFirmwareVersion();
   
+  // ============================================
+  // Détection automatique (thread)
+  // ============================================
+  
   /**
-   * Lire l'UID d'un tag NFC
+   * Définir le callback appelé quand un tag est détecté
+   * @param callback Fonction à appeler (nullptr pour désactiver)
+   */
+  static void setTagCallback(NFCTagCallback callback);
+  
+  /**
+   * Activer/désactiver la détection automatique
+   * @param enabled true pour activer, false pour désactiver
+   */
+  static void setAutoDetect(bool enabled);
+  
+  /**
+   * Vérifier si la détection automatique est active
+   */
+  static bool isAutoDetectEnabled();
+  
+  /**
+   * Vérifier si un tag a été détecté récemment
+   * @return true si un tag est présent
+   */
+  static bool isTagPresent();
+  
+  /**
+   * Obtenir l'UID du dernier tag détecté
+   * @param uid Buffer pour stocker l'UID (min 10 bytes)
+   * @param uidLength Pointeur pour stocker la longueur
+   * @return true si un tag a été détecté, false sinon
+   */
+  static bool getLastTagUID(uint8_t* uid, uint8_t* uidLength);
+  
+  // ============================================
+  // Opérations manuelles (bloquantes mais courtes)
+  // ============================================
+  
+  /**
+   * Lire l'UID d'un tag NFC (appel bloquant)
+   * Note: Préférer la détection automatique pour ne pas bloquer
    * @param uid Buffer pour stocker l'UID (max 10 bytes)
    * @param uidLength Pointeur pour stocker la longueur de l'UID
    * @param timeoutMs Timeout en millisecondes (défaut: 5000)
@@ -72,10 +122,30 @@ private:
    */
   static bool testHardware();
   
+  /**
+   * Thread de détection NFC
+   */
+  static void nfcTask(void* parameter);
+  
   // Variables statiques
   static bool initialized;
   static bool available;
   static uint32_t firmwareVersion;
+  
+  // Thread
+  static TaskHandle_t taskHandle;
+  static SemaphoreHandle_t nfcMutex;
+  static volatile bool threadRunning;
+  static volatile bool autoDetectEnabled;
+  
+  // Dernier tag détecté
+  static uint8_t lastUID[10];
+  static uint8_t lastUIDLength;
+  static volatile bool tagPresent;
+  static unsigned long lastDetectionTime;
+  
+  // Callback
+  static NFCTagCallback tagCallback;
 };
 
 #endif // NFC_MANAGER_H

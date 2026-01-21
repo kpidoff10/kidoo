@@ -104,13 +104,6 @@ bool InitManager::init() {
   }
   #endif
   
-  // Initialisation spécifique au modèle (après l'initialisation des composants communs)
-  if (!InitModel::init()) {
-    Serial.println("[INIT] ERREUR: Initialisation modele echouee");
-    allSuccess = false;
-  }
-  delay(100);
-  
   // ÉTAPE 4 : Initialiser le BLE (après l'init complète)
   #ifdef HAS_BLE
   if (HAS_BLE) {
@@ -157,6 +150,14 @@ bool InitManager::init() {
     delay(100);
   }
   #endif
+  
+  // ÉTAPE 10 : Initialisation spécifique au modèle (APRÈS tous les composants)
+  Serial.println("[INIT] Appel InitModel::init()...");
+  if (!InitModel::init()) {
+    Serial.println("[INIT] ERREUR: Initialisation modele echouee");
+    allSuccess = false;
+  }
+  delay(100);
   
   initialized = true;
   

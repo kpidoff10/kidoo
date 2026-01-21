@@ -1,5 +1,6 @@
 #include "init_model.h"
 #include "../../common/managers/init/init_manager.h"
+#include "../nfc/nfc_tag_handler.h"
 
 /**
  * Initialisation spécifique au modèle Kidoo Basic
@@ -7,30 +8,23 @@
 
 bool InitModelBasic::configure() {
   // Configuration spécifique au Basic avant l'initialisation
-  // Exemple : configurer des pins spécifiques, des paramètres, etc.
-  
   Serial.println("[INIT] Configuration modele Basic");
-  
-  // Ajouter ici toute configuration spécifique au Basic
-  // Par exemple :
-  // - Configurer des pins supplémentaires
-  // - Définir des paramètres spécifiques
-  // - Initialiser des composants uniquement présents sur le Basic
   
   return true;
 }
 
 bool InitModelBasic::init() {
   // Initialisation spécifique au Basic après l'initialisation des composants communs
-  // Exemple : initialiser des composants supplémentaires, calibrer, etc.
+  Serial.println("");
+  Serial.println("========================================");
+  Serial.println("[INIT-BASIC] Initialisation modele Basic");
+  Serial.println("========================================");
   
-  Serial.println("[INIT] Initialisation modele Basic");
-  
-  // Ajouter ici toute initialisation spécifique au Basic
-  // Par exemple :
-  // - Initialiser des capteurs supplémentaires
-  // - Configurer des périphériques spécifiques
-  // - Effectuer des calibrations
+  // Initialiser le gestionnaire de tags NFC
+  // Cela configure les actions automatiques quand un tag est détecté
+  Serial.println("[INIT-BASIC] Init NFCTagHandler...");
+  NFCTagHandler::init();
+  Serial.println("[INIT-BASIC] NFCTagHandler OK");
   
   return true;
 }

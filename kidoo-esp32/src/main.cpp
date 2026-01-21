@@ -10,6 +10,11 @@
 #include "models/common/managers/wifi/wifi_manager.h"
 #endif
 
+// Handler NFC spécifique au modèle Basic
+#ifdef KIDOO_MODEL_BASIC
+#include "models/basic/nfc/nfc_tag_handler.h"
+#endif
+
 /**
  * Architecture multi-cœurs ESP32 (auto-détectée)
  * ==============================================
@@ -93,6 +98,11 @@ void loop() {
   // Mettre à jour le potentiomètre (détection de changement)
   #ifdef HAS_POTENTIOMETER
   PotentiometerManager::update();
+  #endif
+  
+  // Mettre à jour le gestionnaire de tags NFC (détection retrait tag)
+  #ifdef KIDOO_MODEL_BASIC
+  NFCTagHandler::update();
   #endif
   
   // ====================================================================
