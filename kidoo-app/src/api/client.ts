@@ -6,24 +6,10 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { tokenStorage } from '@/utils/storage';
 
-import { Platform } from 'react-native';
-
-// TODO: Utiliser une variable d'environnement
-// Pour tester sur téléphone, remplace par l'IP de ton PC (ex: 192.168.1.x)
-// Trouve ton IP avec: ipconfig (Windows) ou ifconfig (Mac/Linux)
-const getApiUrl = () => {
-  if (!__DEV__) return 'https://api.kidoo.com'; // Production
-  
-  // En dev : localhost pour web, IP locale pour mobile
-  if (Platform.OS === 'web') {
-    return 'http://localhost:3000';
-  }
-  
-  // REMPLACE par ton IP locale pour tester sur téléphone
-  return 'http://192.168.1.XXX:3000';
-};
-
-const API_URL = getApiUrl();
+// URL de l'API depuis la variable d'environnement
+// En dev : définir EXPO_PUBLIC_API_URL dans .env (ex: http://192.168.1.217:3000)
+// En prod : https://api.kidoo.com
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
 export const apiClient = axios.create({
   baseURL: API_URL,

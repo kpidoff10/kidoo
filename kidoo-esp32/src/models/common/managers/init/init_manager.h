@@ -32,7 +32,6 @@ struct SystemStatus {
   InitStatus pubnub;        // Gestionnaire PubNub
   InitStatus rtc;           // Gestionnaire RTC DS3231
   InitStatus potentiometer; // Gestionnaire Potentiomètre
-  InitStatus audio;         // Gestionnaire Audio
   // Ajouter d'autres composants ici
   
   bool isFullyInitialized() const {
@@ -81,7 +80,6 @@ private:
   static bool initPubNub();
   static bool initRTC();
   static bool initPotentiometer();
-  static bool initAudio();
   // Ajouter d'autres méthodes d'initialisation ici
   
   // Variables statiques

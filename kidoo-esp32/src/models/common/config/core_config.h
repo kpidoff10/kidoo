@@ -8,9 +8,10 @@
  * 
  * ESP32-S3 (Dual-core + PSRAM) - Modèle Basic
  * -------------------------------------------
- * - Core 0 : WiFi stack, PubNub, Audio, WiFi retry
- * - Core 1 : loop(), LEDManager, BLE
+ * - Core 0 : WiFi stack, BLE, PubNub, WiFi retry (radio et réseau)
+ * - Core 1 : loop(), LEDManager (temps-réel isolé)
  * - PSRAM : Buffers LED, caches
+ * - FastLED utilise le driver RMT (hardware) pour éviter les conflits
  * 
  * ESP32-C3 (Single-core RISC-V) - Modèle Mini
  * -------------------------------------------
@@ -66,21 +67,19 @@
   #define CORE_WIFI         0
   #define CORE_PUBNUB       0
   #define CORE_WIFI_RETRY   0
-  #define CORE_AUDIO        0
   #define CORE_LED          0
   #define CORE_BLE          0
   #define CORE_MAIN         0
 #else
   // ESP32/S3 Dual-core :
-  // Core 0 : WiFi stack + Réseau + Audio
+  // Core 0 : WiFi stack + Réseau + BLE
   #define CORE_WIFI         0   // WiFi stack (automatique ESP-IDF)
   #define CORE_PUBNUB       0   // PubNub (HTTP, dépend WiFi)
   #define CORE_WIFI_RETRY   0   // WiFi retry thread
-  #define CORE_AUDIO        0   // Audio I2S (sensible au timing)
+  #define CORE_BLE          0   // BLE sur Core 0 (partage avec WiFi, même radio)
 
-  // Core 1 : Application + LED + BLE
-  #define CORE_LED          1   // LEDManager (FastLED, temps-réel)
-  #define CORE_BLE          1   // BLE (si utilisé)
+  // Core 1 : Application + LED (temps-réel)
+  #define CORE_LED          1   // LEDManager (FastLED RMT, temps-réel)
   #define CORE_MAIN         1   // loop() Arduino (automatique)
 #endif
 
@@ -90,15 +89,12 @@
 
 #if IS_SINGLE_CORE
   // Single-core : Priorités espacées pour éviter la famine
-  // L'audio doit rester le plus prioritaire pour éviter les saccades
-  #define PRIORITY_AUDIO      8   // Très haute - audio temps-réel critique
-  #define PRIORITY_LED        5   // Moyenne-haute - animations
+  #define PRIORITY_LED        8   // Haute - animations temps-réel
   #define PRIORITY_PUBNUB     2   // Basse - réseau non critique
   #define PRIORITY_WIFI_RETRY 1   // Très basse - retry en background
 #else
   // Dual-core : Plus de marge car les tâches sont réparties
-  #define PRIORITY_AUDIO      6   // Très haute - audio temps-réel critique
-  #define PRIORITY_LED        5   // Haute - animations fluides
+  #define PRIORITY_LED        19  // Très haute - LED temps-réel critique (juste sous WiFi qui est 23)
   #define PRIORITY_PUBNUB     2   // Basse - réseau non critique
   #define PRIORITY_WIFI_RETRY 1   // Très basse - retry en background
 #endif
@@ -110,11 +106,9 @@
 #if HAS_PSRAM_SUPPORT
   // Activer l'utilisation de la PSRAM pour les gros buffers
   #define USE_PSRAM_FOR_LED_BUFFER    true
-  #define USE_PSRAM_FOR_AUDIO_BUFFER  false  // La lib audio gère ses buffers
 #else
   // ESP32-C3 : Pas de PSRAM, tout en heap interne
   #define USE_PSRAM_FOR_LED_BUFFER    false
-  #define USE_PSRAM_FOR_AUDIO_BUFFER  false
 #endif
 
 // ============================================
@@ -122,7 +116,6 @@
 // ============================================
 
 #define STACK_SIZE_LED          4096    // LEDManager
-#define STACK_SIZE_AUDIO        4096    // AudioManager
 #define STACK_SIZE_PUBNUB       8192    // PubNubManager (HTTP + JSON)
 #define STACK_SIZE_WIFI_RETRY   4096    // WiFi retry
 
@@ -218,12 +211,12 @@ inline void printCoreArchitecture() {
   
   #if IS_SINGLE_CORE
   Serial.println("[CPU] Mode: Single-core");
-  Serial.println("[CPU] Core 0: WiFi, LED, Audio, PubNub (tout)");
+  Serial.println("[CPU] Core 0: WiFi, BLE, LED, PubNub (tout)");
   #else
   Serial.println("[CPU] Mode: Dual-core");
-  Serial.printf("[CPU] Core 0: WiFi, Audio (P%d), PubNub (P%d), WiFi-retry (P%d)\n", 
-                PRIORITY_AUDIO, PRIORITY_PUBNUB, PRIORITY_WIFI_RETRY);
-  Serial.printf("[CPU] Core 1: loop(), LED (P%d)\n", PRIORITY_LED);
+  Serial.printf("[CPU] Core 0: WiFi, BLE, PubNub (P%d), WiFi-retry (P%d)\n", 
+                PRIORITY_PUBNUB, PRIORITY_WIFI_RETRY);
+  Serial.printf("[CPU] Core 1: loop(), LED (P%d) [RMT driver]\n", PRIORITY_LED);
   #endif
   
   #if HAS_PSRAM_SUPPORT

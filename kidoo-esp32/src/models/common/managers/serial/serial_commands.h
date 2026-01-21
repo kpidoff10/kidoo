@@ -60,10 +60,6 @@ private:
   static void cmdMemoryDebug();
   static void cmdNFCRead(const String& args);
   static void cmdNFCWrite(const String& args);
-  static void cmdAudioPlay(const String& args);
-  static void cmdAudioStop();
-  static void cmdAudioVolume(const String& args);
-  static void cmdAudioInfo();
   static void cmdConfigGet(const String& args);
   static void cmdConfigSet(const String& args);
   static void cmdConfigList();

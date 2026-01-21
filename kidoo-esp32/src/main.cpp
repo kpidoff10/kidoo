@@ -3,7 +3,6 @@
 #include "models/common/managers/serial/serial_commands.h"
 #include "models/common/managers/pubnub/pubnub_manager.h"
 #include "models/common/managers/potentiometer/potentiometer_manager.h"
-#include "models/common/managers/audio/audio_manager.h"
 #include "models/model_config.h"
 #include "models/common/config/core_config.h"
 
@@ -99,7 +98,6 @@ void loop() {
   // ====================================================================
   // Threads indépendants (gérés par FreeRTOS, ne pas appeler ici) :
   // - LEDManager   : CORE_LED, PRIORITY_LED, animations temps-réel
-  // - AudioManager : CORE_AUDIO, PRIORITY_AUDIO, I2S/DMA
   // - PubNubManager: CORE_PUBNUB, PRIORITY_PUBNUB, HTTP polling
   // - WiFi retry   : CORE_WIFI_RETRY, PRIORITY_WIFI_RETRY, reconnexion
   // (voir core_config.h pour les valeurs selon le chip)

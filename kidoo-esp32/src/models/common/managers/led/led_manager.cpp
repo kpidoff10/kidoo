@@ -69,6 +69,10 @@ bool LEDManager::init() {
   Serial.println("[LED] Init FastLED...");
   FastLED.addLeds<LED_TYPE, LED_DATA_PIN>(leds, NUM_LEDS);
   FastLED.setBrightness(currentBrightness);
+  FastLED.setDither(0);           // Désactiver le dithering pour éviter le scintillement
+  FastLED.setMaxRefreshRate(0);   // Pas de limite de refresh rate
+  FastLED.clearData();            // Nettoyer toutes les données LED
+  FastLED.show();                 // Appliquer immédiatement
   Serial.println("[LED] FastLED OK");
   
   // Créer la queue de commandes
@@ -225,7 +229,7 @@ void LEDManager::ledTask(void* parameter) {
     FastLED.show();
     
     // Petite pause pour éviter de surcharger le CPU
-    vTaskDelay(pdMS_TO_TICKS(1));
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
   
   // Ne devrait jamais arriver ici

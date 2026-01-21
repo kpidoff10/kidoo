@@ -21,7 +21,7 @@
 #define LED_DATA_PIN 17
 
 // Nombre de LEDs sur la bande principale
-#define NUM_LEDS 71
+#define NUM_LEDS 144
 
 // Type de LED (WS2812B, WS2811, etc.)
 // Options: NEOPIXEL, WS2812B, WS2811, SK6812, etc.
@@ -101,7 +101,7 @@
 #define HAS_NFC false
 #define HAS_PUBNUB true
 #define HAS_RTC false
-#define HAS_POTENTIOMETER true
-#define HAS_AUDIO true
+#define HAS_POTENTIOMETER false
+#define HAS_AUDIO false      // Désactivé - conflit driver I2S legacy/nouveau
 
 #endif // MODEL_BASIC_CONFIG_H

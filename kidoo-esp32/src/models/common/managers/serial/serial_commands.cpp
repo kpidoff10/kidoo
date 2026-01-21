@@ -13,7 +13,6 @@
 #include "../rtc/rtc_manager.h"
 #include "../potentiometer/potentiometer_manager.h"
 #include "../nfc/nfc_manager.h"
-#include "../audio/audio_manager.h"
 #include "../../../model_serial_commands.h"
 #ifdef HAS_PUBNUB
 #include "../../../model_pubnub_routes.h"
@@ -137,14 +136,6 @@ void SerialCommands::processCommand(const String& command) {
     cmdNFCRead(args);
   } else if (cmd == "nfc-write" || cmd == "nfc-write-block") {
     cmdNFCWrite(args);
-  } else if (cmd == "audio-play" || cmd == "play") {
-    cmdAudioPlay(args);
-  } else if (cmd == "audio-stop" || cmd == "stop") {
-    cmdAudioStop();
-  } else if (cmd == "audio-volume" || cmd == "volume") {
-    cmdAudioVolume(args);
-  } else if (cmd == "audio" || cmd == "audio-info") {
-    cmdAudioInfo();
   } else if (cmd == "config-get" || cmd == "cfg-get") {
     cmdConfigGet(args);
   } else if (cmd == "config-set" || cmd == "cfg-set") {
@@ -224,15 +215,6 @@ void SerialCommands::printHelp() {
   if (HAS_NFC) {
     Serial.println("  nfc-read [block] - Lire l'UID d'un tag NFC (optionnel: lire un bloc)");
     Serial.println("  nfc-write <block> <data> - Ecrire des donnees sur un tag NFC");
-  }
-  #endif
-  
-  #ifdef HAS_AUDIO
-  if (HAS_AUDIO) {
-    Serial.println("  audio-play <file> - Jouer un fichier audio depuis la SD (MP3, WAV)");
-    Serial.println("  audio-stop - Arreter la lecture audio en cours");
-    Serial.println("  audio-volume [0-21] - Afficher ou definir le volume (0=mute, 21=max)");
-    Serial.println("  audio, audio-info - Afficher l'etat de l'audio");
   }
   #endif
   
@@ -1116,105 +1098,6 @@ void SerialCommands::cmdNFCWrite(const String& args) {
     Serial.print(" ");
   }
   Serial.println();
-#endif
-}
-
-void SerialCommands::cmdAudioPlay(const String& args) {
-#ifndef HAS_AUDIO
-  Serial.println("[AUDIO] Audio non disponible sur ce modele");
-  return;
-#else
-  if (!AudioManager::isAvailable()) {
-    Serial.println("[AUDIO] Audio non disponible");
-    return;
-  }
-  
-  if (args.length() == 0) {
-    Serial.println("[AUDIO] Usage: audio-play <file>");
-    Serial.println("[AUDIO] Exemple: audio-play /music.mp3");
-    Serial.println("[AUDIO] Formats supportes: MP3, WAV");
-    return;
-  }
-  
-  // Nettoyer le chemin (enlever les espaces)
-  String filePath = args;
-  filePath.trim();
-  
-  // S'assurer que le chemin commence par /
-  if (!filePath.startsWith("/")) {
-    filePath = "/" + filePath;
-  }
-  
-  Serial.print("[AUDIO] Lecture du fichier: ");
-  Serial.println(filePath);
-  
-  if (AudioManager::playFile(filePath.c_str())) {
-    Serial.println("[AUDIO] Lecture demarree");
-  } else {
-    Serial.println("[AUDIO] ERREUR: Echec du demarrage de la lecture");
-  }
-#endif
-}
-
-void SerialCommands::cmdAudioStop() {
-#ifndef HAS_AUDIO
-  Serial.println("[AUDIO] Audio non disponible sur ce modele");
-  return;
-#else
-  if (!AudioManager::isAvailable()) {
-    Serial.println("[AUDIO] Audio non disponible");
-    return;
-  }
-  
-  AudioManager::stop();
-  Serial.println("[AUDIO] Lecture arretee");
-#endif
-}
-
-void SerialCommands::cmdAudioVolume(const String& args) {
-#ifndef HAS_AUDIO
-  Serial.println("[AUDIO] Audio non disponible sur ce modele");
-  return;
-#else
-  if (!AudioManager::isAvailable()) {
-    Serial.println("[AUDIO] Audio non disponible");
-    return;
-  }
-  
-  if (args.length() == 0) {
-    // Afficher le volume actuel
-    uint8_t volume = AudioManager::getVolume();
-    Serial.print("[AUDIO] Volume actuel: ");
-    Serial.print(volume);
-    Serial.println("/21");
-    Serial.println("[AUDIO] Utilisez: audio-volume <0-21> pour definir le volume");
-    Serial.println("[AUDIO] Exemple: audio-volume 21 (volume maximum)");
-  } else {
-    // Définir le volume
-    int volume = args.toInt();
-    
-    if (volume < 0 || volume > 21) {
-      Serial.println("[AUDIO] ERREUR: Le volume doit etre entre 0 et 21");
-      return;
-    }
-    
-    if (AudioManager::setVolume((uint8_t)volume)) {
-      Serial.print("[AUDIO] Volume defini a: ");
-      Serial.print(volume);
-      Serial.println("/21");
-    } else {
-      Serial.println("[AUDIO] ERREUR: Impossible de definir le volume");
-    }
-  }
-#endif
-}
-
-void SerialCommands::cmdAudioInfo() {
-#ifndef HAS_AUDIO
-  Serial.println("[AUDIO] Audio non disponible sur ce modele");
-  return;
-#else
-  AudioManager::printInfo();
 #endif
 }
 
