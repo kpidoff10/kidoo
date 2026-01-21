@@ -18,7 +18,7 @@
  * Architecture :
  * - Le WiFi stack ESP-IDF tourne automatiquement sur Core 0
  * - Le thread de retry tourne aussi sur Core 0 (CORE_WIFI_RETRY)
- * - Priorité très basse (PRIORITY_WIFI_RETRY) pour ne pas bloquer l'audio
+ * - Priorité très basse (PRIORITY_WIFI_RETRY) pour ne pas bloquer les autres tâches
  */
 
 // États de connexion WiFi

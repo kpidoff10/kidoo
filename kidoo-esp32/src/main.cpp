@@ -17,7 +17,7 @@
  * La configuration s'adapte automatiquement au type de chip :
  * 
  * ESP32-S3 (Basic) : Dual-core + PSRAM
- * - Core 0 : WiFi stack, PubNub, Audio, WiFi retry
+ * - Core 0 : WiFi stack, PubNub, WiFi retry
  * - Core 1 : loop(), LEDManager, BLE
  * - PSRAM pour les buffers
  * 

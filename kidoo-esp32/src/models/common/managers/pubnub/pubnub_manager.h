@@ -14,7 +14,7 @@
  * Architecture :
  * - Tourne sur Core 0 (CORE_PUBNUB) avec le WiFi stack
  * - Priorité basse (PRIORITY_PUBNUB) car non critique en temps-réel
- * - Partage Core 0 avec Audio et WiFi pour minimiser les context switches réseau
+ * - Partage Core 0 avec WiFi pour minimiser les context switches réseau
  */
 
 class PubNubManager {

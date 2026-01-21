@@ -68,6 +68,5 @@
 #define HAS_RTC false           // Optionnel sur Mini
 #define HAS_NFC false           // Pas de NFC sur Mini
 #define HAS_POTENTIOMETER false // Pas de potentiomètre sur Mini
-#define HAS_AUDIO false         // Pas d'audio sur Mini (I2S limité sur C3)
 
 #endif // MODEL_MINI_CONFIG_H

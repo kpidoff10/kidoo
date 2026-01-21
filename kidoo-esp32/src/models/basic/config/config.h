@@ -73,24 +73,6 @@
 #define POTENTIOMETER_PIN 1   // GPIO 1 (ADC1_CH0)
 
 // ============================================
-// Configuration Audio (MAX98357 via I2S)
-// ============================================
-
-// Pins I2S pour le module audio MAX98357 (ESP32-S3)
-// Note: DOUT = Data Out de l'ESP32 vers DIN du MAX98357
-#define AUDIO_I2S_BCLK_PIN 16   // GPIO 16 (Bit Clock) - connexion BCLK du MAX98357
-#define AUDIO_I2S_LRC_PIN 17    // GPIO 17 (Left/Right Clock) - connexion LRC du MAX98357
-#define AUDIO_I2S_DIN_PIN 18    // GPIO 18 (Data Out) - connexion DIN du MAX98357
-
-// Mode audio (1 = MONO, 2 = STEREO)
-// MONO : 1 haut-parleur, STEREO : 2 haut-parleurs
-#define AUDIO_MODE 1  // 1 = MONO, 2 = STEREO
-
-// Volume par défaut (0-21, où 21 = volume maximum)
-// Note: Si le son est inaudible, essayez d'augmenter à 18-21
-#define AUDIO_DEFAULT_VOLUME 1
-
-// ============================================
 // Composants disponibles sur ce modèle
 // ============================================
 
@@ -102,6 +84,5 @@
 #define HAS_PUBNUB true
 #define HAS_RTC false
 #define HAS_POTENTIOMETER false
-#define HAS_AUDIO false      // Désactivé - conflit driver I2S legacy/nouveau
 
 #endif // MODEL_BASIC_CONFIG_H

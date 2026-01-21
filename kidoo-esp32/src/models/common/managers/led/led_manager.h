@@ -16,7 +16,7 @@
  * même si d'autres parties du code buggent ou se bloquent.
  * 
  * Architecture :
- * - Tourne sur Core 1 (CORE_LED) pour éviter les conflits avec WiFi/Audio sur Core 0
+ * - Tourne sur Core 1 (CORE_LED) pour éviter les conflits avec WiFi sur Core 0
  * - Utilise la PSRAM pour le buffer LED (si USE_PSRAM_FOR_LED_BUFFER = true)
  * - Priorité élevée (PRIORITY_LED) pour des animations fluides
  */
