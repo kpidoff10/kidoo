@@ -131,6 +131,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
+    marginBottom: spacing[10],
   },
   iconContainer: {
     width: 64,

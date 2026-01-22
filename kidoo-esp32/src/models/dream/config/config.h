@@ -22,7 +22,7 @@
 #define LED_DATA_PIN 8
 
 // Nombre de LEDs sur la bande principale (Mini a moins de LEDs)
-#define NUM_LEDS 30
+#define NUM_LEDS 41
 
 // Type de LED (WS2812B, WS2811, etc.)
 // Options: NEOPIXEL, WS2812B, WS2811, SK6812, etc.

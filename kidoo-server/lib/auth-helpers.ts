@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAccessToken, extractTokenFromHeader } from './jwt';
+import { createErrorResponse } from './api-response';
 
 /**
  * Extrait l'userId depuis les headers de la requête
@@ -48,13 +49,13 @@ export function requireAuth(request: NextRequest):
   if (!userId) {
     return {
       success: false,
-      response: NextResponse.json(
+      response: createErrorResponse(
+        'UNAUTHORIZED',
+        401,
         {
-          success: false,
-          error: 'Authentification requise',
+          message: 'Authentification requise',
           field: 'userId',
-        },
-        { status: 401 }
+        }
       ),
     };
   }

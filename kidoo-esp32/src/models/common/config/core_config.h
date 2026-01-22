@@ -91,10 +91,10 @@
 
 #if IS_SINGLE_CORE
   // Single-core : Priorités espacées pour éviter la famine
-  #define PRIORITY_LED        8   // Haute - animations temps-réel
-  #define PRIORITY_AUDIO      12  // Très haute - audio temps-réel (plus critique que LED)
-  #define PRIORITY_PUBNUB     2   // Basse - réseau non critique
-  #define PRIORITY_WIFI_RETRY 1   // Très basse - retry en background
+  #define PRIORITY_AUDIO      4   // La plus haute acceptable
+  #define PRIORITY_LED        3   // Animations fluides sans casser le RTOS
+  #define PRIORITY_PUBNUB     2   // Réseau
+  #define PRIORITY_WIFI_RETRY 1   // Background
 #else
   // Dual-core : Plus de marge car les tâches sont réparties
   // Audio a la priorité maximale pour éviter les claquements

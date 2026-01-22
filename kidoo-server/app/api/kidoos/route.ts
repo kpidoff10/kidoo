@@ -4,24 +4,20 @@
  * POST /api/kidoos - Créer un nouveau kidoo
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createKidooInputSchema } from '@/shared';
-import { requireAuth } from '@/lib/auth-helpers';
+import { withAuth, AuthenticatedRequest } from '@/lib/withAuth';
+import { createSuccessResponse, createErrorResponse } from '@/lib/api-response';
+import { KidoosErrors } from './errors';
 
 /**
  * GET /api/kidoos
  * Récupère tous les kidoos de l'utilisateur connecté
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: AuthenticatedRequest) => {
   try {
-    // Vérifier l'authentification
-    const authResult = requireAuth(request);
-    if (!authResult.success) {
-      return authResult.response;
-    }
-
-    const { userId } = authResult;
+    const { userId } = request;
 
     // Récupérer les kidoos de l'utilisateur
     const kidoos = await prisma.kidoo.findMany({
@@ -41,52 +37,36 @@ export async function GET(request: NextRequest) {
       updatedAt: kidoo.updatedAt.toISOString(),
     }));
 
-    return NextResponse.json({
-      success: true,
-      data: kidoosWithISOStrings,
+    return createSuccessResponse(kidoosWithISOStrings, {
       message: `${kidoos.length} kidoo(s) trouvé(s)`,
     });
   } catch (error) {
     console.error('Erreur lors de la récupération des kidoos:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Une erreur est survenue lors de la récupération des kidoos',
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(KidoosErrors.INTERNAL_ERROR, {
+      details: error instanceof Error ? error.message : undefined,
+    });
   }
-}
+});
 
 /**
  * POST /api/kidoos
  * Crée un nouveau kidoo pour l'utilisateur connecté
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: AuthenticatedRequest) => {
   try {
     const body = await request.json();
-
-    // Vérifier l'authentification
-    const authResult = requireAuth(request);
-    if (!authResult.success) {
-      return authResult.response;
-    }
-
-    const { userId } = authResult;
+    const { userId } = request;
 
     // Validation des données
     const validationResult = createKidooInputSchema.safeParse(body);
 
     if (!validationResult.success) {
       const firstError = validationResult.error.issues[0];
-      return NextResponse.json(
-        {
-          success: false,
-          error: firstError.message,
-          field: firstError.path[0] as string,
-        },
-        { status: 400 }
-      );
+      return createErrorResponse(KidoosErrors.VALIDATION_ERROR, {
+        message: firstError.message,
+        field: firstError.path[0] as string,
+        details: validationResult.error.issues,
+      });
     }
 
     const { name, model, deviceId, macAddress, firmwareVersion } = validationResult.data;
@@ -99,25 +79,17 @@ export async function POST(request: NextRequest) {
     if (existingKidoo) {
       // Si le kidoo appartient déjà à cet utilisateur, retourner celui-ci
       if (existingKidoo.userId === userId) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Ce Kidoo est déjà enregistré dans votre compte',
-            field: 'deviceId',
-          },
-          { status: 409 }
-        );
+        return createErrorResponse(KidoosErrors.ALREADY_REGISTERED, {
+          message: 'Ce Kidoo est déjà enregistré dans votre compte',
+          field: 'deviceId',
+        });
       }
 
       // Sinon, erreur car le deviceId est déjà utilisé par un autre utilisateur
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Ce Kidoo est déjà enregistré par un autre utilisateur',
-          field: 'deviceId',
-        },
-        { status: 409 }
-      );
+      return createErrorResponse(KidoosErrors.ALREADY_REGISTERED, {
+        message: 'Ce Kidoo est déjà enregistré par un autre utilisateur',
+        field: 'deviceId',
+      });
     }
 
     // Créer le nouveau kidoo
@@ -142,22 +114,14 @@ export async function POST(request: NextRequest) {
       updatedAt: newKidoo.updatedAt.toISOString(),
     };
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: kidooWithISOStrings,
-        message: 'Kidoo créé avec succès',
-      },
-      { status: 201 }
-    );
+    return createSuccessResponse(kidooWithISOStrings, {
+      message: 'Kidoo créé avec succès',
+      status: 201,
+    });
   } catch (error) {
     console.error('Erreur lors de la création du kidoo:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Une erreur est survenue lors de la création du kidoo',
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(KidoosErrors.INTERNAL_ERROR, {
+      details: error instanceof Error ? error.message : undefined,
+    });
   }
-}
+});

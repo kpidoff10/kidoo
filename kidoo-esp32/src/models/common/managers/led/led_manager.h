@@ -2,7 +2,7 @@
 #define LED_MANAGER_H
 
 #include <Arduino.h>
-#include <FastLED.h>
+#include <Adafruit_NeoPixel.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
@@ -97,10 +97,10 @@ private:
   static bool initialized;
   static TaskHandle_t taskHandle;
   static QueueHandle_t commandQueue;
-  static CRGB* leds;
+  static Adafruit_NeoPixel* strip;
   static uint8_t currentBrightness;
   static LEDEffect currentEffect;
-  static CRGB currentColor;
+  static uint32_t currentColor;  // Couleur au format RGB (0xRRGGBB)
   static unsigned long lastUpdateTime;
   static unsigned long lastActivityTime;  // Dernière activité (pour sleep mode)
   static bool isSleeping;  // État du sleep mode
@@ -110,7 +110,8 @@ private:
   static LEDEffect savedEffect;  // Effet sauvegardé avant le sleep
   static uint32_t sleepTimeoutMs;  // Timeout configuré pour le sleep mode
   static bool pulseNeedsReset;  // Flag pour réinitialiser l'effet PULSE
-  
+  static bool hardwareInitialized;  // Init NeoPixel faite dans la tâche LED
+
   // Paramètres du thread (centralisés dans core_config.h)
   static const int QUEUE_SIZE = 10;
   static const int TASK_STACK_SIZE = STACK_SIZE_LED;

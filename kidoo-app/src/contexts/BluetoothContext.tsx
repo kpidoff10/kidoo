@@ -22,6 +22,7 @@ import { useKidoos } from '@/hooks/useKidoos';
 import { useCreateKidoo } from '@/hooks/useKidoos';
 import { AddKidooSheet } from '@/screens/kidoos/KidoosListScreen/components/AddKidooSheet';
 import { AddDeviceSheet } from '@/components/AddDeviceSheet';
+import { useAppReady } from '@/contexts/AppReadyContext';
 
 // Types pour les appareils BLE
 export interface BLEDevice {
@@ -71,7 +72,7 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
   const addDeviceSheet = useBottomSheet(); // Bottom sheet pour AddDeviceSheet
   const { data: kidoos } = useKidoos(); // Liste des Kidoos pour vérifier si déjà lié
   const createKidoo = useCreateKidoo();
-  const [isSplashScreenHidden, setIsSplashScreenHidden] = useState(false);
+  const { isAppReady } = useAppReady(); // Vérifier si l'app est prête (splash screen caché)
   const [pendingDeviceForAddSheet, setPendingDeviceForAddSheet] = useState<{ device: BLEDevice; detectedModel: string } | null>(null);
   
   const [state, setState] = useState<BluetoothState>({
@@ -472,16 +473,6 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
     }));
   }, []);
 
-  // Attendre que le splash screen soit caché avant d'ouvrir les bottom sheets
-  // Le splash screen est caché dans App.tsx, on attend un délai raisonnable
-  useEffect(() => {
-    // Attendre 1 seconde après le montage pour s'assurer que le splash screen est caché
-    const timer = setTimeout(() => {
-      setIsSplashScreenHidden(true);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []);
 
   // Démarrer automatiquement le scan une fois que le Bluetooth est disponible
   useEffect(() => {
@@ -496,10 +487,10 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
   }, [state.isAvailable, state.isEnabled, state.isScanning, startScan]);
 
   // Ouvrir automatiquement le bottom sheet quand un Kidoo non lié est détecté
-  // IMPORTANT: Attendre que le splash screen soit caché avant d'ouvrir
+  // IMPORTANT: Attendre que l'app soit prête (splash screen caché) avant d'ouvrir
   useEffect(() => {
-    // Ne pas ouvrir si le splash screen est encore visible
-    if (!isSplashScreenHidden) {
+    // Ne pas ouvrir si l'app n'est pas encore prête
+    if (!isAppReady) {
       return;
     }
     
@@ -524,7 +515,7 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
         clearPendingKidoo();
       }
     }
-  }, [state.pendingKidooDevice, kidoos, addKidooSheet, clearPendingKidoo, isSplashScreenHidden]);
+  }, [state.pendingKidooDevice, kidoos, addKidooSheet, clearPendingKidoo, isAppReady]);
 
   // Handler pour compléter l'ajout du device
   const handleAddDeviceComplete = useCallback(async () => {

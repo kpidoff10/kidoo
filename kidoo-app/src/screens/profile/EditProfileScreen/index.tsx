@@ -10,6 +10,7 @@ import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import { Button, BottomSheetActions, MenuList, ContentScrollView } from '@/components/ui';
 import { useTheme } from '@/theme';
 import { EditNameSheet } from './components/EditNameSheet';
+import { ChangePasswordSheet } from './components/ChangePasswordSheet';
 import { useBottomSheet } from '@/hooks/useBottomSheet';
 import { useProfile } from '@/hooks/useProfile';
 
@@ -19,10 +20,15 @@ export function EditProfileScreen() {
   const { data: user } = useProfile();
   const deleteAccountSheetRef = useRef<TrueSheet>(null);
   const editNameSheet = useBottomSheet();
+  const changePasswordSheet = useBottomSheet();
 
   const handleNamePress = useCallback(() => {
     editNameSheet.open();
   }, [editNameSheet]);
+
+  const handleChangePasswordPress = useCallback(() => {
+    changePasswordSheet.open();
+  }, [changePasswordSheet]);
 
   // Configuration des items du menu
   const menuItems = useMemo(
@@ -39,8 +45,14 @@ export function EditProfileScreen() {
         icon: 'mail-outline' as const,
         disabled: true, // Email non modifiable
       },
+      {
+        label: t('profile.changePassword', { defaultValue: 'Modifier le mot de passe' }),
+        value: '••••••••',
+        icon: 'lock-closed-outline' as const,
+        onPress: handleChangePasswordPress,
+      },
     ],
-    [user?.name, user?.email, handleNamePress, t]
+    [user?.name, user?.email, handleNamePress, handleChangePasswordPress, t]
   );
 
   const handleDeleteAccountPress = useCallback(() => {
@@ -97,6 +109,9 @@ export function EditProfileScreen() {
 
       {/* Bottom Sheet pour modifier le nom */}
       <EditNameSheet bottomSheet={editNameSheet} />
+
+      {/* Bottom Sheet pour modifier le mot de passe */}
+      <ChangePasswordSheet bottomSheet={changePasswordSheet} />
       </ContentScrollView>
  
   );

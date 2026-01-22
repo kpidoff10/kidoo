@@ -12,8 +12,9 @@ import Constants from 'expo-constants';
 import { Text, Button, BottomSheet } from '@/components/ui';
 import { spacing, useTheme } from '@/theme';
 import { useAuth } from '@/contexts';
-import { UseBottomSheetReturn } from '@/hooks/useBottomSheet';
+import { UseBottomSheetReturn, useBottomSheet } from '@/hooks/useBottomSheet';
 import { useProfile } from '@/hooks/useProfile';
+import { ChangePasswordSheet } from '../EditProfileScreen/components/ChangePasswordSheet';
 
 interface ProfileSheetProps {
   bottomSheet: UseBottomSheetReturn;
@@ -26,6 +27,7 @@ export function ProfileSheet({ bottomSheet, onClose }: ProfileSheetProps) {
     const { logout, setDeveloperMode, isDeveloper } = useAuth();
     const { data: user } = useProfile();
     const navigation = useNavigation();
+    const changePasswordSheet = useBottomSheet();
     
     // Compteur d'appuis pour activer le mode développeur
     const tapCountRef = useRef(0);
@@ -77,6 +79,7 @@ export function ProfileSheet({ bottomSheet, onClose }: ProfileSheetProps) {
     }, [isDeveloper, setDeveloperMode]);
 
     return (
+      <>
       <BottomSheet
         ref={bottomSheet.ref}
         name={bottomSheet.id}
@@ -104,11 +107,15 @@ export function ProfileSheet({ bottomSheet, onClose }: ProfileSheetProps) {
 
             <TouchableOpacity
               style={[styles.actionItem, { borderBottomColor: colors.border }]}
-              onPress={() => {}}
+              onPress={async () => {
+                await bottomSheet.close();
+                onClose?.();
+                changePasswordSheet.open();
+              }}
             >
-              <Ionicons name="settings-outline" size={22} color={colors.text} />
+              <Ionicons name="lock-closed-outline" size={22} color={colors.text} />
               <Text style={{ marginLeft: spacing[3], flex: 1 }}>
-                {t('profile.settings')}
+                {t('profile.changePassword', { defaultValue: 'Modifier le mot de passe' })}
               </Text>
               <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
             </TouchableOpacity>
@@ -144,6 +151,10 @@ export function ProfileSheet({ bottomSheet, onClose }: ProfileSheetProps) {
             </Text>
           </TouchableOpacity>
       </BottomSheet>
+
+      {/* Bottom Sheet pour modifier le mot de passe */}
+      <ChangePasswordSheet bottomSheet={changePasswordSheet} onClose={onClose} />
+    </>
     );
 }
 

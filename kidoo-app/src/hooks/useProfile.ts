@@ -88,3 +88,35 @@ export function useDeleteAccount() {
     },
   });
 }
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+/**
+ * Hook pour changer le mot de passe
+ */
+export function useChangePassword() {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: ChangePasswordRequest) => authApi.changePassword(data),
+    retry: false, // Pas de retry automatique pour le changement de mot de passe
+    onSuccess: () => {
+      // Invalider le cache du profil pour forcer un refetch
+      queryClient.invalidateQueries({ queryKey: PROFILE_KEY });
+      // Pas de toast : le bottom sheet se ferme déjà, ce qui informe l'utilisateur
+    },
+    onError: (error: any) => {
+      // Gérer les erreurs spécifiques du serveur
+      const errorMessage = error?.response?.data?.error || t('errors.generic');
+
+      showToast.error({
+        title: t('toast.error'),
+        message: errorMessage,
+      });
+    },
+  });
+}

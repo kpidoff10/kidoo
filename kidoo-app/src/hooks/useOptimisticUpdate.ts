@@ -11,7 +11,7 @@ export interface OptimisticUpdateContext<TData = unknown> {
   previousData: TData | undefined;
 }
 
-export interface UseOptimisticUpdateOptions<TData, TVariables, TError = Error> {
+export interface UseOptimisticUpdateOptions<TData, TVariables, TError = Error, TMutationData = TData> {
   /**
    * Query key à mettre à jour
    */
@@ -42,11 +42,11 @@ export interface UseOptimisticUpdateOptions<TData, TVariables, TError = Error> {
  * });
  * ```
  */
-export function useOptimisticUpdate<TData, TVariables, TError = Error>({
+export function useOptimisticUpdate<TData, TVariables, TError = Error, TMutationData = TData>({
   queryKey,
   updateFn,
-}: UseOptimisticUpdateOptions<TData, TVariables, TError>): Pick<
-  UseMutationOptions<TData, TError, TVariables, OptimisticUpdateContext<TData>>,
+}: UseOptimisticUpdateOptions<TData, TVariables, TError, TMutationData>): Pick<
+  UseMutationOptions<TMutationData, TError, TVariables, OptimisticUpdateContext<TData>>,
   'onMutate' | 'onError' | 'onSettled'
 > {
 

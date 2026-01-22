@@ -177,6 +177,21 @@ bool BLEConfigManager::enableBLE(uint32_t durationMs, bool enableFeedback) {
       feedbackActive = false;
     }
     #endif
+  } else {
+    // BLE activé sans feedback (ex: auto car pas de WiFi) -> ne pas toucher aux LEDs
+    // IMPORTANT: Si les LEDs sont déjà en sleep mode, ne pas les réveiller avec des commandes
+    #ifdef HAS_LED
+    if (HAS_LED && !LEDManager::getSleepState()) {
+      // Les LEDs ne sont pas en sleep, on peut les éteindre proprement
+      LEDManager::setEffect(LED_EFFECT_NONE);
+      LEDManager::setColor(0, 0, 0);
+      LEDManager::clear();
+      Serial.println("[BLE-CONFIG] LEDs eteintes (pas en sleep mode)");
+    } else if (HAS_LED) {
+      // Les LEDs sont en sleep mode, ne rien faire pour éviter de les réveiller
+      Serial.println("[BLE-CONFIG] LEDs en sleep mode - pas de commande LED envoyee");
+    }
+    #endif
   }
   
   return true;

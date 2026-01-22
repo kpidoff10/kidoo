@@ -201,7 +201,11 @@ SDConfig SDManager::getConfig() {
   
   // Parser le JSON
   // Utiliser StaticJsonDocument avec allocation statique (1024 octets)
+  // Note: StaticJsonDocument est déprécié mais toujours fonctionnel dans ArduinoJson v7
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   StaticJsonDocument<1024> doc;
+  #pragma GCC diagnostic pop
   DeserializationError error = deserializeJson(doc, jsonBuffer);
   
   delete[] jsonBuffer;
@@ -254,7 +258,11 @@ bool SDManager::saveConfig(const SDConfig& config) {
   }
   
   // Créer un document JSON
+  // Note: StaticJsonDocument est déprécié mais toujours fonctionnel dans ArduinoJson v7
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   StaticJsonDocument<1024> doc;
+  #pragma GCC diagnostic pop
   
   // Ajouter les valeurs (seulement si elles sont valides/modifiées)
   if (strlen(config.device_name) > 0) {

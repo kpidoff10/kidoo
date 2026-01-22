@@ -88,16 +88,26 @@
       "title": "Ajouter un device",
       "complete": "Terminer",
       "step1": {
-        "title": "Sélection du modèle",
-        "description": "Choisissez le modèle de votre device"
+        "title": "Nom du Kidoo",
+        "description": "Donnez un nom à votre Kidoo"
       },
       "step2": {
-        "title": "Configuration",
-        "description": "Configurez votre device"
+        "title": "Identifiants WiFi",
+        "description": "Configurez le WiFi de votre device"
       },
       "step3": {
         "title": "Finalisation",
         "description": "Finalisez l'ajout de votre device"
+      },
+      "form": {
+        "name": "Nom du Kidoo",
+        "namePlaceholder": "Ex: Kidoo du salon",
+        "nameRequired": "Le nom est requis",
+        "nameTooLong": "Le nom ne peut pas dépasser 100 caractères",
+        "wifiSSID": "Nom du réseau WiFi (SSID)",
+        "wifiSSIDPlaceholder": "Ex: MonWiFi",
+        "wifiPassword": "Mot de passe WiFi",
+        "wifiPasswordPlaceholder": "Mot de passe du réseau"
       }
     }
   },
@@ -113,6 +123,12 @@
     "editName": "Modifier le nom",
     "name": "Nom",
     "email": "Email",
+    "changePassword": "Modifier le mot de passe",
+    "currentPassword": "Mot de passe actuel",
+    "currentPasswordPlaceholder": "Entrez votre mot de passe actuel",
+    "newPassword": "Nouveau mot de passe",
+    "newPasswordPlaceholder": "Entrez votre nouveau mot de passe",
+    "passwordChanged": "Mot de passe modifié avec succès",
     "version": "Version {{version}}",
     "developerModeEnabled": "Mode développeur activé",
     "developerModeDisabled": "Mode développeur désactivé"
@@ -133,7 +149,39 @@
     "server": "Erreur serveur",
     "notFound": "Non trouvé",
     "unauthorized": "Non autorisé",
-    "tryAgain": "Veuillez réessayer"
+    "tryAgain": "Veuillez réessayer",
+    "auth": {
+      "unauthorized": "Authentification requise",
+      "forbidden": "Accès non autorisé",
+      "invalidCredentials": "Email ou mot de passe incorrect",
+      "tokenExpired": "Session expirée, veuillez vous reconnecter",
+      "tokenInvalid": "Session invalide",
+      "passwordIncorrect": "Mot de passe incorrect",
+      "passwordTooWeak": "Le mot de passe est trop faible",
+      "emailAlreadyExists": "Cet email est déjà utilisé"
+    },
+    "validation": {
+      "error": "Erreur de validation",
+      "missingField": "Champ manquant",
+      "invalidFormat": "Format invalide"
+    },
+    "resource": {
+      "notFound": "Ressource non trouvée",
+      "alreadyExists": "Ressource déjà existante",
+      "conflict": "Conflit de ressources"
+    },
+    "server": {
+      "internalError": "Une erreur est survenue",
+      "serviceUnavailable": "Service indisponible",
+      "badGateway": "Erreur de communication"
+    },
+    "kidoo": {
+      "notFound": "Kidoo non trouvé",
+      "notOwned": "Vous n'êtes pas autorisé à accéder à ce Kidoo",
+      "alreadyRegistered": "Ce Kidoo est déjà enregistré",
+      "notConfigured": "Kidoo non configuré (adresse MAC manquante)",
+      "offline": "Kidoo hors ligne"
+    }
   },
   "toast": {
     "success": "Succès",

@@ -86,4 +86,11 @@ export const authApi = {
   async deleteAccount(): Promise<void> {
     await apiClient.delete('/api/auth/mobile/me');
   },
+
+  /**
+   * Changer le mot de passe
+   */
+  async changePassword(data: { currentPassword: string; newPassword: string }): Promise<void> {
+    await apiClient.post('/api/auth/mobile/change-password', data);
+  },
 };

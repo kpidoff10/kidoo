@@ -12,14 +12,41 @@
 #include "../ble_config/ble_config_manager.h"
 #endif
 
+// Fonction utilitaire pour convertir HSV en RGB (format NeoPixel)
+static uint32_t hsvToRgb(uint8_t h, uint8_t s, uint8_t v) {
+  uint8_t r, g, b;
+  
+  if (s == 0) {
+    r = g = b = v;
+  } else {
+    uint8_t region = h / 43;
+    uint8_t remainder = (h - (region * 43)) * 6;
+    
+    uint8_t p = (v * (255 - s)) >> 8;
+    uint8_t q = (v * (255 - ((s * remainder) >> 8))) >> 8;
+    uint8_t t = (v * (255 - ((s * (255 - remainder)) >> 8))) >> 8;
+    
+    switch (region) {
+      case 0: r = v; g = t; b = p; break;
+      case 1: r = q; g = v; b = p; break;
+      case 2: r = p; g = v; b = t; break;
+      case 3: r = p; g = q; b = v; break;
+      case 4: r = t; g = p; b = v; break;
+      default: r = v; g = p; b = q; break;
+    }
+  }
+  
+  return ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+}
+
 // Variables statiques
 bool LEDManager::initialized = false;
 TaskHandle_t LEDManager::taskHandle = nullptr;
 QueueHandle_t LEDManager::commandQueue = nullptr;
-CRGB* LEDManager::leds = nullptr;
+Adafruit_NeoPixel* LEDManager::strip = nullptr;
 uint8_t LEDManager::currentBrightness = DEFAULT_LED_BRIGHTNESS;
 LEDEffect LEDManager::currentEffect = LED_EFFECT_NONE;
-CRGB LEDManager::currentColor = CRGB::Black;
+uint32_t LEDManager::currentColor = 0;  // Noir par défaut
 unsigned long LEDManager::lastUpdateTime = 0;
 unsigned long LEDManager::lastActivityTime = 0;
 bool LEDManager::isSleeping = false;
@@ -29,6 +56,7 @@ unsigned long LEDManager::sleepFadeStartTime = 0;
 LEDEffect LEDManager::savedEffect = LED_EFFECT_NONE;
 uint32_t LEDManager::sleepTimeoutMs = 0;
 bool LEDManager::pulseNeedsReset = false;
+bool LEDManager::hardwareInitialized = false;
 
 bool LEDManager::init() {
   Serial.println("[LED] Debut init...");
@@ -47,45 +75,28 @@ bool LEDManager::init() {
   isSleeping = false;
   Serial.printf("[LED] Brightness=%d, SleepTimeout=%lu\n", currentBrightness, sleepTimeoutMs);
   
-  // Allouer le tableau de LEDs (en PSRAM si disponible et configuré)
-  Serial.println("[LED] Allocation memoire...");
-  #if USE_PSRAM_FOR_LED_BUFFER
-  if (psramFound()) {
-    leds = (CRGB*)ps_malloc(NUM_LEDS * sizeof(CRGB));
-    if (leds) {
-      Serial.printf("[LED] Buffer alloue en PSRAM (%d bytes)\n", NUM_LEDS * sizeof(CRGB));
-    }
-  }
-  #endif
+  // Créer l'objet NeoPixel (l'initialisation matérielle sera faite dans la task)
+  // NEO_GRB pour WS2812B (ordre des couleurs GRB)
+  Serial.println("[LED] Creation objet NeoPixel...");
+  strip = new Adafruit_NeoPixel(NUM_LEDS, LED_DATA_PIN, NEO_GRB + NEO_KHZ800);
   
-  // Fallback sur heap classique si PSRAM non disponible ou désactivée
-  if (!leds) {
-    leds = new CRGB[NUM_LEDS];
-  }
-  
-  if (!leds) {
+  if (!strip) {
     Serial.println("[LED] ERREUR: Allocation memoire echouee!");
     return false;
   }
-  Serial.println("[LED] Memoire OK");
+  Serial.println("[LED] Objet NeoPixel OK");
   
-  // Initialiser FastLED
-  Serial.println("[LED] Init FastLED...");
-  FastLED.addLeds<LED_TYPE, LED_DATA_PIN>(leds, NUM_LEDS);
-  FastLED.setBrightness(currentBrightness);
-  FastLED.setDither(0);           // Désactiver le dithering pour éviter le scintillement
-  FastLED.setMaxRefreshRate(0);   // Pas de limite de refresh rate
-  FastLED.clearData();            // Nettoyer toutes les données LED
-  FastLED.show();                 // Appliquer immédiatement
-  Serial.println("[LED] FastLED OK");
+  // Ne PAS initialiser NeoPixel.begin() ici : cela peut nécessiter le scheduler
+  // L'init matérielle NeoPixel est faite dans ledTask() au premier run.
+  Serial.println("[LED] Init NeoPixel differe (dans task)...");
   
   // Créer la queue de commandes
   Serial.println("[LED] Creation queue...");
   commandQueue = xQueueCreate(QUEUE_SIZE, sizeof(LEDCommand));
   if (commandQueue == nullptr) {
     Serial.println("[LED] ERREUR: Creation queue echouee!");
-    delete[] leds;
-    leds = nullptr;
+    delete strip;
+    strip = nullptr;
     return false;
   }
   Serial.println("[LED] Queue OK");
@@ -107,13 +118,16 @@ bool LEDManager::init() {
     Serial.printf("[LED] ERREUR: Creation task echouee! Code=%d\n", result);
     vQueueDelete(commandQueue);
     commandQueue = nullptr;
-    delete[] leds;
-    leds = nullptr;
+    delete strip;
+    strip = nullptr;
     return false;
   }
   Serial.println("[LED] Task OK");
   
   initialized = true;
+  
+  // Laisser la tâche LED faire l'init NeoPixel avant d'envoyer des commandes
+  vTaskDelay(pdMS_TO_TICKS(50));  // Attendre que la task ait fini son init
   
   // Éteindre toutes les LEDs au démarrage
   clear();
@@ -138,12 +152,13 @@ void LEDManager::stop() {
     commandQueue = nullptr;
   }
   
-  if (leds != nullptr) {
-    delete[] leds;
-    leds = nullptr;
+  if (strip != nullptr) {
+    delete strip;
+    strip = nullptr;
   }
   
   initialized = false;
+  hardwareInitialized = false;
   Serial.println("[LED] Gestionnaire arrete (ne devrait pas arriver)");
 }
 
@@ -158,26 +173,55 @@ bool LEDManager::sendCommand(const LEDCommand& cmd) {
 }
 
 bool LEDManager::setColor(uint8_t r, uint8_t g, uint8_t b) {
+  Serial.printf("[LED] setColor: RGB(%d, %d, %d), sleepState=%d\n", r, g, b, getSleepState() ? 1 : 0);
   LEDCommand cmd;
   cmd.type = LED_CMD_SET_COLOR;
   cmd.data.color.r = r;
   cmd.data.color.g = g;
   cmd.data.color.b = b;
-  return sendCommand(cmd);
+  bool result = sendCommand(cmd);
+  // Réveiller les LEDs pour les commandes utilisateur explicites
+  // MAIS seulement si elles ne sont pas déjà en sleep mode ET si ce n'est pas une intention d'éteindre
+  // (pour éviter de réveiller si on veut qu'elles restent en sleep ou si on les éteint)
+  bool isTurningOff = (r == 0 && g == 0 && b == 0);
+  if (result && !getSleepState() && !isTurningOff) {
+    wakeUp();
+  } else if (isTurningOff) {
+    Serial.println("[LED] setColor: Couleur noire detectee, pas de reveil");
+  }
+  return result;
 }
 
 bool LEDManager::setBrightness(uint8_t brightness) {
   LEDCommand cmd;
   cmd.type = LED_CMD_SET_BRIGHTNESS;
   cmd.data.brightness = brightness;
-  return sendCommand(cmd);
+  bool result = sendCommand(cmd);
+  // Réveiller les LEDs pour les commandes utilisateur explicites
+  // MAIS seulement si elles ne sont pas déjà en sleep mode
+  if (result && !getSleepState()) {
+    wakeUp();
+  }
+  return result;
 }
 
 bool LEDManager::setEffect(LEDEffect effect) {
+  const char* effectNames[] = {"NONE", "RAINBOW", "PULSE", "GLOSSY", "ROTATE"};
+  Serial.printf("[LED] setEffect: %s, sleepState=%d\n", effectNames[effect], getSleepState() ? 1 : 0);
   LEDCommand cmd;
   cmd.type = LED_CMD_SET_EFFECT;
   cmd.data.effect = effect;
-  return sendCommand(cmd);
+  bool result = sendCommand(cmd);
+  // Réveiller les LEDs pour les commandes utilisateur explicites
+  // MAIS seulement si elles ne sont pas déjà en sleep mode ET si ce n'est pas une intention d'éteindre
+  // (pour éviter de réveiller si on veut qu'elles restent en sleep ou si on les éteint)
+  bool isTurningOff = (effect == LED_EFFECT_NONE);
+  if (result && !getSleepState() && !isTurningOff) {
+    wakeUp();
+  } else if (isTurningOff) {
+    Serial.println("[LED] setEffect: Effet NONE detecte, pas de reveil");
+  }
+  return result;
 }
 
 bool LEDManager::clear() {
@@ -195,14 +239,25 @@ uint8_t LEDManager::getCurrentBrightness() {
 }
 
 void LEDManager::ledTask(void* parameter) {
+  // Init matérielle NeoPixel au premier run
+  if (!hardwareInitialized) {
+    if (strip != nullptr) {
+      strip->begin();
+      strip->setBrightness(currentBrightness);
+      strip->clear();
+      strip->show();
+      hardwareInitialized = true;
+    }
+  }
+
   // Ce thread tourne en continu et ne s'arrête jamais
-  // IMPORTANT: On limite les appels à FastLED.show() pour ne pas interférer avec l'audio I2S
-  // FastLED.show() désactive brièvement les interruptions, ce qui peut causer des grésillements
+  // IMPORTANT: On limite les appels à strip->show() pour ne pas interférer avec l'audio I2S
+  // strip->show() peut désactiver brièvement les interruptions, ce qui peut causer des grésillements
   
   static unsigned long lastShowTime = 0;
-  static bool needsUpdate = true;  // Flag pour savoir si on doit appeler FastLED.show()
+  static bool needsUpdate = true;  // Flag pour savoir si on doit appeler strip->show()
   
-  // Intervalle minimum entre deux FastLED.show() (en ms)
+  // Intervalle minimum entre deux strip->show() (en ms)
   // 33ms = ~30 FPS, suffisant pour les animations et évite les conflits avec I2S
   const unsigned long SHOW_INTERVAL_MS = 33;
   
@@ -211,8 +266,10 @@ void LEDManager::ledTask(void* parameter) {
     LEDCommand cmd;
     while (xQueueReceive(commandQueue, &cmd, 0) == pdTRUE) {
       processCommand(cmd);
-      // Réveiller les LEDs si une commande est reçue
-      wakeUp();
+      // IMPORTANT: Ne pas appeler wakeUp() automatiquement ici
+      // wakeUp() est appelé uniquement par les méthodes publiques (setColor, setEffect, etc.)
+      // Cela évite que les commandes système automatiques (WiFi retry, etc.) réveillent les LEDs
+      // Si on est en sleep, les commandes sont traitées mais ne réveillent pas les LEDs
       needsUpdate = true;
     }
     
@@ -240,7 +297,11 @@ void LEDManager::ledTask(void* parameter) {
         // Mais on s'assure que les LEDs sont bien éteintes au début
         if (isFadingFromSleep && (currentTime - sleepFadeStartTime) < 50) {
           // Au tout début du fade-in, éteindre les LEDs pour éviter le flash
-          fill_solid(leds, NUM_LEDS, CRGB::Black);
+          if (strip != nullptr) {
+            for (int i = 0; i < NUM_LEDS; i++) {
+              strip->setPixelColor(i, 0);
+            }
+          }
         } else {
           // Appliquer les effets normalement
           updateEffects();
@@ -250,8 +311,8 @@ void LEDManager::ledTask(void* parameter) {
       }
       // S'assurer que la luminosité maximale configurée est toujours respectée
       // (sauf pendant le fade-in où on utilise la luminosité fade)
-      if (!isFadingFromSleep) {
-        FastLED.setBrightness(currentBrightness);
+      if (!isFadingFromSleep && strip != nullptr) {
+        strip->setBrightness(currentBrightness);
       }
     }
     
@@ -261,14 +322,18 @@ void LEDManager::ledTask(void* parameter) {
     if (needsUpdate && (currentTime - lastShowTime >= SHOW_INTERVAL_MS)) {
       // IMPORTANT: S'assurer que si on a clear() ou si l'effet est NONE avec couleur noire,
       // on éteint vraiment toutes les LEDs
-      if (currentEffect == LED_EFFECT_NONE && currentColor == CRGB::Black) {
+      if (currentEffect == LED_EFFECT_NONE && currentColor == 0 && strip != nullptr) {
         // S'assurer que toutes les LEDs sont bien éteintes
-        fill_solid(leds, NUM_LEDS, CRGB::Black);
+        for (int i = 0; i < NUM_LEDS; i++) {
+          strip->setPixelColor(i, 0);
+        }
         // IMPORTANT: Mettre la luminosité à 0 pour éteindre complètement
         // Cela garantit que même si updateEffects() tourne, les LEDs restent éteintes
-        FastLED.setBrightness(0);
+        strip->setBrightness(0);
       }
-      FastLED.show();
+      if (strip != nullptr) {
+        strip->show();
+      }
       lastShowTime = currentTime;
       needsUpdate = false;
     }
@@ -284,18 +349,24 @@ void LEDManager::ledTask(void* parameter) {
 void LEDManager::processCommand(const LEDCommand& cmd) {
   switch (cmd.type) {
     case LED_CMD_SET_COLOR:
+      Serial.printf("[LED] processCommand SET_COLOR: RGB(%d, %d, %d), currentEffect=%d\n", 
+                    cmd.data.color.r, cmd.data.color.g, cmd.data.color.b, currentEffect);
       // Si on change de couleur et qu'on a un effet actif, éteindre d'abord
       // Cela évite le flash de la couleur précédente
-      if (currentEffect != LED_EFFECT_NONE) {
+      if (currentEffect != LED_EFFECT_NONE && strip != nullptr) {
         // Éteindre toutes les LEDs avant de changer de couleur
-        fill_solid(leds, NUM_LEDS, CRGB::Black);
+        for (int i = 0; i < NUM_LEDS; i++) {
+          strip->setPixelColor(i, 0);
+        }
       }
-      currentColor = CRGB(cmd.data.color.r, cmd.data.color.g, cmd.data.color.b);
+      currentColor = ((uint32_t)cmd.data.color.r << 16) | ((uint32_t)cmd.data.color.g << 8) | cmd.data.color.b;
       // Si on change de couleur et qu'on n'a pas d'effet actif, appliquer immédiatement
       // Si on a un effet, la couleur sera appliquée par l'effet
-      if (currentEffect == LED_EFFECT_NONE) {
+      if (currentEffect == LED_EFFECT_NONE && strip != nullptr) {
         // Appliquer la couleur immédiatement
-        fill_solid(leds, NUM_LEDS, currentColor);
+        for (int i = 0; i < NUM_LEDS; i++) {
+          strip->setPixelColor(i, currentColor);
+        }
       }
       // Ne pas réinitialiser l'effet ici, il sera géré par SET_EFFECT
       // L'effet reste actif, seule la couleur change
@@ -303,46 +374,74 @@ void LEDManager::processCommand(const LEDCommand& cmd) {
       
     case LED_CMD_SET_BRIGHTNESS:
       currentBrightness = cmd.data.brightness;
-      FastLED.setBrightness(currentBrightness);
-      // Réappliquer la couleur sur toutes les LEDs si pas d'effet actif
-      if (currentEffect == LED_EFFECT_NONE) {
-        fill_solid(leds, NUM_LEDS, currentColor);
+      if (strip != nullptr) {
+        strip->setBrightness(currentBrightness);
+        // Réappliquer la couleur sur toutes les LEDs si pas d'effet actif
+        if (currentEffect == LED_EFFECT_NONE) {
+          for (int i = 0; i < NUM_LEDS; i++) {
+            strip->setPixelColor(i, currentColor);
+          }
+        }
       }
       break;
       
-    case LED_CMD_SET_EFFECT:
+    case LED_CMD_SET_EFFECT: {
+      const char* effectNames[] = {"NONE", "RAINBOW", "PULSE", "GLOSSY", "ROTATE"};
+      Serial.printf("[LED] processCommand SET_EFFECT: %s (ancien: %s)\n", 
+                    effectNames[cmd.data.effect], effectNames[currentEffect]);
       // Si on change d'effet, éteindre d'abord pour transition propre
       // Cela évite le flash de la couleur/effet précédent
-      if (currentEffect != cmd.data.effect) {
+      if (currentEffect != cmd.data.effect && strip != nullptr) {
         // Éteindre toutes les LEDs avant de changer d'effet
-        fill_solid(leds, NUM_LEDS, CRGB::Black);
+        for (int i = 0; i < NUM_LEDS; i++) {
+          strip->setPixelColor(i, 0);
+        }
       }
       currentEffect = cmd.data.effect;
+      // Si on change vers NONE, réinitialiser aussi la couleur à noir pour éviter le flash
+      // (car si on avait un effet actif avec une couleur, on ne veut pas que cette couleur reste)
+      if (currentEffect == LED_EFFECT_NONE && strip != nullptr) {
+        currentColor = 0;  // Réinitialiser la couleur à noir
+        // S'assurer que toutes les LEDs sont bien éteintes
+        for (int i = 0; i < NUM_LEDS; i++) {
+          strip->setPixelColor(i, 0);
+        }
+        // Forcer l'affichage immédiat pour éviter le flash
+        strip->setBrightness(0);
+        strip->show();
+        Serial.println("[LED] processCommand SET_EFFECT NONE - Couleur reinitialisee a noir, LEDs eteintes immediatement");
+      }
       // Si on change vers PULSE, réinitialiser l'effet pour éviter le flash
       if (currentEffect == LED_EFFECT_PULSE) {
         resetPulseEffect();
       }
       // Les effets seront gérés par updateEffects()
       break;
+      }
       
     case LED_CMD_CLEAR:
-      currentColor = CRGB::Black;
+      Serial.println("[LED] processCommand CLEAR");
+      currentColor = 0;  // Noir
       currentEffect = LED_EFFECT_NONE;
       // IMPORTANT: Éteindre complètement toutes les LEDs
-      // S'assurer que toutes les LEDs sont bien à CRGB::Black
-      fill_solid(leds, NUM_LEDS, CRGB::Black);
-      // IMPORTANT: Mettre la luminosité à 0 pour éteindre complètement
-      // Cela garantit que même si updateEffects() tourne, les LEDs restent éteintes
-      FastLED.setBrightness(0);
+      if (strip != nullptr) {
+        for (int i = 0; i < NUM_LEDS; i++) {
+          strip->setPixelColor(i, 0);
+        }
+        // IMPORTANT: Mettre la luminosité à 0 pour éteindre complètement
+        // Cela garantit que même si updateEffects() tourne, les LEDs restent éteintes
+        strip->setBrightness(0);
+      }
       // Réinitialiser l'effet PULSE si nécessaire pour éviter qu'il reprenne
       pulseNeedsReset = false;
-      // La mise à jour sera faite par FastLED.show() dans la boucle principale
+      // La mise à jour sera faite par strip->show() dans la boucle principale
       // avec needsUpdate = true qui a été défini lors de la réception de la commande
       break;
   }
   
-  // Mettre à jour le temps d'activité
-  lastActivityTime = millis();
+  // IMPORTANT: Ne PAS mettre à jour lastActivityTime ici
+  // lastActivityTime est mis à jour uniquement dans wakeUp() et dans les méthodes publiques
+  // Cela évite que les commandes système (WiFi retry, etc.) empêchent le sleep mode
 }
 
 void LEDManager::checkSleepMode() {
@@ -352,7 +451,9 @@ void LEDManager::checkSleepMode() {
       // Réveiller si on était en sleep ou en fade
       isSleeping = false;
       isFadingToSleep = false;
-      FastLED.setBrightness(currentBrightness);
+      if (strip != nullptr) {
+        strip->setBrightness(currentBrightness);
+      }
     }
     return;
   }
@@ -365,15 +466,19 @@ void LEDManager::checkSleepMode() {
     if (isSleeping || isFadingToSleep) {
       isSleeping = false;
       isFadingToSleep = false;
-      FastLED.setBrightness(currentBrightness);
+      if (strip != nullptr) {
+        strip->setBrightness(currentBrightness);
+      }
       // Restaurer l'effet si nécessaire
       if (savedEffect != LED_EFFECT_NONE) {
         currentEffect = savedEffect;
         savedEffect = LED_EFFECT_NONE;
       }
+      // Réinitialiser le timer d'activité UNIQUEMENT si on réveille depuis le sleep
+      lastActivityTime = millis();
     }
-    // Réinitialiser le timer d'activité pour éviter le sleep
-    lastActivityTime = millis();
+    // Si on n'était pas en sleep, ne pas réinitialiser lastActivityTime
+    // pour permettre le sleep même si le BLE est actif (si timeout très court)
     return;
   }
   #endif
@@ -384,10 +489,13 @@ void LEDManager::checkSleepMode() {
   // Vérifier si on doit entrer en sleep mode
   if (!isSleeping && !isFadingToSleep && timeSinceActivity >= sleepTimeoutMs) {
     // Démarrer l'animation de fade vers sleep
+    Serial.printf("[LED] Entree en sleep mode (timeout: %lu ms, inactivite: %lu ms)\n", 
+                  sleepTimeoutMs, timeSinceActivity);
     isFadingToSleep = true;
     sleepFadeStartTime = currentTime;
     // Sauvegarder l'effet actuel pour le restaurer au réveil
     savedEffect = currentEffect;
+    Serial.printf("[LED] Effet sauvegarde: %d\n", savedEffect);
   }
 }
 
@@ -399,10 +507,14 @@ void LEDManager::updateSleepFade() {
     // Animation terminée, éteindre complètement
     isFadingToSleep = false;
     isSleeping = true;
-    FastLED.setBrightness(0);
-    // IMPORTANT: Clear les LEDs quand on atteint 0 luminosité (mode sleep)
-    // Cela évite le flash de la couleur précédente quand on réactive
-    fill_solid(leds, NUM_LEDS, CRGB::Black);
+    if (strip != nullptr) {
+      strip->setBrightness(0);
+      // IMPORTANT: Clear les LEDs quand on atteint 0 luminosité (mode sleep)
+      // Cela évite le flash de la couleur précédente quand on réactive
+      for (int i = 0; i < NUM_LEDS; i++) {
+        strip->setPixelColor(i, 0);
+      }
+    }
   } else {
     // Calculer le facteur de fade (1.0 -> 0.0)
     float fadeFactor = 1.0f - ((float)elapsed / (float)SLEEP_FADE_DURATION_MS);
@@ -410,11 +522,15 @@ void LEDManager::updateSleepFade() {
     // Simple: on baisse juste la luminosité globale
     // Les couleurs actuelles des LEDs restent inchangées
     uint8_t fadedBrightness = (uint8_t)(currentBrightness * fadeFactor);
-    FastLED.setBrightness(fadedBrightness);
-    
-    // Si la luminosité atteint 0 (ou presque), clear les LEDs
-    if (fadedBrightness == 0) {
-      fill_solid(leds, NUM_LEDS, CRGB::Black);
+    if (strip != nullptr) {
+      strip->setBrightness(fadedBrightness);
+      
+      // Si la luminosité atteint 0 (ou presque), clear les LEDs
+      if (fadedBrightness == 0) {
+        for (int i = 0; i < NUM_LEDS; i++) {
+          strip->setPixelColor(i, 0);
+        }
+      }
     }
   }
 }
@@ -423,12 +539,18 @@ void LEDManager::wakeUp() {
   bool wasSleeping = (isSleeping || isFadingToSleep);
   
   if (isSleeping || isFadingToSleep) {
+    Serial.printf("[LED] wakeUp() - Reveil depuis sleep (wasSleeping=%d, savedEffect=%d, currentColor=0x%06X)\n", 
+                  wasSleeping ? 1 : 0, savedEffect, currentColor);
     isSleeping = false;
     isFadingToSleep = false;
     
     // IMPORTANT: Éteindre d'abord les LEDs pour éviter le flash de l'animation précédente
     // Les LEDs peuvent encore contenir l'ancienne couleur/effet
-    fill_solid(leds, NUM_LEDS, CRGB::Black);
+    if (strip != nullptr) {
+      for (int i = 0; i < NUM_LEDS; i++) {
+        strip->setPixelColor(i, 0);
+      }
+    }
     
     // Démarrer un fade-in progressif pour le réveil
     isFadingFromSleep = true;
@@ -436,29 +558,32 @@ void LEDManager::wakeUp() {
     
     // Restaurer l'effet s'il y en avait un
     if (savedEffect != LED_EFFECT_NONE) {
+      const char* effectNames[] = {"NONE", "RAINBOW", "PULSE", "GLOSSY", "ROTATE"};
+      Serial.printf("[LED] wakeUp() - Restauration effet: %s\n", effectNames[savedEffect]);
       currentEffect = savedEffect;
       // Si on restaure PULSE, réinitialiser l'effet
       if (currentEffect == LED_EFFECT_PULSE) {
         resetPulseEffect();
       }
     } else {
-      // Pas d'effet, réappliquer la couleur sur toutes les LEDs
-      fill_solid(leds, NUM_LEDS, currentColor);
+      // Pas d'effet sauvegardé -> pas de retour lumineux souhaité
+      // Ne pas restaurer la couleur, laisser les LEDs éteintes
+      Serial.println("[LED] wakeUp() - Pas d'effet sauvegarde, LEDs restent eteintes (currentColor reinitialise a 0)");
+      currentEffect = LED_EFFECT_NONE;
+      currentColor = 0;  // Réinitialiser la couleur à noir
+      // Les LEDs sont déjà éteintes (ligne 515-517), on ne fait rien de plus
     }
+    
+    // Réinitialiser le timer d'activité UNIQUEMENT si on était vraiment en sleep
+    // Cela évite de réinitialiser le timer si wakeUp() est appelé alors qu'on n'est pas en sleep
+    lastActivityTime = millis();
   }
-  // Réinitialiser le timer d'activité
-  lastActivityTime = millis();
+  // Si on n'était pas en sleep, ne PAS réinitialiser lastActivityTime
+  // pour permettre le sleep même si wakeUp() est appelé par erreur
   
-  // Si on sortait du mode sommeil, vérifier le WiFi et relancer le retry si nécessaire
-  if (wasSleeping) {
-    #ifdef HAS_WIFI
-    if (!WiFiManager::isConnected() && !WiFiManager::isRetryThreadActive()) {
-      // WiFi non connecté et pas de retry en cours, démarrer le retry
-      Serial.println("[LED] Sortie du sleep mode - verification WiFi...");
-      WiFiManager::startRetryThread();
-    }
-    #endif
-  }
+  // NOTE: Ne pas démarrer automatiquement le WiFi retry depuis wakeUp()
+  // car cela peut créer un cycle : WiFi retry -> commande LED -> wakeUp() -> WiFi retry
+  // Le WiFi retry doit être géré indépendamment par le système d'initialisation
 }
 
 void LEDManager::updateWakeFade() {
@@ -467,25 +592,34 @@ void LEDManager::updateWakeFade() {
   
   if (elapsed >= SLEEP_FADE_DURATION_MS) {
     // Animation terminée, restaurer complètement
+    const char* effectNames[] = {"NONE", "RAINBOW", "PULSE", "GLOSSY", "ROTATE"};
+    Serial.printf("[LED] updateWakeFade() - Animation reveil terminee, effet=%s, couleur=0x%06X\n", 
+                  effectNames[currentEffect], currentColor);
     isFadingFromSleep = false;
     
     // IMPORTANT: S'assurer que les LEDs sont bien éteintes avant de restaurer l'effet
     // Cela évite le flash de l'animation précédente
-    fill_solid(leds, NUM_LEDS, CRGB::Black);
-    
-    // Si l'effet est PULSE, réinitialiser pour une transition fluide
-    if (currentEffect == LED_EFFECT_PULSE) {
-      resetPulseEffect();
-      // Réinitialiser lastUpdateTime pour que l'effet reprenne immédiatement
-      lastUpdateTime = millis();
-    }
-    
-    // Restaurer la luminosité complète
-    FastLED.setBrightness(currentBrightness);
-    
-    // S'assurer que toutes les LEDs ont la couleur si pas d'effet
-    if (currentEffect == LED_EFFECT_NONE) {
-      fill_solid(leds, NUM_LEDS, currentColor);
+    if (strip != nullptr) {
+      for (int i = 0; i < NUM_LEDS; i++) {
+        strip->setPixelColor(i, 0);
+      }
+      
+      // Si l'effet est PULSE, réinitialiser pour une transition fluide
+      if (currentEffect == LED_EFFECT_PULSE) {
+        resetPulseEffect();
+        // Réinitialiser lastUpdateTime pour que l'effet reprenne immédiatement
+        lastUpdateTime = millis();
+      }
+      
+      // Restaurer la luminosité complète
+      strip->setBrightness(currentBrightness);
+      
+      // S'assurer que toutes les LEDs ont la couleur si pas d'effet
+      if (currentEffect == LED_EFFECT_NONE) {
+        for (int i = 0; i < NUM_LEDS; i++) {
+          strip->setPixelColor(i, currentColor);
+        }
+      }
     }
   } else {
     // Calculer le facteur de fade (0.0 -> 1.0)
@@ -493,28 +627,36 @@ void LEDManager::updateWakeFade() {
     
     // Simple: on remonte juste la luminosité globale
     uint8_t fadedBrightness = (uint8_t)(currentBrightness * fadeFactor);
-    FastLED.setBrightness(fadedBrightness);
-    
-    // IMPORTANT: Pendant le fade-in, s'assurer que les LEDs sont bien éteintes au début
-    // et appliquer la nouvelle couleur/effet progressivement
-    if (fadedBrightness == 0 || elapsed < 50) {
-      // Au tout début du fade-in, s'assurer que les LEDs sont bien éteintes
-      fill_solid(leds, NUM_LEDS, CRGB::Black);
-    } else {
-      // Pendant le fade-in, appliquer la couleur/effet
-      // Si on a un effet, il sera géré par updateEffects() dans la boucle principale
-      // Mais on doit s'assurer que la couleur de base est correcte
-      if (currentEffect == LED_EFFECT_NONE) {
-        fill_solid(leds, NUM_LEDS, currentColor);
+    if (strip != nullptr) {
+      strip->setBrightness(fadedBrightness);
+      
+      // IMPORTANT: Pendant le fade-in, s'assurer que les LEDs sont bien éteintes au début
+      // et appliquer la nouvelle couleur/effet progressivement
+      if (fadedBrightness == 0 || elapsed < 50) {
+        // Au tout début du fade-in, s'assurer que les LEDs sont bien éteintes
+        for (int i = 0; i < NUM_LEDS; i++) {
+          strip->setPixelColor(i, 0);
+        }
+      } else {
+        // Pendant le fade-in, appliquer la couleur/effet
+        // Si on a un effet, il sera géré par updateEffects() dans la boucle principale
+        // Mais on doit s'assurer que la couleur de base est correcte
+        if (currentEffect == LED_EFFECT_NONE) {
+          for (int i = 0; i < NUM_LEDS; i++) {
+            strip->setPixelColor(i, currentColor);
+          }
+        }
+        // Si on a un effet, updateEffects() s'en chargera dans la boucle principale
+        // Mais on doit permettre à updateEffects() de s'exécuter même pendant le fade-in
       }
-      // Si on a un effet, updateEffects() s'en chargera dans la boucle principale
-      // Mais on doit permettre à updateEffects() de s'exécuter même pendant le fade-in
     }
   }
 }
 
 bool LEDManager::getSleepState() {
-  return isSleeping;
+  // Retourner true si on est en sleep OU en fade vers sleep
+  // Cela évite de réveiller les LEDs si elles sont en train de s'éteindre
+  return isSleeping || isFadingToSleep;
 }
 
 void LEDManager::resetPulseEffect() {
@@ -534,8 +676,11 @@ void LEDManager::updateEffects() {
     case LED_EFFECT_RAINBOW: {
       // Effet arc-en-ciel qui défile
       static uint8_t hue = 0;
-      for (int i = 0; i < NUM_LEDS; i++) {
-        leds[i] = CHSV((hue + i * 2) % 256, 255, 255);
+      if (strip != nullptr) {
+        for (int i = 0; i < NUM_LEDS; i++) {
+          uint32_t color = hsvToRgb((hue + i * 2) % 256, 255, 255);
+          strip->setPixelColor(i, color);
+        }
       }
       hue = (hue + 2) % 256;
       break;
@@ -585,18 +730,34 @@ void LEDManager::updateEffects() {
       }
       
       // Appliquer la pulsation à la couleur
-      CRGB pulseColor = currentColor;
-      pulseColor.fadeToBlackBy(255 - pulseValue);
-      fill_solid(leds, NUM_LEDS, pulseColor);
+      if (strip != nullptr) {
+        // Extraire les composantes RGB de currentColor
+        uint8_t r = (currentColor >> 16) & 0xFF;
+        uint8_t g = (currentColor >> 8) & 0xFF;
+        uint8_t b = currentColor & 0xFF;
+        
+        // Appliquer la pulsation (fade)
+        r = (r * pulseValue) / 255;
+        g = (g * pulseValue) / 255;
+        b = (b * pulseValue) / 255;
+        
+        uint32_t pulseColor = ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+        for (int i = 0; i < NUM_LEDS; i++) {
+          strip->setPixelColor(i, pulseColor);
+        }
+      }
       break;
     }
     
     case LED_EFFECT_GLOSSY: {
       // Effet glossy multicolore
       static uint8_t offset = 0;
-      for (int i = 0; i < NUM_LEDS; i++) {
-        uint8_t hue = ((i * 256 / NUM_LEDS) + offset) % 256;
-        leds[i] = CHSV(hue, 200, 255);
+      if (strip != nullptr) {
+        for (int i = 0; i < NUM_LEDS; i++) {
+          uint8_t hue = ((i * 256 / NUM_LEDS) + offset) % 256;
+          uint32_t color = hsvToRgb(hue, 200, 255);
+          strip->setPixelColor(i, color);
+        }
       }
       offset = (offset + 1) % 256;
       break;
@@ -626,7 +787,11 @@ void LEDManager::updateEffects() {
       const uint8_t snakeLength = NUM_LEDS / 4;  // 25% de la bande
       
       // Éteindre toutes les LEDs
-      fill_solid(leds, NUM_LEDS, CRGB::Black);
+      if (strip != nullptr) {
+        for (int i = 0; i < NUM_LEDS; i++) {
+          strip->setPixelColor(i, 0);
+        }
+      }
       
       // Dessiner le serpent progressif avec position fractionnaire pour mouvement ultra-fluide
       // Le serpent s'étend de (headPosition - snakeLength) à headPosition
@@ -655,7 +820,9 @@ void LEDManager::updateEffects() {
         
         // Si la LED est en dehors du serpent, elle est éteinte
         if (absDistance > maxSnakeDistance) {
-          leds[ledIndex] = CRGB::Black;
+          if (strip != nullptr) {
+            strip->setPixelColor(ledIndex, 0);
+          }
           continue;
         }
         
@@ -714,9 +881,20 @@ void LEDManager::updateEffects() {
         }
         
         // Appliquer la couleur avec l'intensité calculée
-        CRGB snakeColor = currentColor;
-        snakeColor.fadeToBlackBy(255 - intensity);
-        leds[ledIndex] = snakeColor;
+        if (strip != nullptr) {
+          // Extraire les composantes RGB de currentColor
+          uint8_t r = (currentColor >> 16) & 0xFF;
+          uint8_t g = (currentColor >> 8) & 0xFF;
+          uint8_t b = currentColor & 0xFF;
+          
+          // Appliquer l'intensité (fade)
+          r = (r * intensity) / 255;
+          g = (g * intensity) / 255;
+          b = (b * intensity) / 255;
+          
+          uint32_t snakeColor = ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+          strip->setPixelColor(ledIndex, snakeColor);
+        }
       }
       break;
     }

@@ -5,9 +5,9 @@
  * Body: { "value": 80 }
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth-helpers';
+import { withAuth, AuthenticatedRequest } from '@/lib/withAuth';
 import { sendCommand, isPubNubConfigured } from '@/lib/pubnub';
 import { brightnessCommandSchema } from '@/shared';
 import { Kidoo } from '@prisma/client';
@@ -16,18 +16,12 @@ import { Kidoo } from '@prisma/client';
  * PATCH/POST /api/kidoos/[id]/commands/common/brightness
  * Modifie la luminosité d'un Kidoo
  */
-export async function PATCH(
-  request: NextRequest,
+export const PATCH = withAuth(async (
+  request: AuthenticatedRequest,
   { params }: { params: Promise<{ id: Kidoo['id'] }> }
-) {
+) => {
   try {
-    // Vérifier l'authentification
-    const authResult = requireAuth(request);
-    if (!authResult.success) {
-      return authResult.response;
-    }
-
-    const { userId } = authResult;
+    const { userId } = request;
     const { id } = await params;
 
     // Récupérer et valider le body
@@ -35,14 +29,9 @@ export async function PATCH(
     const validation = brightnessCommandSchema.safeParse(body);
 
     if (!validation.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'La luminosité doit être un nombre entre 10 et 100',
-          details: validation.error.issues,
-        },
-        { status: 400 }
-      );
+      return createErrorResponse(BrightnessErrors.VALIDATION_ERROR, {
+        details: validation.error.issues,
+      });
     }
 
     const { value } = validation.data;
@@ -98,22 +87,14 @@ export async function PATCH(
       data: { brightness: value },
     });
 
-    return NextResponse.json({
-      success: true,
-      data: { brightness: value },
-      message: `Luminosité définie à ${value}%`,
-    });
+    return createSuccessResponse(
+      { brightness: value },
+      { message: `Luminosité définie à ${value}%` }
+    );
   } catch (error) {
     console.error('Erreur lors de la modification de la luminosité:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Une erreur est survenue',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(BrightnessErrors.INTERNAL_ERROR, {
+      details: error instanceof Error ? error.message : undefined,
+    });
   }
-}
+});

@@ -14,6 +14,7 @@ import * as SplashScreen from 'expo-splash-screen';
 // Providers
 import { ThemeProvider, useTheme } from '@/theme';
 import { AuthProvider, NetworkProvider, BluetoothProvider } from '@/contexts';
+import { AppReadyProvider } from '@/contexts/AppReadyContext';
 import { queryClient, asyncStoragePersister, persistOptions } from '@/lib/queryClient';
 
 // Components
@@ -31,11 +32,6 @@ SplashScreen.preventAutoHideAsync();
 function AppContent() {
   const { colors, isDark } = useTheme();
   const colorScheme = useColorScheme();
-
-  useEffect(() => {
-    // Hide splash screen when app is ready
-    SplashScreen.hideAsync();
-  }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -60,13 +56,15 @@ export function App() {
               client={queryClient}
               persistOptions={persistOptions}
             >
-              <NetworkProvider>
-                <AuthProvider>
-                  <BluetoothProvider>
-                    <AppContent />
-                  </BluetoothProvider>
-                </AuthProvider>
-              </NetworkProvider>
+              <AppReadyProvider>
+                <NetworkProvider>
+                  <AuthProvider>
+                    <BluetoothProvider>
+                      <AppContent />
+                    </BluetoothProvider>
+                  </AuthProvider>
+                </NetworkProvider>
+              </AppReadyProvider>
             </PersistQueryClientProvider>
           </ErrorBoundary>
         </ThemeProvider>

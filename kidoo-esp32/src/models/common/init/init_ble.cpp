@@ -15,12 +15,12 @@ bool InitManager::initBLE() {
     return true;  // Pas une erreur, juste désactivé
   }
   
-  // Construire le nom du device avec le modèle
-  String deviceName = "KIDOO-";
-  deviceName += KIDOO_MODEL_NAME;
+  // Utiliser DEFAULT_DEVICE_NAME pour le nom BLE
+  // DEFAULT_DEVICE_NAME est défini dans le fichier default_config.h du modèle
+  const char* deviceName = DEFAULT_DEVICE_NAME;
   
   // Initialiser le BLEManager (mais ne pas démarrer l'advertising)
-  if (!BLEManager::init(deviceName.c_str())) {
+  if (!BLEManager::init(deviceName)) {
     systemStatus.ble = INIT_FAILED;
     Serial.println("[INIT] ERREUR: Echec initialisation BLE");
     return false;

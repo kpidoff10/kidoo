@@ -79,6 +79,34 @@
       "delete": "Delete"
     }
   },
+  "device": {
+    "add": {
+      "title": "Add a device",
+      "complete": "Complete",
+      "step1": {
+        "title": "Kidoo name",
+        "description": "Give a name to your Kidoo"
+      },
+      "step2": {
+        "title": "WiFi Credentials",
+        "description": "Configure your device WiFi"
+      },
+      "step3": {
+        "title": "Finalization",
+        "description": "Finalize adding your device"
+      },
+      "form": {
+        "name": "Kidoo name",
+        "namePlaceholder": "Ex: Living room Kidoo",
+        "nameRequired": "Name is required",
+        "nameTooLong": "Name cannot exceed 100 characters",
+        "wifiSSID": "WiFi network name (SSID)",
+        "wifiSSIDPlaceholder": "Ex: MyWiFi",
+        "wifiPassword": "WiFi password",
+        "wifiPasswordPlaceholder": "Network password"
+      }
+    }
+  },
   "profile": {
     "title": "Profile",
     "editProfile": "Edit profile",
@@ -86,6 +114,12 @@
     "logout": "Logout",
     "logoutConfirm": "Are you sure you want to logout?",
     "deleteAccount": "Delete my account",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "currentPasswordPlaceholder": "Enter your current password",
+    "newPassword": "New password",
+    "newPasswordPlaceholder": "Enter your new password",
+    "passwordChanged": "Password changed successfully",
     "version": "Version {{version}}"
   },
   "settings": {
@@ -104,7 +138,39 @@
     "server": "Server error",
     "notFound": "Not found",
     "unauthorized": "Unauthorized",
-    "tryAgain": "Please try again"
+    "tryAgain": "Please try again",
+    "auth": {
+      "unauthorized": "Authentication required",
+      "forbidden": "Access denied",
+      "invalidCredentials": "Invalid email or password",
+      "tokenExpired": "Session expired, please log in again",
+      "tokenInvalid": "Invalid session",
+      "passwordIncorrect": "Incorrect password",
+      "passwordTooWeak": "Password is too weak",
+      "emailAlreadyExists": "This email is already in use"
+    },
+    "validation": {
+      "error": "Validation error",
+      "missingField": "Missing field",
+      "invalidFormat": "Invalid format"
+    },
+    "resource": {
+      "notFound": "Resource not found",
+      "alreadyExists": "Resource already exists",
+      "conflict": "Resource conflict"
+    },
+    "server": {
+      "internalError": "An error occurred",
+      "serviceUnavailable": "Service unavailable",
+      "badGateway": "Communication error"
+    },
+    "kidoo": {
+      "notFound": "Kidoo not found",
+      "notOwned": "You are not authorized to access this Kidoo",
+      "alreadyRegistered": "This Kidoo is already registered",
+      "notConfigured": "Kidoo not configured (missing MAC address)",
+      "offline": "Kidoo offline"
+    }
   },
   "toast": {
     "success": "Success",

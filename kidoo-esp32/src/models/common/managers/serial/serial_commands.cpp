@@ -1172,7 +1172,11 @@ void SerialCommands::cmdConfigList() {
   configFile.close();
   
   // Parser le JSON
+  // Note: StaticJsonDocument est déprécié mais toujours fonctionnel dans ArduinoJson v7
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   StaticJsonDocument<2048> doc;
+  #pragma GCC diagnostic pop
   DeserializationError error = deserializeJson(doc, jsonBuffer);
   delete[] jsonBuffer;
   
@@ -1255,7 +1259,11 @@ void SerialCommands::cmdConfigGet(const String& args) {
   configFile.close();
   
   // Parser le JSON
+  // Note: StaticJsonDocument est déprécié mais toujours fonctionnel dans ArduinoJson v7
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   StaticJsonDocument<2048> doc;
+  #pragma GCC diagnostic pop
   DeserializationError error = deserializeJson(doc, jsonBuffer);
   delete[] jsonBuffer;
   
@@ -1335,7 +1343,11 @@ void SerialCommands::cmdConfigSet(const String& args) {
   }
   
   // Lire le fichier existant ou créer un nouveau document
+  // Note: StaticJsonDocument est déprécié mais toujours fonctionnel dans ArduinoJson v7
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   StaticJsonDocument<2048> doc;
+  #pragma GCC diagnostic pop
   
   if (SDManager::configFileExists()) {
     File configFile = SD.open("/config.json", FILE_READ);

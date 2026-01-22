@@ -5,27 +5,23 @@
  * DELETE /api/kidoos/[id] - Supprimer un kidoo
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth-helpers';
 import { updateKidooInputSchema } from '@/shared';
+import { withAuth, AuthenticatedRequest } from '@/lib/withAuth';
+import { createSuccessResponse, createErrorResponse } from '@/lib/api-response';
+import { KidooErrors } from './errors';
 
 /**
  * GET /api/kidoos/[id]
  * Récupère un kidoo par son ID
  */
-export async function GET(
-  request: NextRequest,
+export const GET = withAuth(async (
+  request: AuthenticatedRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
-    // Vérifier l'authentification
-    const authResult = requireAuth(request);
-    if (!authResult.success) {
-      return authResult.response;
-    }
-
-    const { userId } = authResult;
+    const { userId } = request;
     const { id } = await params;
 
     // Récupérer le kidoo avec sa configuration Basic
@@ -37,24 +33,12 @@ export async function GET(
     });
 
     if (!kidoo) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Kidoo non trouvé',
-        },
-        { status: 404 }
-      );
+      return createErrorResponse(KidooErrors.NOT_FOUND);
     }
 
     // Vérifier que le kidoo appartient à l'utilisateur
     if (kidoo.userId !== userId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Accès non autorisé',
-        },
-        { status: 403 }
-      );
+      return createErrorResponse(KidooErrors.NOT_OWNED);
     }
 
     // Convertir les dates en ISO strings et les BigInt en Number
@@ -74,49 +58,27 @@ export async function GET(
       } : null,
     };
 
-    return NextResponse.json({
-      success: true,
-      data: kidooWithISOStrings,
+    return createSuccessResponse(kidooWithISOStrings, {
       message: 'Kidoo trouvé',
     });
   } catch (error) {
     console.error('Erreur lors de la récupération du kidoo:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    
-    console.error('Détails de l\'erreur:', {
-      message: errorMessage,
-      stack: errorStack,
-      error,
+    return createErrorResponse(KidooErrors.INTERNAL_ERROR, {
+      details: error instanceof Error ? error.message : undefined,
     });
-    
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Une erreur est survenue lors de la récupération du kidoo',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
-      },
-      { status: 500 }
-    );
   }
-}
+});
 
 /**
  * PUT /api/kidoos/[id]
  * Met à jour un kidoo par son ID
  */
-export async function PUT(
-  request: NextRequest,
+export const PUT = withAuth(async (
+  request: AuthenticatedRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
-    // Vérifier l'authentification
-    const authResult = requireAuth(request);
-    if (!authResult.success) {
-      return authResult.response;
-    }
-
-    const { userId } = authResult;
+    const { userId } = request;
     const { id } = await params;
 
     // Récupérer le body de la requête
@@ -125,15 +87,12 @@ export async function PUT(
     // Valider les données avec le schéma
     const validationResult = updateKidooInputSchema.safeParse(body);
     if (!validationResult.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Données invalides',
-          field: validationResult.error.issues[0]?.path[0] as string,
-          details: validationResult.error.issues,
-        },
-        { status: 400 }
-      );
+      const firstError = validationResult.error.issues[0];
+      return createErrorResponse(KidooErrors.VALIDATION_ERROR, {
+        message: firstError?.message || 'Données invalides',
+        field: firstError?.path[0] as string,
+        details: validationResult.error.issues,
+      });
     }
 
     const data = validationResult.data;
@@ -144,23 +103,11 @@ export async function PUT(
     });
 
     if (!existingKidoo) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Kidoo non trouvé',
-        },
-        { status: 404 }
-      );
+      return createErrorResponse(KidooErrors.NOT_FOUND);
     }
 
     if (existingKidoo.userId !== userId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Accès non autorisé',
-        },
-        { status: 403 }
-      );
+      return createErrorResponse(KidooErrors.NOT_OWNED);
     }
 
     // Préparer les données à mettre à jour
@@ -196,42 +143,27 @@ export async function PUT(
       updatedAt: updatedKidoo.updatedAt.toISOString(),
     };
 
-    return NextResponse.json({
-      success: true,
-      data: kidooWithISOStrings,
+    return createSuccessResponse(kidooWithISOStrings, {
       message: 'Kidoo mis à jour avec succès',
     });
   } catch (error) {
     console.error('Erreur lors de la mise à jour du kidoo:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-    
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Une erreur est survenue lors de la mise à jour du kidoo',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(KidooErrors.INTERNAL_ERROR, {
+      details: error instanceof Error ? error.message : undefined,
+    });
   }
-}
+});
 
 /**
  * DELETE /api/kidoos/[id]
  * Supprime un kidoo par son ID
  */
-export async function DELETE(
-  request: NextRequest,
+export const DELETE = withAuth(async (
+  request: AuthenticatedRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
-    // Vérifier l'authentification
-    const authResult = requireAuth(request);
-    if (!authResult.success) {
-      return authResult.response;
-    }
-
-    const { userId } = authResult;
+    const { userId } = request;
     const { id } = await params;
 
     // Vérifier que le kidoo existe et appartient à l'utilisateur
@@ -240,23 +172,11 @@ export async function DELETE(
     });
 
     if (!existingKidoo) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Kidoo non trouvé',
-        },
-        { status: 404 }
-      );
+      return createErrorResponse(KidooErrors.NOT_FOUND);
     }
 
     if (existingKidoo.userId !== userId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Accès non autorisé',
-        },
-        { status: 403 }
-      );
+      return createErrorResponse(KidooErrors.NOT_OWNED);
     }
 
     // Supprimer le kidoo
@@ -264,22 +184,13 @@ export async function DELETE(
       where: { id },
     });
 
-    return NextResponse.json({
-      success: true,
-      data: null,
+    return createSuccessResponse(null, {
       message: 'Kidoo supprimé avec succès',
     });
   } catch (error) {
     console.error('Erreur lors de la suppression du kidoo:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-    
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Une erreur est survenue lors de la suppression du kidoo',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(KidooErrors.INTERNAL_ERROR, {
+      details: error instanceof Error ? error.message : undefined,
+    });
   }
-}
+});

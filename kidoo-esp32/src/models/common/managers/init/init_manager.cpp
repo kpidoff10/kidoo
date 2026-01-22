@@ -68,6 +68,7 @@ bool InitManager::init() {
   }
   
   bool allSuccess = true;
+  bool bleAutoActivated = false;  // BLE activé automatiquement (pas de WiFi) -> pas de retour lumineux
   
   // ÉTAPE 1 : Initialiser la carte SD et récupérer la configuration (CRITIQUE)
   if (!initSD()) {
@@ -135,7 +136,7 @@ bool InitManager::init() {
     delay(100);
     
     // Si le WiFi n'est toujours pas connecté après l'attente, activer automatiquement le BLE
-    // IMPORTANT: Avec feedback lumineux pour que l'utilisateur sache que le Kidoo est en mode appairage
+    // SANS feedback lumineux : l'utilisateur ne fait rien, on évite de perturber (LEDs éteintes)
     #ifdef HAS_BLE
     if (HAS_BLE && BLEConfigManager::isInitialized()) {
       if (!WiFiManager::isConnected()) {
@@ -144,9 +145,9 @@ bool InitManager::init() {
         Serial.println("[INIT] WiFi non connecte apres attente");
         Serial.println("[INIT] Activation automatique du BLE pour configuration");
         Serial.println("[INIT] BLE actif pendant 15 minutes (timeout automatique)");
-        Serial.println("[INIT] Feedback lumineux active (respiration bleue)");
         Serial.println("[INIT] ========================================");
-        BLEConfigManager::enableBLE(0, true);  // Active avec durée par défaut, AVEC feedback lumineux
+        BLEConfigManager::enableBLE(0, false);  // Active avec durée par défaut, SANS feedback lumineux
+        bleAutoActivated = true;
       } else {
         Serial.println("[INIT] WiFi connecte - BLE non active automatiquement");
       }
@@ -199,10 +200,17 @@ bool InitManager::init() {
   if (allSuccess) {
     Serial.println("[INIT] OK");
     // Mettre les LEDs en vert qui tourne pour indiquer que tout est OK
+    // SAUF si BLE auto (pas de WiFi) : pas de retour lumineux, LEDs restent éteintes
     #ifdef HAS_LED
-    if (HAS_LED && systemStatus.led == INIT_SUCCESS) {
-      LEDManager::setColor(COLOR_SUCCESS);
-      LEDManager::setEffect(LED_EFFECT_ROTATE);
+    if (HAS_LED && systemStatus.led == INIT_SUCCESS && !bleAutoActivated) {
+      // Ne pas réveiller les LEDs si elles sont déjà en sleep mode
+      // (par exemple si le timeout de sleep est très court)
+      if (!LEDManager::getSleepState()) {
+        LEDManager::setColor(COLOR_SUCCESS);
+        LEDManager::setEffect(LED_EFFECT_ROTATE);
+      } else {
+        Serial.println("[INIT] LEDs en sleep mode - pas d'affichage vert");
+      }
     }
     #endif
   } else {
