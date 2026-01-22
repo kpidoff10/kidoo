@@ -79,4 +79,11 @@ export const authApi = {
     const response = await apiClient.post('/api/auth/mobile/refresh', { refreshToken });
     return response.data;
   },
+
+  /**
+   * Supprimer le compte utilisateur
+   */
+  async deleteAccount(): Promise<void> {
+    await apiClient.delete('/api/auth/mobile/me');
+  },
 };

@@ -264,6 +264,8 @@ void LEDManager::ledTask(void* parameter) {
       if (currentEffect == LED_EFFECT_NONE && currentColor == CRGB::Black) {
         // S'assurer que toutes les LEDs sont bien éteintes
         fill_solid(leds, NUM_LEDS, CRGB::Black);
+        // IMPORTANT: Mettre la luminosité à 0 pour éteindre complètement
+        // Cela garantit que même si updateEffects() tourne, les LEDs restent éteintes
         FastLED.setBrightness(0);
       }
       FastLED.show();
@@ -329,8 +331,11 @@ void LEDManager::processCommand(const LEDCommand& cmd) {
       // IMPORTANT: Éteindre complètement toutes les LEDs
       // S'assurer que toutes les LEDs sont bien à CRGB::Black
       fill_solid(leds, NUM_LEDS, CRGB::Black);
-      // S'assurer que la luminosité est à 0 pour éteindre complètement
+      // IMPORTANT: Mettre la luminosité à 0 pour éteindre complètement
+      // Cela garantit que même si updateEffects() tourne, les LEDs restent éteintes
       FastLED.setBrightness(0);
+      // Réinitialiser l'effet PULSE si nécessaire pour éviter qu'il reprenne
+      pulseNeedsReset = false;
       // La mise à jour sera faite par FastLED.show() dans la boucle principale
       // avec needsUpdate = true qui a été défini lors de la réception de la commande
       break;

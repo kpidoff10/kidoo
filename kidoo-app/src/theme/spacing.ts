@@ -62,4 +62,18 @@ export const shadow = {
 
 export type Spacing = typeof spacing;
 export type BorderRadius = typeof borderRadius;
+
+/**
+ * Styles de séparateurs réutilisables
+ */
+export const separators = {
+  horizontal: {
+    borderTopWidth: 1,
+  },
+  vertical: {
+    borderLeftWidth: 1,
+  },
+};
+
+export type Separators = typeof separators;
 export type Shadow = typeof shadow;

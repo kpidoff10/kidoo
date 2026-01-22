@@ -12,14 +12,18 @@ import React, {
   useMemo,
 } from 'react';
 import { authApi, User, LoginRequest, RegisterRequest } from '@/api';
-import { tokenStorage } from '@/utils/storage';
+import { tokenStorage, developerStorage } from '@/utils/storage';
 import { showToast } from '@/components/ui/Toast';
 import { useTranslation } from 'react-i18next';
+import { queryClient } from '@/lib/queryClient';
+
+const PROFILE_KEY = ['profile'];
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isDeveloper: boolean;
 }
 
 interface AuthContextType extends AuthState {
@@ -28,6 +32,7 @@ interface AuthContextType extends AuthState {
   logout: () => Promise<void>;
   updateUser: (data: { name?: string }) => Promise<void>;
   refreshUser: () => Promise<void>;
+  setDeveloperMode: (enabled: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,42 +47,62 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user: null,
     isLoading: true,
     isAuthenticated: false,
+    isDeveloper: false,
   });
 
-  // Vérifier si l'utilisateur est connecté au démarrage
+  // Vérifier si l'utilisateur est connecté au démarrage et charger le mode développeur
   useEffect(() => {
     checkAuth();
+    loadDeveloperMode();
   }, []);
+
+  const loadDeveloperMode = async () => {
+    try {
+      const isDeveloper = await developerStorage.isEnabled();
+      setState((prev) => ({
+        ...prev,
+        isDeveloper,
+      }));
+    } catch (error) {
+      console.error('Error loading developer mode:', error);
+    }
+  };
 
   const checkAuth = async () => {
     try {
       const hasTokens = await tokenStorage.hasTokens();
       
       if (!hasTokens) {
-        setState({
+        setState((prev) => ({
+          ...prev,
           user: null,
           isLoading: false,
           isAuthenticated: false,
-        });
+        }));
         return;
       }
 
       // Récupérer le profil utilisateur
       const user = await authApi.getProfile();
       
-      setState({
+      // Synchroniser le cache React Query
+      queryClient.setQueryData<User>(PROFILE_KEY, user);
+      
+      setState((prev) => ({
+        ...prev,
         user,
         isLoading: false,
         isAuthenticated: true,
-      });
+      }));
     } catch (error) {
       // Token invalide ou expiré
       await tokenStorage.clearTokens();
-      setState({
+      setState((prev) => ({
+        ...prev,
         user: null,
         isLoading: false,
         isAuthenticated: false,
-      });
+      }));
     }
   };
 
@@ -88,16 +113,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Stocker les tokens
       await tokenStorage.setTokens(response.accessToken, response.refreshToken);
       
-      setState({
+      // Synchroniser le cache React Query
+      queryClient.setQueryData<User>(PROFILE_KEY, response.user);
+      
+      setState((prev) => ({
+        ...prev,
         user: response.user,
         isLoading: false,
         isAuthenticated: true,
-      });
-
-      showToast.success({
-        title: t('toast.success'),
-        message: t('home.welcomeBack', { name: response.user.name }),
-      });
+      }));
     } catch (error) {
       showToast.error({
         title: t('toast.error'),
@@ -114,11 +138,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Stocker les tokens
       await tokenStorage.setTokens(response.accessToken, response.refreshToken);
       
-      setState({
+      setState((prev) => ({
+        ...prev,
         user: response.user,
         isLoading: false,
         isAuthenticated: true,
-      });
+      }));
 
       showToast.success({
         title: t('toast.success'),
@@ -143,11 +168,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Toujours nettoyer les tokens locaux
       await tokenStorage.clearTokens();
       
-      setState({
+      // Nettoyer le cache React Query
+      queryClient.removeQueries({ queryKey: PROFILE_KEY });
+      
+      setState((prev) => ({
+        ...prev,
         user: null,
         isLoading: false,
         isAuthenticated: false,
-      });
+      }));
     }
   }, []);
 
@@ -159,11 +188,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ...prev,
         user: updatedUser,
       }));
-
-      showToast.success({
-        title: t('toast.success'),
-        message: t('toast.updated'),
-      });
     } catch (error) {
       showToast.error({
         title: t('toast.error'),
@@ -176,6 +200,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const refreshUser = useCallback(async () => {
     try {
       const user = await authApi.getProfile();
+      
+      // Synchroniser le cache React Query
+      queryClient.setQueryData<User>(PROFILE_KEY, user);
+      
       setState((prev) => ({
         ...prev,
         user,
@@ -185,6 +213,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  const setDeveloperMode = useCallback(async (enabled: boolean) => {
+    try {
+      await developerStorage.setEnabled(enabled);
+      setState((prev) => ({
+        ...prev,
+        isDeveloper: enabled,
+      }));
+      
+      if (enabled) {
+        showToast.success({
+          title: t('toast.success'),
+          message: t('profile.developerModeEnabled', { defaultValue: 'Mode développeur activé' }),
+        });
+      } else {
+        showToast.success({
+          title: t('toast.success'),
+          message: t('profile.developerModeDisabled', { defaultValue: 'Mode développeur désactivé' }),
+        });
+      }
+    } catch (error) {
+      console.error('Error setting developer mode:', error);
+      showToast.error({
+        title: t('toast.error'),
+        message: t('errors.generic'),
+      });
+    }
+  }, [t]);
+
   const value = useMemo<AuthContextType>(
     () => ({
       ...state,
@@ -193,8 +249,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       logout,
       updateUser,
       refreshUser,
+      setDeveloperMode,
     }),
-    [state, login, register, logout, updateUser, refreshUser]
+    [state, login, register, logout, updateUser, refreshUser, setDeveloperMode]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

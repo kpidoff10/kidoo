@@ -52,9 +52,11 @@ Deux modes disponibles :
 Si aucune configuration n'est définie :
 - **Heure de coucher** : 20h00 (tous les jours)
 - **Heure de réveil** : 7h30 (tous les jours)
-- **Couleur coucher** : À définir (couleur par défaut)
-- **Couleur réveil** : À définir (couleur par défaut)
+- **Couleur coucher** : Orange doux (RGB 255, 100, 50)
+- **Couleur réveil** : Jaune doux (RGB 255, 200, 100)
 - **Durée allumage** : Toute la nuit (0 = mode toute la nuit)
+- **Durée fade-in coucher** : 30 secondes
+- **Durée extinction progressive** : 5 minutes
 
 ## Structure de configuration
 
@@ -128,18 +130,18 @@ Si aucune configuration n'est définie :
 ### Transition de coucher (Fade-in)
 
 1. **Déclenchement** : À l'heure de coucher exacte
-2. **Durée** : Transition progressive sur X secondes (à définir, ex: 30 secondes)
+2. **Durée** : Transition progressive sur **30 secondes**
 3. **Effet** :
-   - Brightness : 0 → `currentBrightness`
+   - Brightness : 0 → `currentBrightness` (interpolation linéaire sur 30 secondes)
    - Couleur : Couleur de coucher définie pour le jour
    - Effet LED : `LED_EFFECT_NONE` (couleur fixe)
 
 ### Extinction progressive (si timer activé)
 
 1. **Déclenchement** : Après la durée définie depuis l'heure de coucher
-2. **Durée** : Transition progressive sur X secondes (à définir, ex: 5 minutes)
+2. **Durée** : Transition progressive sur **5 minutes** (300 secondes)
 3. **Effet** :
-   - Brightness : `currentBrightness` → 0
+   - Brightness : `currentBrightness` → 0 (interpolation linéaire sur 5 minutes)
    - Couleur : Reste la même (couleur de coucher)
    - Effet LED : `LED_EFFECT_NONE` (couleur fixe)
 4. **État final** : LEDs complètement éteintes (brightness 0, couleur noire)
@@ -196,7 +198,7 @@ Si aucune configuration n'est définie :
 ### État : Coucher (fade-in)
 - Transition brightness 0 → currentBrightness
 - Couleur : Couleur de coucher
-- Durée : X secondes
+- Durée : 30 secondes
 
 ### État : Nuit (allumée)
 - LEDs allumées à la couleur de coucher
@@ -207,7 +209,7 @@ Si aucune configuration n'est définie :
 ### État : Nuit (extinction progressive)
 - Transition brightness currentBrightness → 0
 - Couleur : Couleur de coucher (fixe)
-- Durée : X minutes
+- Durée : 5 minutes
 - État final : LEDs éteintes
 
 ### État : Attente réveil
@@ -302,10 +304,10 @@ Créer un manager `SleepRitualManager` dans `models/common/managers/sleep_ritual
 - Utiliser `LEDManager::wakeUp()` si nécessaire
 - Après le réveil, les LEDs peuvent entrer en sleep mode normal si inactives
 
-## Questions ouvertes
+## Valeurs confirmées
 
-1. **Durée du fade-in de coucher** : Combien de secondes ? (suggestion: 30 secondes)
-2. **Durée de l'extinction progressive** : Combien de minutes ? (suggestion: 5 minutes)
-3. **Couleur par défaut coucher** : Quelle couleur RGB ? (suggestion: Orange doux)
-4. **Couleur par défaut réveil** : Quelle couleur RGB ? (suggestion: Jaune doux)
-5. **Fréquence de vérification** : Toutes les secondes suffit-il ?
+1. **Durée du fade-in de coucher** : 30 secondes
+2. **Durée de l'extinction progressive** : 5 minutes (300 secondes)
+3. **Couleur par défaut coucher** : Orange doux (RGB 255, 100, 50)
+4. **Couleur par défaut réveil** : Jaune doux (RGB 255, 200, 100)
+5. **Fréquence de vérification** : Toutes les secondes (optimisation avec `millis()`)

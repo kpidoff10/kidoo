@@ -349,9 +349,14 @@ void BLEConfigManager::handleBLEDeactivation() {
   #endif
   
   // Feedback visuel : LED éteinte
-  // IMPORTANT: Utiliser clear() pour s'assurer que TOUTES les LEDs sont éteintes
+  // IMPORTANT: Arrêter l'effet PULSE avant de clear pour éviter que les LEDs restent allumées
   #ifdef HAS_LED
   if (HAS_LED) {
+    // D'abord arrêter l'effet pour éviter que PULSE continue à tourner
+    LEDManager::setEffect(LED_EFFECT_NONE);
+    // Ensuite éteindre toutes les LEDs
+    LEDManager::setColor(0, 0, 0);  // Noir
+    // Enfin, clear pour s'assurer que tout est bien éteint
     LEDManager::clear();  // Éteindre complètement toutes les LEDs
   }
   #endif

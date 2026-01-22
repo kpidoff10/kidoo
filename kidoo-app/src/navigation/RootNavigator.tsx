@@ -10,7 +10,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme';
 import { useAuth } from '@/contexts';
 import { ScreenLoader } from '@/components/ui';
-import { LoginScreen, RegisterScreen } from '@/screens';
+import { LoginScreen, RegisterScreen, EditProfileScreen } from '@/screens';
 import { AppNavigator } from './AppNavigator';
 import { RootStackParamList } from './types';
 
@@ -48,7 +48,22 @@ export function RootNavigator() {
       >
         {isAuthenticated ? (
           // User connecté → App
-          <Stack.Screen name="MainTabs" component={AppNavigator} />
+          <>
+            <Stack.Screen name="MainTabs" component={AppNavigator} />
+            <Stack.Screen
+              name="EditProfile"
+              component={EditProfileScreen}
+              options={({ navigation }) => ({
+                headerShown: true,
+                title: '',
+                headerBackTitle: '',
+                headerTintColor: colors.text,
+                headerStyle: {
+                  backgroundColor: colors.background,
+                },
+              })}
+            />
+          </>
         ) : (
           // User non connecté → Auth
           <>

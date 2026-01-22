@@ -12,6 +12,7 @@ const KEYS = {
   REFRESH_TOKEN: 'kidoo_refresh_token',
   USER_DATA: 'kidoo_user_data',
   BIOMETRIC_ENABLED: 'kidoo_biometric_enabled',
+  DEVELOPER_MODE: 'kidoo_developer_mode',
 } as const;
 
 // Vérifier si on est sur le web
@@ -110,5 +111,17 @@ export const biometricStorage = {
 
   async setEnabled(enabled: boolean): Promise<void> {
     await setSecureItem(KEYS.BIOMETRIC_ENABLED, enabled ? 'true' : 'false');
+  },
+};
+
+// Developer mode settings
+export const developerStorage = {
+  async isEnabled(): Promise<boolean> {
+    const value = await getSecureItem(KEYS.DEVELOPER_MODE);
+    return value === 'true';
+  },
+
+  async setEnabled(enabled: boolean): Promise<void> {
+    await setSecureItem(KEYS.DEVELOPER_MODE, enabled ? 'true' : 'false');
   },
 };

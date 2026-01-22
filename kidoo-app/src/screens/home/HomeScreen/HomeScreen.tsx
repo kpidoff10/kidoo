@@ -7,14 +7,13 @@ import { View, StyleSheet, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Title, Text, Card } from '@/components/ui';
 import { useTheme } from '@/theme';
-import { useAuth } from '@/contexts';
-import { useKidoos } from '@/hooks';
+import { useKidoos, useProfile } from '@/hooks';
 import { WelcomeCard } from './components/WelcomeCard';
 
 export function HomeScreen() {
   const { t } = useTranslation();
   const { colors, spacing } = useTheme();
-  const { user } = useAuth();
+  const { data: user } = useProfile();
   const { data: kidoos } = useKidoos();
 
   const kidoosList = Array.isArray(kidoos) ? kidoos : [];
