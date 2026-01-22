@@ -55,6 +55,15 @@
 #define RTC_I2C_ADDRESS 0x68
 
 // ============================================
+// Configuration Bouton BLE (Activation BLE)
+// ============================================
+
+// Pin GPIO pour le bouton d'activation BLE (INPUT_PULLUP)
+// Appui long (3 secondes) pour activer le BLE
+// Note: GPIO 0 peut être un strapping pin, vérifier selon votre hardware
+#define BLE_CONFIG_BUTTON_PIN 1   // GPIO 1 (ESP32-C3)
+
+// ============================================
 // Composants disponibles sur ce modèle
 // ============================================
 // ESP32-C3 : Single-core, pas de PSRAM, GPIO limités
@@ -64,9 +73,7 @@
 #define HAS_LED true
 #define HAS_WIFI true
 #define HAS_BLE true
+#define HAS_RTC true
 #define HAS_PUBNUB true
-#define HAS_RTC false           // Optionnel sur Mini
-#define HAS_NFC false           // Pas de NFC sur Mini
-#define HAS_POTENTIOMETER false // Pas de potentiomètre sur Mini
 
 #endif // MODEL_MINI_CONFIG_H

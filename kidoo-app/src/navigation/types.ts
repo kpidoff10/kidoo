@@ -12,6 +12,7 @@ export type RootStackParamList = {
   
   // Modals
   KidooDetail: { kidooId: string };
+  EditProfile: undefined;
 };
 
 export type MainTabsParamList = {

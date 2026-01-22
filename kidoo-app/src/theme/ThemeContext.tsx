@@ -6,7 +6,7 @@ import React, { createContext, useContext, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
 import { lightColors, darkColors, Colors } from './colors';
 import { fonts, Fonts } from './fonts';
-import { spacing, borderRadius, shadow, Spacing, BorderRadius, Shadow } from './spacing';
+import { spacing, borderRadius, shadow, separators, Spacing, BorderRadius, Shadow, Separators } from './spacing';
 
 export interface Theme {
   colors: Colors;
@@ -14,6 +14,7 @@ export interface Theme {
   spacing: Spacing;
   borderRadius: BorderRadius;
   shadow: Shadow;
+  separators: Separators;
   isDark: boolean;
 }
 
@@ -34,6 +35,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       spacing,
       borderRadius,
       shadow,
+      separators,
       isDark,
     }),
     [isDark]

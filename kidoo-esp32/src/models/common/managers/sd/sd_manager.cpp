@@ -3,6 +3,7 @@
 #include <SD.h>
 #include <ArduinoJson.h>
 #include "../../../model_config.h"
+#include "../../config/core_config.h"
 
 // Variables statiques
 bool SDManager::initialized = false;
@@ -93,17 +94,52 @@ bool SDManager::initSDCard() {
   // Configurer la broche CS en sortie et la mettre à HIGH (désélectionner la carte)
   pinMode(SD_CS_PIN, OUTPUT);
   digitalWrite(SD_CS_PIN, HIGH);
+  delay(10);  // Petit délai pour stabiliser
   
   // Initialiser le bus SPI avec les pins configurés
+  Serial.println("[SD] Initialisation bus SPI...");
   SPI.begin(SD_SCK_PIN, SD_MISO_PIN, SD_MOSI_PIN);
+  delay(100);  // Délai plus long après SPI.begin() - important pour ESP32-C3
   
-  // Initialiser la carte SD (utilise la fréquence par défaut - plus rapide)
-  if (SD.begin(SD_CS_PIN)) {
-    Serial.println("[SD] Carte SD initialisee");
-    return true;
-  }
+  // Initialiser la carte SD avec une fréquence plus basse pour ESP32-C3 (plus stable)
+  // ESP32-C3 a des problèmes connus avec SD.begin() - utiliser une fréquence réduite
+  #if defined(ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C3) || defined(IS_SINGLE_CORE)
+    Serial.println("[SD] Mode ESP32-C3 detecte - utilisation frequence reduite (400kHz)");
+    // ESP32-C3 : essayer plusieurs fréquences de plus en plus basses
+    // Commencer par 400kHz (très basse mais plus stable)
+    if (SD.begin(SD_CS_PIN, SPI, 400000)) {
+      Serial.println("[SD] Carte SD initialisee (ESP32-C3, 400kHz)");
+      return true;
+    }
+    Serial.println("[SD] Echec a 400kHz, essai a 250kHz...");
+    delay(100);
+    if (SD.begin(SD_CS_PIN, SPI, 250000)) {
+      Serial.println("[SD] Carte SD initialisee (ESP32-C3, 250kHz)");
+      return true;
+    }
+    Serial.println("[SD] Echec a 250kHz, essai frequence par defaut...");
+    delay(100);
+    // Dernier essai avec la fréquence par défaut
+    if (SD.begin(SD_CS_PIN)) {
+      Serial.println("[SD] Carte SD initialisee (ESP32-C3, defaut)");
+      return true;
+    }
+  #else
+    // ESP32-S3 : fréquence par défaut (plus rapide)
+    Serial.println("[SD] Mode ESP32-S3 - frequence par defaut");
+    if (SD.begin(SD_CS_PIN)) {
+      Serial.println("[SD] Carte SD initialisee");
+      return true;
+    }
+  #endif
   
+  // Diagnostic supplémentaire
   Serial.println("[SD] ERREUR: Impossible d'initialiser la carte SD");
+  Serial.println("[SD] Verifier les connexions et que la carte SD est formatee en FAT32");
+  Serial.println("[SD] Diagnostic:");
+  Serial.printf("[SD]   - Pin CS (GPIO %d) etat: %s\n", SD_CS_PIN, digitalRead(SD_CS_PIN) ? "HIGH" : "LOW");
+  Serial.println("[SD]   - Verifier que la carte SD est bien connectee et formatee en FAT32");
+  Serial.println("[SD]   - Sur ESP32-C3, les pins 4-7 sont partages avec JTAG (peut causer conflits)");
   return false;
 }
 

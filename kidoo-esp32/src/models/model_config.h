@@ -9,8 +9,8 @@
  */
 
 // Vérifier qu'un modèle est défini
-#if !defined(KIDOO_MODEL_BASIC) && !defined(KIDOO_MODEL_MINI)
-  #error "Aucun modele Kidoo defini. Definir KIDOO_MODEL_BASIC ou KIDOO_MODEL_MINI dans platformio.ini"
+#if !defined(KIDOO_MODEL_BASIC) && !defined(KIDOO_MODEL_MINI) && !defined(KIDOO_MODEL_DREAM)
+  #error "Aucun modele Kidoo defini. Definir KIDOO_MODEL_BASIC, KIDOO_MODEL_MINI ou KIDOO_MODEL_DREAM dans platformio.ini"
 #endif
 
 // Inclure la configuration commune
@@ -25,6 +25,10 @@
   #include "mini/config/config.h"
   #include "mini/config/default_config.h"
   #define KIDOO_MODEL_NAME "Mini"
+#elif defined(KIDOO_MODEL_DREAM)
+  #include "dream/config/config.h"
+  #include "dream/config/default_config.h"
+  #define KIDOO_MODEL_NAME "Dream"
 #endif
 
 #endif // MODEL_CONFIG_H

@@ -14,3 +14,4 @@ export { KidoosListScreen } from './kidoos/KidoosListScreen';
 
 // Profile
 export { ProfileSheet } from './profile/ProfileSheet';
+export { EditProfileScreen } from './profile/EditProfileScreen';

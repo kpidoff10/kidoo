@@ -13,7 +13,7 @@ import * as SplashScreen from 'expo-splash-screen';
 
 // Providers
 import { ThemeProvider, useTheme } from '@/theme';
-import { AuthProvider, NetworkProvider } from '@/contexts';
+import { AuthProvider, NetworkProvider, BluetoothProvider } from '@/contexts';
 import { queryClient, asyncStoragePersister, persistOptions } from '@/lib/queryClient';
 
 // Components
@@ -62,7 +62,9 @@ export function App() {
             >
               <NetworkProvider>
                 <AuthProvider>
-                  <AppContent />
+                  <BluetoothProvider>
+                    <AppContent />
+                  </BluetoothProvider>
                 </AuthProvider>
               </NetworkProvider>
             </PersistQueryClientProvider>

@@ -73,10 +73,32 @@
     "offline": "Hors ligne",
     "model": "Modèle",
     "lastSeen": "Vu il y a {{time}}",
+    "addKidoo": "Nouveau Kidoo détecté",
+    "add": "Ajouter",
+    "addKidooMessage": "Voulez-vous ajouter ce Kidoo à votre liste ?",
+    "unknownDevice": "Appareil inconnu",
     "actions": {
       "view": "Voir",
       "settings": "Paramètres",
       "delete": "Supprimer"
+    }
+  },
+  "device": {
+    "add": {
+      "title": "Ajouter un device",
+      "complete": "Terminer",
+      "step1": {
+        "title": "Sélection du modèle",
+        "description": "Choisissez le modèle de votre device"
+      },
+      "step2": {
+        "title": "Configuration",
+        "description": "Configurez votre device"
+      },
+      "step3": {
+        "title": "Finalisation",
+        "description": "Finalisez l'ajout de votre device"
+      }
     }
   },
   "profile": {
@@ -86,7 +108,14 @@
     "logout": "Déconnexion",
     "logoutConfirm": "Êtes-vous sûr de vouloir vous déconnecter ?",
     "deleteAccount": "Supprimer mon compte",
-    "version": "Version {{version}}"
+    "deleteAccountConfirm": "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.",
+    "accountDeleted": "Compte supprimé avec succès",
+    "editName": "Modifier le nom",
+    "name": "Nom",
+    "email": "Email",
+    "version": "Version {{version}}",
+    "developerModeEnabled": "Mode développeur activé",
+    "developerModeDisabled": "Mode développeur désactivé"
   },
   "settings": {
     "title": "Paramètres",
@@ -113,5 +142,24 @@
     "updated": "Mis à jour avec succès",
     "error": "Erreur",
     "networkError": "Erreur de connexion réseau"
+  },
+  "bluetooth": {
+    "scanStarted": "Scan Bluetooth démarré",
+    "scanStopped": "Scan Bluetooth arrêté",
+    "connected": "Connecté à {{name}}",
+    "disconnected": "Déconnecté",
+    "signalStrength": "Signal",
+    "errors": {
+      "notAvailable": "Le Bluetooth n'est pas disponible",
+      "notEnabled": "Le Bluetooth n'est pas activé",
+      "permissionsDenied": "Les permissions Bluetooth sont requises",
+      "permissionsError": "Erreur lors de la demande de permissions",
+      "scanError": "Erreur lors du démarrage du scan",
+      "deviceNotFound": "Appareil non trouvé",
+      "connectionError": "Erreur lors de la connexion",
+      "disconnectionError": "Erreur lors de la déconnexion",
+      "notConnected": "Aucun appareil connecté",
+      "sendError": "Erreur lors de l'envoi de la commande"
+    }
   }
 }

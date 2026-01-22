@@ -8,6 +8,10 @@
 #include "../wifi/wifi_manager.h"
 #endif
 
+#ifdef HAS_BLE
+#include "../ble_config/ble_config_manager.h"
+#endif
+
 // Variables statiques
 bool LEDManager::initialized = false;
 TaskHandle_t LEDManager::taskHandle = nullptr;
@@ -227,22 +231,43 @@ void LEDManager::ledTask(void* parameter) {
       needsUpdate = true;
     }
     
-    // Mettre à jour les effets animés si nécessaire (seulement si pas en sleep et pas en fade)
-    if (!isSleeping && !isFadingToSleep && !isFadingFromSleep) {
+    // Mettre à jour les effets animés si nécessaire
+    // Permettre les effets même pendant le fade-in (mais pas pendant le fade-out)
+    if (!isSleeping && !isFadingToSleep) {
       unsigned long currentTime = millis();
       if (currentTime - lastUpdateTime >= UPDATE_INTERVAL_MS) {
-        updateEffects();
+        // Pendant le fade-in, on permet les effets pour qu'ils s'appliquent progressivement
+        // Mais on s'assure que les LEDs sont bien éteintes au début
+        if (isFadingFromSleep && (currentTime - sleepFadeStartTime) < 50) {
+          // Au tout début du fade-in, éteindre les LEDs pour éviter le flash
+          fill_solid(leds, NUM_LEDS, CRGB::Black);
+        } else {
+          // Appliquer les effets normalement
+          updateEffects();
+        }
         lastUpdateTime = currentTime;
         needsUpdate = true;
       }
       // S'assurer que la luminosité maximale configurée est toujours respectée
-      FastLED.setBrightness(currentBrightness);
+      // (sauf pendant le fade-in où on utilise la luminosité fade)
+      if (!isFadingFromSleep) {
+        FastLED.setBrightness(currentBrightness);
+      }
     }
     
     // Appliquer les changements aux LEDs SEULEMENT si nécessaire et pas trop souvent
     // Cela évite de bloquer les interruptions I2S trop fréquemment
     unsigned long currentTime = millis();
     if (needsUpdate && (currentTime - lastShowTime >= SHOW_INTERVAL_MS)) {
+      // IMPORTANT: S'assurer que si on a clear() ou si l'effet est NONE avec couleur noire,
+      // on éteint vraiment toutes les LEDs
+      if (currentEffect == LED_EFFECT_NONE && currentColor == CRGB::Black) {
+        // S'assurer que toutes les LEDs sont bien éteintes
+        fill_solid(leds, NUM_LEDS, CRGB::Black);
+        // IMPORTANT: Mettre la luminosité à 0 pour éteindre complètement
+        // Cela garantit que même si updateEffects() tourne, les LEDs restent éteintes
+        FastLED.setBrightness(0);
+      }
       FastLED.show();
       lastShowTime = currentTime;
       needsUpdate = false;
@@ -259,10 +284,21 @@ void LEDManager::ledTask(void* parameter) {
 void LEDManager::processCommand(const LEDCommand& cmd) {
   switch (cmd.type) {
     case LED_CMD_SET_COLOR:
+      // Si on change de couleur et qu'on a un effet actif, éteindre d'abord
+      // Cela évite le flash de la couleur précédente
+      if (currentEffect != LED_EFFECT_NONE) {
+        // Éteindre toutes les LEDs avant de changer de couleur
+        fill_solid(leds, NUM_LEDS, CRGB::Black);
+      }
       currentColor = CRGB(cmd.data.color.r, cmd.data.color.g, cmd.data.color.b);
-      currentEffect = LED_EFFECT_NONE;
-      // Appliquer la couleur immédiatement
-      fill_solid(leds, NUM_LEDS, currentColor);
+      // Si on change de couleur et qu'on n'a pas d'effet actif, appliquer immédiatement
+      // Si on a un effet, la couleur sera appliquée par l'effet
+      if (currentEffect == LED_EFFECT_NONE) {
+        // Appliquer la couleur immédiatement
+        fill_solid(leds, NUM_LEDS, currentColor);
+      }
+      // Ne pas réinitialiser l'effet ici, il sera géré par SET_EFFECT
+      // L'effet reste actif, seule la couleur change
       break;
       
     case LED_CMD_SET_BRIGHTNESS:
@@ -275,14 +311,33 @@ void LEDManager::processCommand(const LEDCommand& cmd) {
       break;
       
     case LED_CMD_SET_EFFECT:
+      // Si on change d'effet, éteindre d'abord pour transition propre
+      // Cela évite le flash de la couleur/effet précédent
+      if (currentEffect != cmd.data.effect) {
+        // Éteindre toutes les LEDs avant de changer d'effet
+        fill_solid(leds, NUM_LEDS, CRGB::Black);
+      }
       currentEffect = cmd.data.effect;
+      // Si on change vers PULSE, réinitialiser l'effet pour éviter le flash
+      if (currentEffect == LED_EFFECT_PULSE) {
+        resetPulseEffect();
+      }
       // Les effets seront gérés par updateEffects()
       break;
       
     case LED_CMD_CLEAR:
       currentColor = CRGB::Black;
       currentEffect = LED_EFFECT_NONE;
+      // IMPORTANT: Éteindre complètement toutes les LEDs
+      // S'assurer que toutes les LEDs sont bien à CRGB::Black
       fill_solid(leds, NUM_LEDS, CRGB::Black);
+      // IMPORTANT: Mettre la luminosité à 0 pour éteindre complètement
+      // Cela garantit que même si updateEffects() tourne, les LEDs restent éteintes
+      FastLED.setBrightness(0);
+      // Réinitialiser l'effet PULSE si nécessaire pour éviter qu'il reprenne
+      pulseNeedsReset = false;
+      // La mise à jour sera faite par FastLED.show() dans la boucle principale
+      // avec needsUpdate = true qui a été défini lors de la réception de la commande
       break;
   }
   
@@ -301,6 +356,27 @@ void LEDManager::checkSleepMode() {
     }
     return;
   }
+  
+  // IMPORTANT: Ne pas entrer en sleep mode si le BLE est actif (mode appairage)
+  // Les LEDs doivent rester allumées pour indiquer le mode appairage
+  #ifdef HAS_BLE
+  if (BLEConfigManager::isBLEEnabled()) {
+    // BLE actif, réveiller si on était en sleep
+    if (isSleeping || isFadingToSleep) {
+      isSleeping = false;
+      isFadingToSleep = false;
+      FastLED.setBrightness(currentBrightness);
+      // Restaurer l'effet si nécessaire
+      if (savedEffect != LED_EFFECT_NONE) {
+        currentEffect = savedEffect;
+        savedEffect = LED_EFFECT_NONE;
+      }
+    }
+    // Réinitialiser le timer d'activité pour éviter le sleep
+    lastActivityTime = millis();
+    return;
+  }
+  #endif
   
   unsigned long currentTime = millis();
   unsigned long timeSinceActivity = currentTime - lastActivityTime;
@@ -324,6 +400,9 @@ void LEDManager::updateSleepFade() {
     isFadingToSleep = false;
     isSleeping = true;
     FastLED.setBrightness(0);
+    // IMPORTANT: Clear les LEDs quand on atteint 0 luminosité (mode sleep)
+    // Cela évite le flash de la couleur précédente quand on réactive
+    fill_solid(leds, NUM_LEDS, CRGB::Black);
   } else {
     // Calculer le facteur de fade (1.0 -> 0.0)
     float fadeFactor = 1.0f - ((float)elapsed / (float)SLEEP_FADE_DURATION_MS);
@@ -332,6 +411,11 @@ void LEDManager::updateSleepFade() {
     // Les couleurs actuelles des LEDs restent inchangées
     uint8_t fadedBrightness = (uint8_t)(currentBrightness * fadeFactor);
     FastLED.setBrightness(fadedBrightness);
+    
+    // Si la luminosité atteint 0 (ou presque), clear les LEDs
+    if (fadedBrightness == 0) {
+      fill_solid(leds, NUM_LEDS, CRGB::Black);
+    }
   }
 }
 
@@ -342,6 +426,10 @@ void LEDManager::wakeUp() {
     isSleeping = false;
     isFadingToSleep = false;
     
+    // IMPORTANT: Éteindre d'abord les LEDs pour éviter le flash de l'animation précédente
+    // Les LEDs peuvent encore contenir l'ancienne couleur/effet
+    fill_solid(leds, NUM_LEDS, CRGB::Black);
+    
     // Démarrer un fade-in progressif pour le réveil
     isFadingFromSleep = true;
     sleepFadeStartTime = millis();
@@ -349,6 +437,10 @@ void LEDManager::wakeUp() {
     // Restaurer l'effet s'il y en avait un
     if (savedEffect != LED_EFFECT_NONE) {
       currentEffect = savedEffect;
+      // Si on restaure PULSE, réinitialiser l'effet
+      if (currentEffect == LED_EFFECT_PULSE) {
+        resetPulseEffect();
+      }
     } else {
       // Pas d'effet, réappliquer la couleur sur toutes les LEDs
       fill_solid(leds, NUM_LEDS, currentColor);
@@ -377,8 +469,12 @@ void LEDManager::updateWakeFade() {
     // Animation terminée, restaurer complètement
     isFadingFromSleep = false;
     
+    // IMPORTANT: S'assurer que les LEDs sont bien éteintes avant de restaurer l'effet
+    // Cela évite le flash de l'animation précédente
+    fill_solid(leds, NUM_LEDS, CRGB::Black);
+    
     // Si l'effet est PULSE, réinitialiser pour une transition fluide
-    if (savedEffect == LED_EFFECT_PULSE) {
+    if (currentEffect == LED_EFFECT_PULSE) {
       resetPulseEffect();
       // Réinitialiser lastUpdateTime pour que l'effet reprenne immédiatement
       lastUpdateTime = millis();
@@ -398,6 +494,22 @@ void LEDManager::updateWakeFade() {
     // Simple: on remonte juste la luminosité globale
     uint8_t fadedBrightness = (uint8_t)(currentBrightness * fadeFactor);
     FastLED.setBrightness(fadedBrightness);
+    
+    // IMPORTANT: Pendant le fade-in, s'assurer que les LEDs sont bien éteintes au début
+    // et appliquer la nouvelle couleur/effet progressivement
+    if (fadedBrightness == 0 || elapsed < 50) {
+      // Au tout début du fade-in, s'assurer que les LEDs sont bien éteintes
+      fill_solid(leds, NUM_LEDS, CRGB::Black);
+    } else {
+      // Pendant le fade-in, appliquer la couleur/effet
+      // Si on a un effet, il sera géré par updateEffects() dans la boucle principale
+      // Mais on doit s'assurer que la couleur de base est correcte
+      if (currentEffect == LED_EFFECT_NONE) {
+        fill_solid(leds, NUM_LEDS, currentColor);
+      }
+      // Si on a un effet, updateEffects() s'en chargera dans la boucle principale
+      // Mais on doit permettre à updateEffects() de s'exécuter même pendant le fade-in
+    }
   }
 }
 
@@ -430,31 +542,49 @@ void LEDManager::updateEffects() {
     }
     
     case LED_EFFECT_PULSE: {
-      // Effet de pulsation (respiration)
-      static uint8_t pulseValue = 255;  // Commencer à 255 pour transition fluide après réveil
-      static bool increasing = false;   // Commencer en descendant
+      // Effet de pulsation (respiration) rapide et fluide
+      // Utiliser le temps réel pour une vitesse constante et fluide
+      static unsigned long pulseStartTime = 0;
       
       // Réinitialiser si nécessaire (après réveil depuis sleep)
       if (pulseNeedsReset) {
-        pulseValue = 255;
-        increasing = false;
+        pulseStartTime = currentTime;
         pulseNeedsReset = false;
       }
       
-      if (increasing) {
-        pulseValue += 2;
-        if (pulseValue >= 255) {
-          pulseValue = 255;
-          increasing = false;
-        }
+      // Cycle de respiration : ~2.5 secondes pour un cycle complet (inspiration + expiration)
+      const uint32_t PULSE_CYCLE_MS = 2500;  // 2.5 secondes
+      uint32_t elapsed = (currentTime - pulseStartTime) % PULSE_CYCLE_MS;
+      
+      // Calculer la phase normalisée (0 à 1023 pour précision)
+      uint16_t phase = (elapsed * 1024) / PULSE_CYCLE_MS;
+      
+      // Calculer la valeur de pulsation avec une courbe sinusoïdale douce
+      // Utiliser une approximation de sin pour fluidité maximale
+      // Phase 0-511 : montée (inspiration), Phase 512-1023 : descente (expiration)
+      // Minimum réduit de 50 à 30 pour un effet plus sombre en bas (~12% de luminosité)
+      const uint8_t PULSE_MIN = 30;  // Minimum de luminosité (réduit de 50 à 30)
+      const uint8_t PULSE_MAX = 255;  // Maximum de luminosité
+      const uint8_t PULSE_RANGE = PULSE_MAX - PULSE_MIN;  // 225
+      
+      uint8_t pulseValue;
+      if (phase < 512) {
+        // Montée (inspiration) : de PULSE_MIN à PULSE_MAX
+        // Courbe douce : utiliser phase² pour accélération progressive
+        uint16_t normalizedPhase = phase;  // 0-511
+        // Appliquer une courbe douce (quadratique) pour fluidité
+        uint16_t smoothPhase = (normalizedPhase * normalizedPhase) / 512;
+        pulseValue = PULSE_MIN + ((smoothPhase * PULSE_RANGE) / 512);
       } else {
-        pulseValue -= 2;
-        if (pulseValue <= 50) {
-          pulseValue = 50;
-          increasing = true;
-        }
+        // Descente (expiration) : de PULSE_MAX à PULSE_MIN
+        uint16_t phaseDown = phase - 512;  // 0-511
+        // Courbe douce inverse
+        uint16_t smoothPhase = 511 - phaseDown;
+        smoothPhase = (smoothPhase * smoothPhase) / 512;
+        pulseValue = PULSE_MIN + ((smoothPhase * PULSE_RANGE) / 512);
       }
       
+      // Appliquer la pulsation à la couleur
       CRGB pulseColor = currentColor;
       pulseColor.fadeToBlackBy(255 - pulseValue);
       fill_solid(leds, NUM_LEDS, pulseColor);
@@ -473,21 +603,121 @@ void LEDManager::updateEffects() {
     }
     
     case LED_EFFECT_ROTATE: {
-      // Effet de rotation qui utilise la couleur définie (currentColor)
-      static uint8_t position = 0;
-      const uint8_t segmentSize = NUM_LEDS / 4; // Taille du segment (25% de la bande)
+      // Effet de rotation type "serpent" avec début (tête) et fin (queue) progressifs
+      // Utiliser le temps réel pour une rotation constante et fluide
+      static unsigned long rotateStartTime = 0;
+      
+      // Initialiser le temps de départ si nécessaire
+      if (rotateStartTime == 0) {
+        rotateStartTime = currentTime;
+      }
+      
+      // Cycle de rotation : ~4 secondes pour un tour complet, peu importe le nombre de LEDs
+      const uint32_t ROTATE_CYCLE_MS = 4000;  // 4 secondes
+      uint32_t elapsed = (currentTime - rotateStartTime) % ROTATE_CYCLE_MS;
+      
+      // Calculer la position de la tête du serpent avec précision fractionnaire
+      // Utiliser une précision élevée (256x) pour fluidité maximale
+      uint32_t headPositionPrecise = (elapsed * NUM_LEDS * 256) / ROTATE_CYCLE_MS;
+      uint16_t headPosition = (headPositionPrecise >> 8) % NUM_LEDS;  // Position de la tête (LED principale)
+      uint8_t headSubPosition = headPositionPrecise & 0xFF;  // Position fractionnaire (0-255)
+      
+      // Longueur du serpent (nombre de LEDs)
+      const uint8_t snakeLength = NUM_LEDS / 4;  // 25% de la bande
       
       // Éteindre toutes les LEDs
       fill_solid(leds, NUM_LEDS, CRGB::Black);
       
-      // Allumer le segment avec la couleur définie qui tourne
-      for (int i = 0; i < segmentSize; i++) {
-        int ledIndex = (position + i) % NUM_LEDS;
-        leds[ledIndex] = currentColor;
-      }
+      // Dessiner le serpent progressif avec position fractionnaire pour mouvement ultra-fluide
+      // Le serpent s'étend de (headPosition - snakeLength) à headPosition
+      // Utiliser la position fractionnaire pour créer un dégradé qui se déplace progressivement
       
-      // Faire tourner le segment
-      position = (position + 1) % NUM_LEDS;
+      // Parcourir toutes les LEDs pour créer un dégradé fluide
+      for (int ledIndex = 0; ledIndex < NUM_LEDS; ledIndex++) {
+        // Calculer la position précise de cette LED (en unités fractionnaires)
+        // Utiliser le centre de la LED pour plus de précision et fluidité
+        // +128 pour centrer, cela donne une transition plus douce entre LEDs
+        int32_t ledPositionPrecise = ((int32_t)ledIndex * 256) + 128;  // Centre de la LED
+        
+        // Calculer la distance depuis la tête (en tenant compte du wrap-around)
+        int32_t distanceToHead = headPositionPrecise - ledPositionPrecise;
+        
+        // Gérer le wrap-around (distance la plus courte)
+        if (distanceToHead > (NUM_LEDS * 256) / 2) {
+          distanceToHead -= (NUM_LEDS * 256);
+        } else if (distanceToHead < -(NUM_LEDS * 256) / 2) {
+          distanceToHead += (NUM_LEDS * 256);
+        }
+        
+        // Convertir en valeur absolue et vérifier si cette LED fait partie du serpent
+        int32_t absDistance = (distanceToHead < 0) ? -distanceToHead : distanceToHead;
+        int32_t maxSnakeDistance = snakeLength * 256;
+        
+        // Si la LED est en dehors du serpent, elle est éteinte
+        if (absDistance > maxSnakeDistance) {
+          leds[ledIndex] = CRGB::Black;
+          continue;
+        }
+        
+        // Calculer l'intensité avec dégradé progressif de la queue vers la tête
+        // Utiliser une courbe sinusoïdale pour fluidité maximale (transition ultra-douce)
+        uint8_t intensity;
+        if (absDistance == 0) {
+          // Tête : luminosité maximale (255)
+          intensity = 255;
+        } else {
+          // Queue vers tête : dégradé progressif avec courbe sinusoïdale
+          // Utiliser la distance inverse : proche de la tête = plus élevé
+          uint32_t fadeFactor = maxSnakeDistance - absDistance;
+          
+          // Normaliser sur 0-256 pour calcul sinusoïdal
+          uint32_t normalizedFade = (fadeFactor * 256) / maxSnakeDistance;  // 0-256
+          
+          // Courbe sinusoïdale pour transition ultra-fluide et naturelle
+          // sin(π/2 * x) où x va de 0 à 1, donne une courbe très douce
+          // Approximation : utiliser une table de lookup ou calcul polynomial
+          // Pour x de 0 à 256, on veut sin(π/2 * x/256)
+          // Approximation polynomiale de sin : sin(x) ≈ x - x³/6 + x⁵/120 (pour x petit)
+          // Mais on utilise une approximation plus simple et efficace
+          
+          // Convertir en angle (0 à 90 degrés, soit 0 à π/2)
+          // Utiliser une approximation sinusoïdale avec interpolation quadratique
+          // Pour fluidité maximale : courbe qui monte très doucement
+          
+          // Méthode : utiliser une courbe qui combine plusieurs techniques
+          // 1. Normalisation douce
+          uint32_t x = normalizedFade;  // 0-256
+          
+          // 2. Courbe sinusoïdale approximée : sin(π/2 * x/256)
+          // Approximation : pour x de 0 à 256, on utilise une interpolation
+          // Formule simplifiée : utilise une courbe qui ressemble à sin mais plus rapide à calculer
+          // On utilise une combinaison de courbes pour fluidité maximale
+          
+          // Courbe sinusoïdale optimisée pour fluidité maximale
+          // Approximation efficace : combinaison de courbes pour transition ultra-douce
+          uint32_t sinFade;
+          
+          // Calculer les composantes de la courbe
+          uint32_t x2 = (x * x) / 256;        // x²/256 : courbe douce
+          uint32_t x3 = (x2 * x) / 256;      // x³/256² : transition progressive
+          
+          // Combinaison optimisée : 80% courbe douce, 20% transition
+          // Cela donne une montée très douce au début, transition fluide ensuite
+          // Formule : 0.8 * x² + 0.2 * x³ pour fluidité maximale
+          sinFade = (x2 * 4 + x3) / 5;
+          
+          // S'assurer que la valeur reste dans les limites
+          if (sinFade > 256) sinFade = 256;
+          
+          // Intensité de 30 (queue) à 255 (tête) avec courbe sinusoïdale
+          intensity = 30 + ((sinFade * 225) / 256);
+        }
+        
+        // Appliquer la couleur avec l'intensité calculée
+        CRGB snakeColor = currentColor;
+        snakeColor.fadeToBlackBy(255 - intensity);
+        leds[ledIndex] = snakeColor;
+      }
       break;
     }
   }

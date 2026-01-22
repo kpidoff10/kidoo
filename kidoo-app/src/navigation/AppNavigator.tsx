@@ -3,16 +3,16 @@
  * Navigation principale avec Bottom Tabs
  */
 
-import React, { useRef, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { TouchableOpacity, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import BottomSheet from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/theme';
 import { HomeScreen, KidoosListScreen, ProfileSheet } from '@/screens';
 import { Avatar } from '@/components/ui';
-import { useAuth } from '@/contexts';
+import { useBottomSheet } from '@/hooks/useBottomSheet';
+import { useProfile } from '@/hooks/useProfile';
 import { MainTabsParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabsParamList>();
@@ -20,16 +20,16 @@ const Tab = createBottomTabNavigator<MainTabsParamList>();
 export function AppNavigator() {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const { user } = useAuth();
-  const profileSheetRef = useRef<BottomSheet>(null);
+  const { data: user } = useProfile();
+  const profileSheet = useBottomSheet();
 
   const openProfileSheet = useCallback(() => {
-    profileSheetRef.current?.expand();
-  }, []);
+    profileSheet.open();
+  }, [profileSheet]);
 
   const closeProfileSheet = useCallback(() => {
-    profileSheetRef.current?.close();
-  }, []);
+    profileSheet.close();
+  }, [profileSheet]);
 
   const ProfileButton = useCallback(
     () => (
@@ -84,7 +84,7 @@ export function AppNavigator() {
         />
       </Tab.Navigator>
 
-      <ProfileSheet ref={profileSheetRef} onClose={closeProfileSheet} />
+      <ProfileSheet bottomSheet={profileSheet} onClose={closeProfileSheet} />
     </>
   );
 }

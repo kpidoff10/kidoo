@@ -5,6 +5,7 @@
 #include "../log/log_manager.h"
 #include "../nfc/nfc_manager.h"
 #include "../ble/ble_manager.h"
+#include "../ble_config/ble_config_manager.h"
 #include "../wifi/wifi_manager.h"
 #include "../pubnub/pubnub_manager.h"
 #include "../rtc/rtc_manager.h"
@@ -116,7 +117,41 @@ bool InitManager::init() {
   #ifdef HAS_WIFI
   if (HAS_WIFI) {
     initWiFi();  // Tente de se connecter au WiFi configuré dans config.json
+    
+    // Attendre un délai pour voir si le WiFi se connecte (le thread de retry peut prendre quelques secondes)
+    // Délai de 8 secondes pour laisser le temps au WiFi de se connecter
+    Serial.println("[INIT] Attente de connexion WiFi (8 secondes)...");
+    unsigned long wifiWaitStart = millis();
+    const unsigned long WIFI_WAIT_TIMEOUT_MS = 8000;  // 8 secondes
+    
+    while ((millis() - wifiWaitStart) < WIFI_WAIT_TIMEOUT_MS) {
+      if (WiFiManager::isConnected()) {
+        Serial.println("[INIT] WiFi connecte - BLE ne sera pas active automatiquement");
+        break;
+      }
+      delay(500);  // Vérifier toutes les 500ms
+    }
+    
     delay(100);
+    
+    // Si le WiFi n'est toujours pas connecté après l'attente, activer automatiquement le BLE
+    // IMPORTANT: Avec feedback lumineux pour que l'utilisateur sache que le Kidoo est en mode appairage
+    #ifdef HAS_BLE
+    if (HAS_BLE && BLEConfigManager::isInitialized()) {
+      if (!WiFiManager::isConnected()) {
+        Serial.println("");
+        Serial.println("[INIT] ========================================");
+        Serial.println("[INIT] WiFi non connecte apres attente");
+        Serial.println("[INIT] Activation automatique du BLE pour configuration");
+        Serial.println("[INIT] BLE actif pendant 15 minutes (timeout automatique)");
+        Serial.println("[INIT] Feedback lumineux active (respiration bleue)");
+        Serial.println("[INIT] ========================================");
+        BLEConfigManager::enableBLE(0, true);  // Active avec durée par défaut, AVEC feedback lumineux
+      } else {
+        Serial.println("[INIT] WiFi connecte - BLE non active automatiquement");
+      }
+    }
+    #endif
   }
   #endif
   

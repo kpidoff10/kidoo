@@ -30,13 +30,11 @@ class MyServerCallbacks: public BLEServerCallbacks {
   void onDisconnect(BLEServer* pServer) {
     Serial.println("[BLE] ========================================");
     Serial.println("[BLE] Client deconnecte");
-    Serial.println("[BLE] Redemarrage de l'advertising...");
     Serial.println("[BLE] ========================================");
     
-    // Redémarrer l'advertising après une déconnexion
-    delay(500); // Petit délai avant de redémarrer
-    BLEDevice::startAdvertising();
-    Serial.println("[BLE] Advertising redemarre");
+    // IMPORTANT: Ne PAS redémarrer l'advertising automatiquement après déconnexion
+    // L'advertising sera géré par BLEConfigManager qui vérifie si le BLE doit rester actif
+    // Si le BLE est toujours activé (via BLEConfigManager), il redémarrera l'advertising via update()
   }
 };
 #endif
@@ -101,16 +99,16 @@ bool BLEManager::init(const char* deviceName) {
   // Démarrer le service
   pService->start();
   
-  // Configurer l'advertising
+  // Configurer l'advertising (mais ne PAS le démarrer automatiquement)
   BLEAdvertising* pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
   pAdvertising->setScanResponse(true);
   pAdvertising->setMinPreferred(0x06);
   pAdvertising->setMaxPreferred(0x0C);
   
-  // Démarrer l'advertising immédiatement (double démarrage pour s'assurer qu'il démarre)
-  BLEDevice::startAdvertising();
-  delay(100);
+  // IMPORTANT: Ne PAS démarrer l'advertising ici
+  // L'advertising sera démarré uniquement via BLEConfigManager::enableBLE()
+  // ou via BLEManager::startAdvertising() explicitement
   
   available = true;
   
@@ -120,8 +118,8 @@ bool BLEManager::init(const char* deviceName) {
   Serial.println(deviceName);
   Serial.print("[BLE] Service UUID: ");
   Serial.println(SERVICE_UUID);
-  Serial.println("[BLE] Le dispositif est maintenant visible pour le couplage");
-  Serial.println("[BLE] Recherchez 'KIDOO-Basic' dans votre scan Bluetooth");
+  Serial.println("[BLE] Advertising desactive par defaut");
+  Serial.println("[BLE] Le BLE sera active via appui long sur bouton ou automatiquement si WiFi non connecte");
   Serial.println("[BLE] ========================================");
   
   return true;
