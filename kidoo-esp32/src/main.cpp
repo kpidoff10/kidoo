@@ -10,7 +10,11 @@
 #include "models/common/managers/wifi/wifi_manager.h"
 #endif
 
-// Handler NFC spécifique au modèle Basic
+#ifdef HAS_BLE
+#include "models/common/managers/ble_config/ble_config_manager.h"
+#endif
+
+// Handler NFC spécifique au modèle Basic uniquement
 #ifdef KIDOO_MODEL_BASIC
 #include "models/basic/nfc/nfc_tag_handler.h"
 #endif
@@ -103,6 +107,15 @@ void loop() {
   // Mettre à jour le gestionnaire de tags NFC (détection retrait tag)
   #ifdef KIDOO_MODEL_BASIC
   NFCTagHandler::update();
+  #endif
+  
+  // Mettre à jour le gestionnaire BLE Config (détection appui bouton)
+  #ifdef HAS_BLE
+  if (HAS_BLE) {
+    #ifdef BLE_CONFIG_BUTTON_PIN
+    BLEConfigManager::update();
+    #endif
+  }
   #endif
   
   // ====================================================================

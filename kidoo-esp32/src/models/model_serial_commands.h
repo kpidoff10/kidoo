@@ -9,8 +9,8 @@
  */
 
 // Vérifier qu'un modèle est défini
-#if !defined(KIDOO_MODEL_BASIC) && !defined(KIDOO_MODEL_MINI)
-  #error "Aucun modele Kidoo defini. Definir KIDOO_MODEL_BASIC ou KIDOO_MODEL_MINI dans platformio.ini"
+#if !defined(KIDOO_MODEL_BASIC) && !defined(KIDOO_MODEL_MINI) && !defined(KIDOO_MODEL_DREAM)
+  #error "Aucun modele Kidoo defini. Definir KIDOO_MODEL_BASIC, KIDOO_MODEL_MINI ou KIDOO_MODEL_DREAM dans platformio.ini"
 #endif
 
 // Inclure les commandes Serial du modèle approprié
@@ -20,6 +20,9 @@
 #elif defined(KIDOO_MODEL_MINI)
   #include "mini/serial/model_serial_commands.h"
   #define ModelSerialCommands ModelMiniSerialCommands
+#elif defined(KIDOO_MODEL_DREAM)
+  #include "dream/serial/model_serial_commands.h"
+  #define ModelSerialCommands ModelDreamSerialCommands
 #endif
 
 #endif // MODEL_SERIAL_COMMANDS_H

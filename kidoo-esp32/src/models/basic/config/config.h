@@ -73,6 +73,14 @@
 #define POTENTIOMETER_PIN 1   // GPIO 1 (ADC1_CH0)
 
 // ============================================
+// Configuration Bouton BLE (Activation BLE)
+// ============================================
+
+// Pin GPIO pour le bouton d'activation BLE (INPUT_PULLUP)
+// Appui long (3 secondes) pour activer le BLE
+#define BLE_CONFIG_BUTTON_PIN 0   // GPIO 0 (ESP32-S3)
+
+// ============================================
 // Configuration Audio I2S (MAX98357)
 // ============================================
 

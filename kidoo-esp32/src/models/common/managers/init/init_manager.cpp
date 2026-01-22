@@ -5,6 +5,7 @@
 #include "../log/log_manager.h"
 #include "../nfc/nfc_manager.h"
 #include "../ble/ble_manager.h"
+#include "../ble_config/ble_config_manager.h"
 #include "../wifi/wifi_manager.h"
 #include "../pubnub/pubnub_manager.h"
 #include "../rtc/rtc_manager.h"
@@ -117,6 +118,23 @@ bool InitManager::init() {
   if (HAS_WIFI) {
     initWiFi();  // Tente de se connecter au WiFi configuré dans config.json
     delay(100);
+    
+    // Si le WiFi n'est pas connecté, activer automatiquement le BLE pour permettre la configuration
+    // IMPORTANT: Sans feedback lumineux pour rester discret (activation transparente)
+    #ifdef HAS_BLE
+    if (HAS_BLE && BLEConfigManager::isInitialized()) {
+      if (!WiFiManager::isConnected()) {
+        Serial.println("");
+        Serial.println("[INIT] ========================================");
+        Serial.println("[INIT] WiFi non connecte");
+        Serial.println("[INIT] Activation automatique du BLE pour configuration");
+        Serial.println("[INIT] BLE actif pendant 15 minutes (timeout automatique)");
+        Serial.println("[INIT] Activation transparente (sans feedback lumineux)");
+        Serial.println("[INIT] ========================================");
+        BLEConfigManager::enableBLE(0, false);  // Active avec durée par défaut, SANS feedback lumineux
+      }
+    }
+    #endif
   }
   #endif
   

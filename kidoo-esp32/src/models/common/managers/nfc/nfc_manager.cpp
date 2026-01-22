@@ -2,12 +2,15 @@
 #include "../../../model_config.h"
 #include "../../config/core_config.h"
 #include <Arduino.h>
+
+#ifdef HAS_NFC
 #include <Wire.h>
 #include <Adafruit_PN532.h>
 #include <string.h>
 
 // Instance statique du PN532 (créée lors de l'initialisation)
 static Adafruit_PN532* nfcInstance = nullptr;
+#endif // HAS_NFC
 
 // Variables statiques
 bool NFCManager::initialized = false;
@@ -31,10 +34,11 @@ NFCTagCallback NFCManager::tagCallback = nullptr;
 
 // Configuration du thread NFC
 #define NFC_TASK_STACK_SIZE 4096
-#define NFC_TASK_PRIORITY 5  // Priorité basse (ne doit pas interférer avec l'audio)
-#define NFC_SCAN_INTERVAL_MS 200  // Intervalle entre les scans (200ms)
-#define NFC_TAG_TIMEOUT_MS 1000   // Timeout pour considérer qu'un tag est parti
+#define NFC_TASK_PRIORITY 2  // Priorité très basse (ne doit JAMAIS interférer avec l'audio)
+#define NFC_SCAN_INTERVAL_MS 300  // Intervalle entre les scans (300ms) - plus espacé
+#define NFC_TAG_TIMEOUT_MS 1500   // Timeout pour considérer qu'un tag est parti
 
+#ifdef HAS_NFC
 // =========================
 // Thread NFC
 // =========================
@@ -52,12 +56,12 @@ void NFCManager::nfcTask(void* parameter) {
     if (autoDetectEnabled && nfcInstance != nullptr) {
       // Prendre le mutex pour accéder au hardware NFC
       if (xSemaphoreTake(nfcMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-        // Essayer de détecter un tag (timeout court de 100ms)
+        // Essayer de détecter un tag (timeout TRÈS court de 50ms)
         uint8_t success = nfcInstance->readPassiveTargetID(
           PN532_MIFARE_ISO14443A, 
           uid, 
           &uidLength, 
-          100  // Timeout court pour ne pas bloquer
+          50  // Timeout très court pour ne pas bloquer l'audio
         );
         
         if (success) {
@@ -113,11 +117,13 @@ void NFCManager::nfcTask(void* parameter) {
     vTaskDelay(pdMS_TO_TICKS(NFC_SCAN_INTERVAL_MS));
   }
 }
+#endif // HAS_NFC
 
 // =========================
 // API
 // =========================
 bool NFCManager::init() {
+#ifdef HAS_NFC
   if (initialized) {
     return available;
   }
@@ -163,10 +169,21 @@ bool NFCManager::init() {
   }
   
   return available;
+#else
+  // NFC non disponible sur ce modèle
+  initialized = true;
+  available = false;
+  Serial.println("[NFC] NFC non disponible sur ce modele");
+  return false;
+#endif // HAS_NFC
 }
 
 bool NFCManager::isAvailable() {
+#ifdef HAS_NFC
   return initialized && available;
+#else
+  return false;
+#endif // HAS_NFC
 }
 
 bool NFCManager::isInitialized() {
@@ -209,6 +226,7 @@ bool NFCManager::isTagPresent() {
 }
 
 bool NFCManager::getLastTagUID(uint8_t* uid, uint8_t* uidLength) {
+#ifdef HAS_NFC
   if (!tagPresent || lastUIDLength == 0) {
     return false;
   }
@@ -221,9 +239,13 @@ bool NFCManager::getLastTagUID(uint8_t* uid, uint8_t* uidLength) {
   }
   
   return false;
+#else
+  return false;
+#endif // HAS_NFC
 }
 
 bool NFCManager::testHardware() {
+#ifdef HAS_NFC
   Serial.println("[NFC] Test hardware...");
   
   // Initialiser le bus I2C
@@ -273,9 +295,13 @@ bool NFCManager::testHardware() {
   
   Serial.println("[NFC] Hardware OK");
   return true;
+#else
+  return false;
+#endif // HAS_NFC
 }
 
 bool NFCManager::readTagUID(uint8_t* uid, uint8_t* uidLength, uint32_t timeoutMs) {
+#ifdef HAS_NFC
   if (!isAvailable() || nfcInstance == nullptr) {
     return false;
   }
@@ -310,9 +336,13 @@ bool NFCManager::readTagUID(uint8_t* uid, uint8_t* uidLength, uint32_t timeoutMs
   }
   
   return false;
+#else
+  return false;
+#endif // HAS_NFC
 }
 
 bool NFCManager::readBlock(uint8_t blockNumber, uint8_t* data, uint8_t* uid, uint8_t uidLength) {
+#ifdef HAS_NFC
   if (!isAvailable() || nfcInstance == nullptr) {
     return false;
   }
@@ -339,9 +369,13 @@ bool NFCManager::readBlock(uint8_t blockNumber, uint8_t* data, uint8_t* uid, uin
   }
   
   return result;
+#else
+  return false;
+#endif // HAS_NFC
 }
 
 bool NFCManager::writeBlock(uint8_t blockNumber, uint8_t* data, uint8_t* uid, uint8_t uidLength) {
+#ifdef HAS_NFC
   if (!isAvailable() || nfcInstance == nullptr) {
     return false;
   }
@@ -368,4 +402,7 @@ bool NFCManager::writeBlock(uint8_t blockNumber, uint8_t* data, uint8_t* uid, ui
   }
   
   return result;
+#else
+  return false;
+#endif // HAS_NFC
 }
