@@ -6,6 +6,7 @@
 #include "../../common/managers/sd/sd_manager.h"
 #include "../../common/managers/nfc/nfc_manager.h"
 #include <WiFi.h>
+#include <esp_mac.h>  // Pour esp_read_mac() et ESP_MAC_WIFI_STA
 
 /**
  * Routes PubNub spécifiques au modèle Kidoo Dream
@@ -14,15 +15,17 @@
 bool ModelDreamPubNubRoutes::processMessage(const JsonObject& json) {
   // Vérifier que l'action est présente
   if (!json["action"].is<const char*>()) {
+    Serial.println("[PUBNUB-ROUTE] Erreur: action manquante dans le message");
     return false;
   }
   
   const char* action = json["action"].as<const char*>();
   if (action == nullptr) {
+    Serial.println("[PUBNUB-ROUTE] Erreur: action est null");
     return false;
   }
   
-  Serial.print("[PUBNUB-ROUTE] Action: ");
+  Serial.print("[PUBNUB-ROUTE] Traitement de l'action: ");
   Serial.println(action);
   
   // Router vers le bon handler
@@ -51,6 +54,8 @@ bool ModelDreamPubNubRoutes::handleGetInfo(const JsonObject& json) {
   // Format: { "action": "get-info" }
   // Publie les informations complètes de l'appareil
   
+  Serial.println("[PUBNUB-ROUTE] get-info: Préparation des informations du Kidoo...");
+  
   SDConfig config = SDManager::getConfig();
   
   // Récupérer les infos de stockage
@@ -64,9 +69,10 @@ bool ModelDreamPubNubRoutes::handleGetInfo(const JsonObject& json) {
     freeBytes = SDManager::getFreeSpace();
   }
   
-  // Récupérer l'adresse MAC
+  // Récupérer l'adresse MAC WiFi (utilisée pour PubNub)
+  // Sur ESP32-C3, BLE et WiFi ont des adresses MAC différentes
   uint8_t mac[6];
-  WiFi.macAddress(mac);
+  esp_read_mac(mac, ESP_MAC_WIFI_STA);
   char macStr[18];
   snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
@@ -113,8 +119,11 @@ bool ModelDreamPubNubRoutes::handleGetInfo(const JsonObject& json) {
     NFCManager::isAvailable() ? "true" : "false"
   );
   
-  PubNubManager::publish(infoJson);
-  Serial.println("[PUBNUB-ROUTE] Info publiee");
+  if (PubNubManager::publish(infoJson)) {
+    Serial.println("[PUBNUB-ROUTE] get-info: Informations publiees avec succes");
+  } else {
+    Serial.println("[PUBNUB-ROUTE] get-info: Erreur lors de la publication des informations");
+  }
   
   return true;
 }

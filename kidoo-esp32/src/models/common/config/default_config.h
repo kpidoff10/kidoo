@@ -19,4 +19,7 @@
 #define MIN_SLEEP_TIMEOUT_MS 5000        // Minimum: 5 secondes
 #define SLEEP_FADE_DURATION_MS 1000      // Durée de l'animation de fade-out (1 seconde)
 
+// Version du firmware Kidoo
+#define FIRMWARE_VERSION "1.0.0"
+
 #endif // COMMON_DEFAULT_CONFIG_H

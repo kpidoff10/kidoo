@@ -5,28 +5,35 @@
 import React, { useCallback, useEffect } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, ScreenLoader } from '@/components/ui';
 import { useTheme } from '@/theme';
 import { useKidoos } from '@/hooks';
-import { useBluetooth } from '@/contexts';
+import { useBluetooth, BLEDevice } from '@/contexts';
+import { useBottomSheet } from '@/hooks/useBottomSheet';
 import { Kidoo } from '@/api';
+import { RootStackParamList } from '@/navigation/types';
 import { KidooCard } from './components/KidooCard';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function KidoosListScreen() {
   const { t } = useTranslation();
   const { colors, spacing } = useTheme();
+  const navigation = useNavigation<NavigationProp>();
   const { data: kidoos, isLoading, refetch, isRefetching } = useKidoos();
-  const { startScan } = useBluetooth();
+  const { openScanSheet } = useBluetooth();
 
-  const handleKidooPress = (kidoo: Kidoo) => {
-    // TODO: Navigate to detail or open modal
-    console.log('Kidoo pressed:', kidoo.id);
-  };
+  const handleKidooPress = useCallback((kidoo: Kidoo) => {
+    navigation.navigate('KidooDetail', { kidooId: kidoo.id });
+  }, [navigation]);
 
   const handleFloatingButtonPress = useCallback(() => {
-    startScan();
-  }, [startScan]);
+    openScanSheet()
+  }, [openScanSheet]);
+
 
   const renderItem = ({ item }: { item: Kidoo }) => (
     <KidooCard kidoo={item} onPress={() => handleKidooPress(item)} />

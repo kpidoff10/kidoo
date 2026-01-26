@@ -70,10 +70,16 @@ export function useBottomSheet(): UseBottomSheetReturn {
     return `bottom-sheet-${bottomSheetCounter}`;
   }, []);
   const isOpenRef = useRef(false);
+  const dismissPromiseRef = useRef<{ resolve: () => void; reject: (error: any) => void } | null>(null);
 
   const handleDidDismiss = useCallback((event: DidDismissEvent) => {
     // Mettre à jour l'état quand le sheet est fermé
     isOpenRef.current = false;
+    // Résoudre la promesse de fermeture si elle existe
+    if (dismissPromiseRef.current) {
+      dismissPromiseRef.current.resolve();
+      dismissPromiseRef.current = null;
+    }
   }, []);
 
   const open = useCallback(async (index?: number, animated?: boolean) => {
@@ -81,6 +87,10 @@ export function useBottomSheet(): UseBottomSheetReturn {
       if (!ref.current) {
         console.warn('BottomSheet ref is not available');
         return;
+      }
+      // Annuler toute promesse de fermeture en cours
+      if (dismissPromiseRef.current) {
+        dismissPromiseRef.current = null;
       }
       // Toujours essayer d'ouvrir, même si on pense qu'il est déjà ouvert
       // Le sheet lui-même gérera l'état
@@ -101,11 +111,32 @@ export function useBottomSheet(): UseBottomSheetReturn {
       if (!ref.current) {
         return;
       }
+      
+      // Créer une promesse qui se résout quand le sheet est vraiment fermé (via onDidDismiss)
+      const dismissPromise = new Promise<void>((resolve, reject) => {
+        dismissPromiseRef.current = { resolve, reject };
+        // Timeout de sécurité au cas où onDidDismiss ne serait pas appelé
+        setTimeout(() => {
+          if (dismissPromiseRef.current) {
+            dismissPromiseRef.current.resolve();
+            dismissPromiseRef.current = null;
+          }
+        }, 1000);
+      });
+      
+      // Démarrer la fermeture
       await ref.current.dismiss(animated);
-      // Ne pas mettre à jour isOpenRef ici, onDidDismiss le fera
+      
+      // Attendre que le sheet soit complètement fermé (via onDidDismiss)
+      await dismissPromise;
     } catch (error) {
       console.error('Erreur lors de la fermeture du bottom sheet:', error);
       isOpenRef.current = false;
+      // Rejeter la promesse si elle existe
+      if (dismissPromiseRef.current) {
+        dismissPromiseRef.current.reject(error);
+        dismissPromiseRef.current = null;
+      }
     }
   }, []);
 

@@ -57,6 +57,7 @@ model Kidoo {
   user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   tags         Tag[]
   configBasic  KidooConfigBasic? // Configuration spécifique au modèle Basic (relation 1:1)
+  configDream  KidooConfigDream? // Configuration spécifique au modèle Dream (relation 1:1)
 
   @@map("kidoos")
   @@index([userId])
@@ -172,5 +173,36 @@ model KidooConfigBasic {
   kidoo             Kidoo     @relation(fields: [kidooId], references: [id], onDelete: Cascade)
 
   @@map("kidoo_config_basic")
+  @@index([kidooId])
+}
+
+// Configuration spécifique au modèle Dream
+// Note: Les configurations WiFi ne sont PAS stockées ici (restent sur le device, modifiables uniquement via Bluetooth)
+model KidooConfigDream {
+  id                String    @id @default(uuid())
+  kidooId           String    @unique // Relation 1:1 avec Kidoo
+
+  // Configuration du rituel de sommeil
+  // Couleur RGB (0-255)
+  colorR            Int?      // Composante rouge de la couleur (0-255, null si non configuré)
+  colorG            Int?      // Composante verte de la couleur (0-255, null si non configuré)
+  colorB            Int?      // Composante bleue de la couleur (0-255, null si non configuré)
+  
+  // Heure de coucher
+  bedtimeHour       Int?      // Heure de coucher (0-23, null si non configuré)
+  bedtimeMinute     Int?      // Minute de coucher (0-59, null si non configuré)
+  
+  // Luminosité
+  brightness        Int?      // Luminosité des LEDs (0-255, null si non configuré)
+  
+  // Mode d'allumage
+  allNight          Boolean   @default(false) // Si true, la veilleuse reste allumée toute la nuit, sinon elle s'éteint après une durée définie
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  kidoo             Kidoo     @relation(fields: [kidooId], references: [id], onDelete: Cascade)
+
+  @@map("kidoo_config_dream")
   @@index([kidooId])
 }

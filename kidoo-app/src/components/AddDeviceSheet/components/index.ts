@@ -8,3 +8,5 @@ export { ActionsContainer } from './ActionsContainer';
 export { ActionsRow } from './ActionsRow';
 export { Step1Name } from './Step1Name';
 export { Step2WiFi } from './Step2WiFi';
+export { Step3Finalization } from './Step3Finalization';
+export { FireworksEffect } from './FireworksEffect';

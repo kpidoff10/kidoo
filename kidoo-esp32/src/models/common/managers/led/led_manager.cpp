@@ -174,16 +174,22 @@ bool LEDManager::sendCommand(const LEDCommand& cmd) {
 
 bool LEDManager::setColor(uint8_t r, uint8_t g, uint8_t b) {
   Serial.printf("[LED] setColor: RGB(%d, %d, %d), sleepState=%d\n", r, g, b, getSleepState() ? 1 : 0);
+  
+  bool isTurningOff = (r == 0 && g == 0 && b == 0);
+  
+  // Ne pas faire clear() ici car cela effacerait la couleur avant qu'elle soit appliquée
+  // Le clear() sera fait dans setEffect() si nécessaire lors d'un changement d'effet
+  
   LEDCommand cmd;
   cmd.type = LED_CMD_SET_COLOR;
   cmd.data.color.r = r;
   cmd.data.color.g = g;
   cmd.data.color.b = b;
   bool result = sendCommand(cmd);
+  
   // Réveiller les LEDs pour les commandes utilisateur explicites
   // MAIS seulement si elles ne sont pas déjà en sleep mode ET si ce n'est pas une intention d'éteindre
   // (pour éviter de réveiller si on veut qu'elles restent en sleep ou si on les éteint)
-  bool isTurningOff = (r == 0 && g == 0 && b == 0);
   if (result && !getSleepState() && !isTurningOff) {
     wakeUp();
   } else if (isTurningOff) {
@@ -208,14 +214,20 @@ bool LEDManager::setBrightness(uint8_t brightness) {
 bool LEDManager::setEffect(LEDEffect effect) {
   const char* effectNames[] = {"NONE", "RAINBOW", "PULSE", "GLOSSY", "ROTATE"};
   Serial.printf("[LED] setEffect: %s, sleepState=%d\n", effectNames[effect], getSleepState() ? 1 : 0);
+  
+  bool isTurningOff = (effect == LED_EFFECT_NONE);
+  
+  // Ne pas faire clear() ici car processCommand() gère déjà les transitions d'effet proprement
+  // Il éteint automatiquement les LEDs avant de changer d'effet (voir processCommand SET_EFFECT)
+  
   LEDCommand cmd;
   cmd.type = LED_CMD_SET_EFFECT;
   cmd.data.effect = effect;
   bool result = sendCommand(cmd);
+  
   // Réveiller les LEDs pour les commandes utilisateur explicites
   // MAIS seulement si elles ne sont pas déjà en sleep mode ET si ce n'est pas une intention d'éteindre
   // (pour éviter de réveiller si on veut qu'elles restent en sleep ou si on les éteint)
-  bool isTurningOff = (effect == LED_EFFECT_NONE);
   if (result && !getSleepState() && !isTurningOff) {
     wakeUp();
   } else if (isTurningOff) {
@@ -414,6 +426,23 @@ void LEDManager::processCommand(const LEDCommand& cmd) {
       // Si on change vers PULSE, réinitialiser l'effet pour éviter le flash
       if (currentEffect == LED_EFFECT_PULSE) {
         resetPulseEffect();
+        // IMPORTANT: S'assurer que currentColor est bien défini avant d'activer PULSE
+        // Si currentColor est 0 (noir) ou contient une couleur résiduelle indésirable,
+        // attendre que la couleur soit définie par setColor() avant d'activer PULSE
+        // Note: Le code appelant devrait faire clear() + setColor() + delay() + setEffect()
+        // pour s'assurer que la couleur est bien définie avant d'activer PULSE
+        if (currentColor == 0 && strip != nullptr) {
+          // Couleur non définie, s'assurer que les LEDs sont éteintes
+          for (int i = 0; i < NUM_LEDS; i++) {
+            strip->setPixelColor(i, 0);
+          }
+          strip->setBrightness(0);
+          Serial.println("[LED] processCommand SET_EFFECT PULSE - Couleur non definie, LEDs eteintes");
+        } else {
+          // Couleur définie, PULSE utilisera cette couleur
+          Serial.printf("[LED] processCommand SET_EFFECT PULSE - Couleur: RGB(%d, %d, %d)\n",
+                       (currentColor >> 16) & 0xFF, (currentColor >> 8) & 0xFF, currentColor & 0xFF);
+        }
       }
       // Les effets seront gérés par updateEffects()
       break;

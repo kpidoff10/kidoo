@@ -77,15 +77,72 @@
     "add": "Ajouter",
     "addKidooMessage": "Voulez-vous ajouter ce Kidoo à votre liste ?",
     "unknownDevice": "Appareil inconnu",
+    "name": "Nom de l'appareil",
+    "editName": "Modifier le nom",
+    "status": "Statut",
+    "macAddress": "Adresse MAC",
+    "deviceId": "ID Appareil",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce Kidoo ?",
     "actions": {
       "view": "Voir",
       "settings": "Paramètres",
       "delete": "Supprimer"
+    },
+    "features": {
+      "nfc": "NFC",
+      "potentiometer": "Potentiomètre",
+      "dreamMode": "Mode Dream",
+      "available": "Disponible",
+      "configure": "Configurer"
+    },
+    "detail": {
+      "offline": {
+        "title": "Kidoo hors ligne",
+        "message": "Les modifications seront envoyées à la reconnexion WiFi"
+      }
+    },
+    "dream": {
+      "bedtime": {
+        "title": "Heure de coucher",
+        "configure": "Configurer",
+        "selectTime": "Sélectionnez l'heure de coucher",
+        "selectColor": "Sélectionnez la couleur",
+        "brightness": "Luminosité",
+        "nightlightAllNight": "Veilleuse allumée toute la nuit",
+        "test": "Tester",
+        "saved": "Configuration enregistrée"
+      }
+    },
+    "wifiConfig": {
+      "title": "Configuration WiFi",
+      "requiresDirectConnection": "Connexion directe nécessaire",
+      "step1": {
+        "title": "Connexion BLE",
+        "loading": "Pour modifier le WiFi, mettez le Kidoo en mode appairage en appuyant 3 secondes sur le bouton reset. Il doit s'allumer en mode respiration bleu.",
+        "success": "Connexion BLE établie",
+        "error": {
+          "title": "Kidoo non disponible en BLE",
+          "message": "Pour modifier la configuration WiFi, le Kidoo doit être en mode appairage. Appuyez 3 secondes sur le bouton reset. Le Kidoo doit respirer en bleu.",
+          "notFound": "Kidoo non trouvé en BLE",
+          "connectionFailed": "Échec de la connexion BLE"
+        }
+      },
+      "step2": {
+        "title": "Identifiants WiFi"
+      },
+      "step3": {
+        "title": "Configuration",
+        "loading": "Configuration WiFi en cours...",
+        "success": "Configuration WiFi réussie",
+        "successMessage": "Le Kidoo est maintenant connecté au réseau WiFi",
+        "error": "Erreur de configuration",
+        "errorMessage": "Impossible de configurer le WiFi. Vérifiez les identifiants et réessayez."
+      }
     }
   },
   "device": {
     "add": {
-      "title": "Ajouter un device",
+      "title": "Ajouter un nouveau Kidoo",
       "complete": "Terminer",
       "step1": {
         "title": "Nom du Kidoo",
@@ -146,7 +203,6 @@
   "errors": {
     "generic": "Une erreur est survenue",
     "network": "Erreur de connexion",
-    "server": "Erreur serveur",
     "notFound": "Non trouvé",
     "unauthorized": "Non autorisé",
     "tryAgain": "Veuillez réessayer",
@@ -197,6 +253,12 @@
     "connected": "Connecté à {{name}}",
     "disconnected": "Déconnecté",
     "signalStrength": "Signal",
+    "scanning": "Recherche en cours...",
+    "scanningDescription": "Mettez votre Kidoo en mode association : maintenez le bouton reset pendant 3 secondes. Le Kidoo doit respirer en bleu.",
+    "scanKidoos": "Rechercher un Kidoo",
+    "noDevicesFound": "Aucun Kidoo trouvé",
+    "noDevicesDescription": "Appuyez sur \"Rechercher\" pour scanner à nouveau",
+    "scan": "Rechercher",
     "errors": {
       "notAvailable": "Le Bluetooth n'est pas disponible",
       "notEnabled": "Le Bluetooth n'est pas activé",

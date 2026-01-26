@@ -53,6 +53,11 @@ export type File = $Result.DefaultSelection<Prisma.$FilePayload>
  * 
  */
 export type KidooConfigBasic = $Result.DefaultSelection<Prisma.$KidooConfigBasicPayload>
+/**
+ * Model KidooConfigDream
+ * 
+ */
+export type KidooConfigDream = $Result.DefaultSelection<Prisma.$KidooConfigDreamPayload>
 
 /**
  * Enums
@@ -268,6 +273,16 @@ export class PrismaClient<
     * ```
     */
   get kidooConfigBasic(): Prisma.KidooConfigBasicDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.kidooConfigDream`: Exposes CRUD operations for the **KidooConfigDream** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more KidooConfigDreams
+    * const kidooConfigDreams = await prisma.kidooConfigDream.findMany()
+    * ```
+    */
+  get kidooConfigDream(): Prisma.KidooConfigDreamDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -709,7 +724,8 @@ export namespace Prisma {
     Session: 'Session',
     VerificationToken: 'VerificationToken',
     File: 'File',
-    KidooConfigBasic: 'KidooConfigBasic'
+    KidooConfigBasic: 'KidooConfigBasic',
+    KidooConfigDream: 'KidooConfigDream'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -725,7 +741,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "kidoo" | "tag" | "account" | "session" | "verificationToken" | "file" | "kidooConfigBasic"
+      modelProps: "user" | "kidoo" | "tag" | "account" | "session" | "verificationToken" | "file" | "kidooConfigBasic" | "kidooConfigDream"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1321,6 +1337,80 @@ export namespace Prisma {
           }
         }
       }
+      KidooConfigDream: {
+        payload: Prisma.$KidooConfigDreamPayload<ExtArgs>
+        fields: Prisma.KidooConfigDreamFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.KidooConfigDreamFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KidooConfigDreamPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.KidooConfigDreamFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KidooConfigDreamPayload>
+          }
+          findFirst: {
+            args: Prisma.KidooConfigDreamFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KidooConfigDreamPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.KidooConfigDreamFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KidooConfigDreamPayload>
+          }
+          findMany: {
+            args: Prisma.KidooConfigDreamFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KidooConfigDreamPayload>[]
+          }
+          create: {
+            args: Prisma.KidooConfigDreamCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KidooConfigDreamPayload>
+          }
+          createMany: {
+            args: Prisma.KidooConfigDreamCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.KidooConfigDreamCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KidooConfigDreamPayload>[]
+          }
+          delete: {
+            args: Prisma.KidooConfigDreamDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KidooConfigDreamPayload>
+          }
+          update: {
+            args: Prisma.KidooConfigDreamUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KidooConfigDreamPayload>
+          }
+          deleteMany: {
+            args: Prisma.KidooConfigDreamDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.KidooConfigDreamUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.KidooConfigDreamUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KidooConfigDreamPayload>[]
+          }
+          upsert: {
+            args: Prisma.KidooConfigDreamUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KidooConfigDreamPayload>
+          }
+          aggregate: {
+            args: Prisma.KidooConfigDreamAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateKidooConfigDream>
+          }
+          groupBy: {
+            args: Prisma.KidooConfigDreamGroupByArgs<ExtArgs>
+            result: $Utils.Optional<KidooConfigDreamGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.KidooConfigDreamCountArgs<ExtArgs>
+            result: $Utils.Optional<KidooConfigDreamCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -1437,6 +1527,7 @@ export namespace Prisma {
     verificationToken?: VerificationTokenOmit
     file?: FileOmit
     kidooConfigBasic?: KidooConfigBasicOmit
+    kidooConfigDream?: KidooConfigDreamOmit
   }
 
   /* Types for Logging */
@@ -3151,6 +3242,7 @@ export namespace Prisma {
     user?: boolean | Kidoo$userArgs<ExtArgs>
     tags?: boolean | Kidoo$tagsArgs<ExtArgs>
     configBasic?: boolean | Kidoo$configBasicArgs<ExtArgs>
+    configDream?: boolean | Kidoo$configDreamArgs<ExtArgs>
     _count?: boolean | KidooCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["kidoo"]>
 
@@ -3215,6 +3307,7 @@ export namespace Prisma {
     user?: boolean | Kidoo$userArgs<ExtArgs>
     tags?: boolean | Kidoo$tagsArgs<ExtArgs>
     configBasic?: boolean | Kidoo$configBasicArgs<ExtArgs>
+    configDream?: boolean | Kidoo$configDreamArgs<ExtArgs>
     _count?: boolean | KidooCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type KidooIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -3230,6 +3323,7 @@ export namespace Prisma {
       user: Prisma.$UserPayload<ExtArgs> | null
       tags: Prisma.$TagPayload<ExtArgs>[]
       configBasic: Prisma.$KidooConfigBasicPayload<ExtArgs> | null
+      configDream: Prisma.$KidooConfigDreamPayload<ExtArgs> | null
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -3644,6 +3738,7 @@ export namespace Prisma {
     user<T extends Kidoo$userArgs<ExtArgs> = {}>(args?: Subset<T, Kidoo$userArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     tags<T extends Kidoo$tagsArgs<ExtArgs> = {}>(args?: Subset<T, Kidoo$tagsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     configBasic<T extends Kidoo$configBasicArgs<ExtArgs> = {}>(args?: Subset<T, Kidoo$configBasicArgs<ExtArgs>>): Prisma__KidooConfigBasicClient<$Result.GetResult<Prisma.$KidooConfigBasicPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    configDream<T extends Kidoo$configDreamArgs<ExtArgs> = {}>(args?: Subset<T, Kidoo$configDreamArgs<ExtArgs>>): Prisma__KidooConfigDreamClient<$Result.GetResult<Prisma.$KidooConfigDreamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4143,6 +4238,25 @@ export namespace Prisma {
      */
     include?: KidooConfigBasicInclude<ExtArgs> | null
     where?: KidooConfigBasicWhereInput
+  }
+
+  /**
+   * Kidoo.configDream
+   */
+  export type Kidoo$configDreamArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KidooConfigDream
+     */
+    select?: KidooConfigDreamSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KidooConfigDream
+     */
+    omit?: KidooConfigDreamOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KidooConfigDreamInclude<ExtArgs> | null
+    where?: KidooConfigDreamWhereInput
   }
 
   /**
@@ -10891,6 +11005,1196 @@ export namespace Prisma {
 
 
   /**
+   * Model KidooConfigDream
+   */
+
+  export type AggregateKidooConfigDream = {
+    _count: KidooConfigDreamCountAggregateOutputType | null
+    _avg: KidooConfigDreamAvgAggregateOutputType | null
+    _sum: KidooConfigDreamSumAggregateOutputType | null
+    _min: KidooConfigDreamMinAggregateOutputType | null
+    _max: KidooConfigDreamMaxAggregateOutputType | null
+  }
+
+  export type KidooConfigDreamAvgAggregateOutputType = {
+    colorR: number | null
+    colorG: number | null
+    colorB: number | null
+    bedtimeHour: number | null
+    bedtimeMinute: number | null
+    brightness: number | null
+  }
+
+  export type KidooConfigDreamSumAggregateOutputType = {
+    colorR: number | null
+    colorG: number | null
+    colorB: number | null
+    bedtimeHour: number | null
+    bedtimeMinute: number | null
+    brightness: number | null
+  }
+
+  export type KidooConfigDreamMinAggregateOutputType = {
+    id: string | null
+    kidooId: string | null
+    colorR: number | null
+    colorG: number | null
+    colorB: number | null
+    bedtimeHour: number | null
+    bedtimeMinute: number | null
+    brightness: number | null
+    allNight: boolean | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type KidooConfigDreamMaxAggregateOutputType = {
+    id: string | null
+    kidooId: string | null
+    colorR: number | null
+    colorG: number | null
+    colorB: number | null
+    bedtimeHour: number | null
+    bedtimeMinute: number | null
+    brightness: number | null
+    allNight: boolean | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type KidooConfigDreamCountAggregateOutputType = {
+    id: number
+    kidooId: number
+    colorR: number
+    colorG: number
+    colorB: number
+    bedtimeHour: number
+    bedtimeMinute: number
+    brightness: number
+    allNight: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type KidooConfigDreamAvgAggregateInputType = {
+    colorR?: true
+    colorG?: true
+    colorB?: true
+    bedtimeHour?: true
+    bedtimeMinute?: true
+    brightness?: true
+  }
+
+  export type KidooConfigDreamSumAggregateInputType = {
+    colorR?: true
+    colorG?: true
+    colorB?: true
+    bedtimeHour?: true
+    bedtimeMinute?: true
+    brightness?: true
+  }
+
+  export type KidooConfigDreamMinAggregateInputType = {
+    id?: true
+    kidooId?: true
+    colorR?: true
+    colorG?: true
+    colorB?: true
+    bedtimeHour?: true
+    bedtimeMinute?: true
+    brightness?: true
+    allNight?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type KidooConfigDreamMaxAggregateInputType = {
+    id?: true
+    kidooId?: true
+    colorR?: true
+    colorG?: true
+    colorB?: true
+    bedtimeHour?: true
+    bedtimeMinute?: true
+    brightness?: true
+    allNight?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type KidooConfigDreamCountAggregateInputType = {
+    id?: true
+    kidooId?: true
+    colorR?: true
+    colorG?: true
+    colorB?: true
+    bedtimeHour?: true
+    bedtimeMinute?: true
+    brightness?: true
+    allNight?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type KidooConfigDreamAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which KidooConfigDream to aggregate.
+     */
+    where?: KidooConfigDreamWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of KidooConfigDreams to fetch.
+     */
+    orderBy?: KidooConfigDreamOrderByWithRelationInput | KidooConfigDreamOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: KidooConfigDreamWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` KidooConfigDreams from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` KidooConfigDreams.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned KidooConfigDreams
+    **/
+    _count?: true | KidooConfigDreamCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: KidooConfigDreamAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: KidooConfigDreamSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: KidooConfigDreamMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: KidooConfigDreamMaxAggregateInputType
+  }
+
+  export type GetKidooConfigDreamAggregateType<T extends KidooConfigDreamAggregateArgs> = {
+        [P in keyof T & keyof AggregateKidooConfigDream]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateKidooConfigDream[P]>
+      : GetScalarType<T[P], AggregateKidooConfigDream[P]>
+  }
+
+
+
+
+  export type KidooConfigDreamGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: KidooConfigDreamWhereInput
+    orderBy?: KidooConfigDreamOrderByWithAggregationInput | KidooConfigDreamOrderByWithAggregationInput[]
+    by: KidooConfigDreamScalarFieldEnum[] | KidooConfigDreamScalarFieldEnum
+    having?: KidooConfigDreamScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: KidooConfigDreamCountAggregateInputType | true
+    _avg?: KidooConfigDreamAvgAggregateInputType
+    _sum?: KidooConfigDreamSumAggregateInputType
+    _min?: KidooConfigDreamMinAggregateInputType
+    _max?: KidooConfigDreamMaxAggregateInputType
+  }
+
+  export type KidooConfigDreamGroupByOutputType = {
+    id: string
+    kidooId: string
+    colorR: number | null
+    colorG: number | null
+    colorB: number | null
+    bedtimeHour: number | null
+    bedtimeMinute: number | null
+    brightness: number | null
+    allNight: boolean
+    createdAt: Date
+    updatedAt: Date
+    _count: KidooConfigDreamCountAggregateOutputType | null
+    _avg: KidooConfigDreamAvgAggregateOutputType | null
+    _sum: KidooConfigDreamSumAggregateOutputType | null
+    _min: KidooConfigDreamMinAggregateOutputType | null
+    _max: KidooConfigDreamMaxAggregateOutputType | null
+  }
+
+  type GetKidooConfigDreamGroupByPayload<T extends KidooConfigDreamGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<KidooConfigDreamGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof KidooConfigDreamGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], KidooConfigDreamGroupByOutputType[P]>
+            : GetScalarType<T[P], KidooConfigDreamGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type KidooConfigDreamSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    kidooId?: boolean
+    colorR?: boolean
+    colorG?: boolean
+    colorB?: boolean
+    bedtimeHour?: boolean
+    bedtimeMinute?: boolean
+    brightness?: boolean
+    allNight?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    kidoo?: boolean | KidooDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["kidooConfigDream"]>
+
+  export type KidooConfigDreamSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    kidooId?: boolean
+    colorR?: boolean
+    colorG?: boolean
+    colorB?: boolean
+    bedtimeHour?: boolean
+    bedtimeMinute?: boolean
+    brightness?: boolean
+    allNight?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    kidoo?: boolean | KidooDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["kidooConfigDream"]>
+
+  export type KidooConfigDreamSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    kidooId?: boolean
+    colorR?: boolean
+    colorG?: boolean
+    colorB?: boolean
+    bedtimeHour?: boolean
+    bedtimeMinute?: boolean
+    brightness?: boolean
+    allNight?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    kidoo?: boolean | KidooDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["kidooConfigDream"]>
+
+  export type KidooConfigDreamSelectScalar = {
+    id?: boolean
+    kidooId?: boolean
+    colorR?: boolean
+    colorG?: boolean
+    colorB?: boolean
+    bedtimeHour?: boolean
+    bedtimeMinute?: boolean
+    brightness?: boolean
+    allNight?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type KidooConfigDreamOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "kidooId" | "colorR" | "colorG" | "colorB" | "bedtimeHour" | "bedtimeMinute" | "brightness" | "allNight" | "createdAt" | "updatedAt", ExtArgs["result"]["kidooConfigDream"]>
+  export type KidooConfigDreamInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    kidoo?: boolean | KidooDefaultArgs<ExtArgs>
+  }
+  export type KidooConfigDreamIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    kidoo?: boolean | KidooDefaultArgs<ExtArgs>
+  }
+  export type KidooConfigDreamIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    kidoo?: boolean | KidooDefaultArgs<ExtArgs>
+  }
+
+  export type $KidooConfigDreamPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "KidooConfigDream"
+    objects: {
+      kidoo: Prisma.$KidooPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      kidooId: string
+      colorR: number | null
+      colorG: number | null
+      colorB: number | null
+      bedtimeHour: number | null
+      bedtimeMinute: number | null
+      brightness: number | null
+      allNight: boolean
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["kidooConfigDream"]>
+    composites: {}
+  }
+
+  type KidooConfigDreamGetPayload<S extends boolean | null | undefined | KidooConfigDreamDefaultArgs> = $Result.GetResult<Prisma.$KidooConfigDreamPayload, S>
+
+  type KidooConfigDreamCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<KidooConfigDreamFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: KidooConfigDreamCountAggregateInputType | true
+    }
+
+  export interface KidooConfigDreamDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['KidooConfigDream'], meta: { name: 'KidooConfigDream' } }
+    /**
+     * Find zero or one KidooConfigDream that matches the filter.
+     * @param {KidooConfigDreamFindUniqueArgs} args - Arguments to find a KidooConfigDream
+     * @example
+     * // Get one KidooConfigDream
+     * const kidooConfigDream = await prisma.kidooConfigDream.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends KidooConfigDreamFindUniqueArgs>(args: SelectSubset<T, KidooConfigDreamFindUniqueArgs<ExtArgs>>): Prisma__KidooConfigDreamClient<$Result.GetResult<Prisma.$KidooConfigDreamPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one KidooConfigDream that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {KidooConfigDreamFindUniqueOrThrowArgs} args - Arguments to find a KidooConfigDream
+     * @example
+     * // Get one KidooConfigDream
+     * const kidooConfigDream = await prisma.kidooConfigDream.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends KidooConfigDreamFindUniqueOrThrowArgs>(args: SelectSubset<T, KidooConfigDreamFindUniqueOrThrowArgs<ExtArgs>>): Prisma__KidooConfigDreamClient<$Result.GetResult<Prisma.$KidooConfigDreamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first KidooConfigDream that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KidooConfigDreamFindFirstArgs} args - Arguments to find a KidooConfigDream
+     * @example
+     * // Get one KidooConfigDream
+     * const kidooConfigDream = await prisma.kidooConfigDream.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends KidooConfigDreamFindFirstArgs>(args?: SelectSubset<T, KidooConfigDreamFindFirstArgs<ExtArgs>>): Prisma__KidooConfigDreamClient<$Result.GetResult<Prisma.$KidooConfigDreamPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first KidooConfigDream that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KidooConfigDreamFindFirstOrThrowArgs} args - Arguments to find a KidooConfigDream
+     * @example
+     * // Get one KidooConfigDream
+     * const kidooConfigDream = await prisma.kidooConfigDream.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends KidooConfigDreamFindFirstOrThrowArgs>(args?: SelectSubset<T, KidooConfigDreamFindFirstOrThrowArgs<ExtArgs>>): Prisma__KidooConfigDreamClient<$Result.GetResult<Prisma.$KidooConfigDreamPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more KidooConfigDreams that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KidooConfigDreamFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all KidooConfigDreams
+     * const kidooConfigDreams = await prisma.kidooConfigDream.findMany()
+     * 
+     * // Get first 10 KidooConfigDreams
+     * const kidooConfigDreams = await prisma.kidooConfigDream.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const kidooConfigDreamWithIdOnly = await prisma.kidooConfigDream.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends KidooConfigDreamFindManyArgs>(args?: SelectSubset<T, KidooConfigDreamFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$KidooConfigDreamPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a KidooConfigDream.
+     * @param {KidooConfigDreamCreateArgs} args - Arguments to create a KidooConfigDream.
+     * @example
+     * // Create one KidooConfigDream
+     * const KidooConfigDream = await prisma.kidooConfigDream.create({
+     *   data: {
+     *     // ... data to create a KidooConfigDream
+     *   }
+     * })
+     * 
+     */
+    create<T extends KidooConfigDreamCreateArgs>(args: SelectSubset<T, KidooConfigDreamCreateArgs<ExtArgs>>): Prisma__KidooConfigDreamClient<$Result.GetResult<Prisma.$KidooConfigDreamPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many KidooConfigDreams.
+     * @param {KidooConfigDreamCreateManyArgs} args - Arguments to create many KidooConfigDreams.
+     * @example
+     * // Create many KidooConfigDreams
+     * const kidooConfigDream = await prisma.kidooConfigDream.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends KidooConfigDreamCreateManyArgs>(args?: SelectSubset<T, KidooConfigDreamCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many KidooConfigDreams and returns the data saved in the database.
+     * @param {KidooConfigDreamCreateManyAndReturnArgs} args - Arguments to create many KidooConfigDreams.
+     * @example
+     * // Create many KidooConfigDreams
+     * const kidooConfigDream = await prisma.kidooConfigDream.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many KidooConfigDreams and only return the `id`
+     * const kidooConfigDreamWithIdOnly = await prisma.kidooConfigDream.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends KidooConfigDreamCreateManyAndReturnArgs>(args?: SelectSubset<T, KidooConfigDreamCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$KidooConfigDreamPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a KidooConfigDream.
+     * @param {KidooConfigDreamDeleteArgs} args - Arguments to delete one KidooConfigDream.
+     * @example
+     * // Delete one KidooConfigDream
+     * const KidooConfigDream = await prisma.kidooConfigDream.delete({
+     *   where: {
+     *     // ... filter to delete one KidooConfigDream
+     *   }
+     * })
+     * 
+     */
+    delete<T extends KidooConfigDreamDeleteArgs>(args: SelectSubset<T, KidooConfigDreamDeleteArgs<ExtArgs>>): Prisma__KidooConfigDreamClient<$Result.GetResult<Prisma.$KidooConfigDreamPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one KidooConfigDream.
+     * @param {KidooConfigDreamUpdateArgs} args - Arguments to update one KidooConfigDream.
+     * @example
+     * // Update one KidooConfigDream
+     * const kidooConfigDream = await prisma.kidooConfigDream.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends KidooConfigDreamUpdateArgs>(args: SelectSubset<T, KidooConfigDreamUpdateArgs<ExtArgs>>): Prisma__KidooConfigDreamClient<$Result.GetResult<Prisma.$KidooConfigDreamPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more KidooConfigDreams.
+     * @param {KidooConfigDreamDeleteManyArgs} args - Arguments to filter KidooConfigDreams to delete.
+     * @example
+     * // Delete a few KidooConfigDreams
+     * const { count } = await prisma.kidooConfigDream.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends KidooConfigDreamDeleteManyArgs>(args?: SelectSubset<T, KidooConfigDreamDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more KidooConfigDreams.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KidooConfigDreamUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many KidooConfigDreams
+     * const kidooConfigDream = await prisma.kidooConfigDream.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends KidooConfigDreamUpdateManyArgs>(args: SelectSubset<T, KidooConfigDreamUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more KidooConfigDreams and returns the data updated in the database.
+     * @param {KidooConfigDreamUpdateManyAndReturnArgs} args - Arguments to update many KidooConfigDreams.
+     * @example
+     * // Update many KidooConfigDreams
+     * const kidooConfigDream = await prisma.kidooConfigDream.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more KidooConfigDreams and only return the `id`
+     * const kidooConfigDreamWithIdOnly = await prisma.kidooConfigDream.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends KidooConfigDreamUpdateManyAndReturnArgs>(args: SelectSubset<T, KidooConfigDreamUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$KidooConfigDreamPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one KidooConfigDream.
+     * @param {KidooConfigDreamUpsertArgs} args - Arguments to update or create a KidooConfigDream.
+     * @example
+     * // Update or create a KidooConfigDream
+     * const kidooConfigDream = await prisma.kidooConfigDream.upsert({
+     *   create: {
+     *     // ... data to create a KidooConfigDream
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the KidooConfigDream we want to update
+     *   }
+     * })
+     */
+    upsert<T extends KidooConfigDreamUpsertArgs>(args: SelectSubset<T, KidooConfigDreamUpsertArgs<ExtArgs>>): Prisma__KidooConfigDreamClient<$Result.GetResult<Prisma.$KidooConfigDreamPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of KidooConfigDreams.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KidooConfigDreamCountArgs} args - Arguments to filter KidooConfigDreams to count.
+     * @example
+     * // Count the number of KidooConfigDreams
+     * const count = await prisma.kidooConfigDream.count({
+     *   where: {
+     *     // ... the filter for the KidooConfigDreams we want to count
+     *   }
+     * })
+    **/
+    count<T extends KidooConfigDreamCountArgs>(
+      args?: Subset<T, KidooConfigDreamCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], KidooConfigDreamCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a KidooConfigDream.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KidooConfigDreamAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends KidooConfigDreamAggregateArgs>(args: Subset<T, KidooConfigDreamAggregateArgs>): Prisma.PrismaPromise<GetKidooConfigDreamAggregateType<T>>
+
+    /**
+     * Group by KidooConfigDream.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KidooConfigDreamGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends KidooConfigDreamGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: KidooConfigDreamGroupByArgs['orderBy'] }
+        : { orderBy?: KidooConfigDreamGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, KidooConfigDreamGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetKidooConfigDreamGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the KidooConfigDream model
+   */
+  readonly fields: KidooConfigDreamFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for KidooConfigDream.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__KidooConfigDreamClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    kidoo<T extends KidooDefaultArgs<ExtArgs> = {}>(args?: Subset<T, KidooDefaultArgs<ExtArgs>>): Prisma__KidooClient<$Result.GetResult<Prisma.$KidooPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the KidooConfigDream model
+   */
+  interface KidooConfigDreamFieldRefs {
+    readonly id: FieldRef<"KidooConfigDream", 'String'>
+    readonly kidooId: FieldRef<"KidooConfigDream", 'String'>
+    readonly colorR: FieldRef<"KidooConfigDream", 'Int'>
+    readonly colorG: FieldRef<"KidooConfigDream", 'Int'>
+    readonly colorB: FieldRef<"KidooConfigDream", 'Int'>
+    readonly bedtimeHour: FieldRef<"KidooConfigDream", 'Int'>
+    readonly bedtimeMinute: FieldRef<"KidooConfigDream", 'Int'>
+    readonly brightness: FieldRef<"KidooConfigDream", 'Int'>
+    readonly allNight: FieldRef<"KidooConfigDream", 'Boolean'>
+    readonly createdAt: FieldRef<"KidooConfigDream", 'DateTime'>
+    readonly updatedAt: FieldRef<"KidooConfigDream", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * KidooConfigDream findUnique
+   */
+  export type KidooConfigDreamFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KidooConfigDream
+     */
+    select?: KidooConfigDreamSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KidooConfigDream
+     */
+    omit?: KidooConfigDreamOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KidooConfigDreamInclude<ExtArgs> | null
+    /**
+     * Filter, which KidooConfigDream to fetch.
+     */
+    where: KidooConfigDreamWhereUniqueInput
+  }
+
+  /**
+   * KidooConfigDream findUniqueOrThrow
+   */
+  export type KidooConfigDreamFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KidooConfigDream
+     */
+    select?: KidooConfigDreamSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KidooConfigDream
+     */
+    omit?: KidooConfigDreamOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KidooConfigDreamInclude<ExtArgs> | null
+    /**
+     * Filter, which KidooConfigDream to fetch.
+     */
+    where: KidooConfigDreamWhereUniqueInput
+  }
+
+  /**
+   * KidooConfigDream findFirst
+   */
+  export type KidooConfigDreamFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KidooConfigDream
+     */
+    select?: KidooConfigDreamSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KidooConfigDream
+     */
+    omit?: KidooConfigDreamOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KidooConfigDreamInclude<ExtArgs> | null
+    /**
+     * Filter, which KidooConfigDream to fetch.
+     */
+    where?: KidooConfigDreamWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of KidooConfigDreams to fetch.
+     */
+    orderBy?: KidooConfigDreamOrderByWithRelationInput | KidooConfigDreamOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for KidooConfigDreams.
+     */
+    cursor?: KidooConfigDreamWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` KidooConfigDreams from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` KidooConfigDreams.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of KidooConfigDreams.
+     */
+    distinct?: KidooConfigDreamScalarFieldEnum | KidooConfigDreamScalarFieldEnum[]
+  }
+
+  /**
+   * KidooConfigDream findFirstOrThrow
+   */
+  export type KidooConfigDreamFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KidooConfigDream
+     */
+    select?: KidooConfigDreamSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KidooConfigDream
+     */
+    omit?: KidooConfigDreamOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KidooConfigDreamInclude<ExtArgs> | null
+    /**
+     * Filter, which KidooConfigDream to fetch.
+     */
+    where?: KidooConfigDreamWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of KidooConfigDreams to fetch.
+     */
+    orderBy?: KidooConfigDreamOrderByWithRelationInput | KidooConfigDreamOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for KidooConfigDreams.
+     */
+    cursor?: KidooConfigDreamWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` KidooConfigDreams from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` KidooConfigDreams.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of KidooConfigDreams.
+     */
+    distinct?: KidooConfigDreamScalarFieldEnum | KidooConfigDreamScalarFieldEnum[]
+  }
+
+  /**
+   * KidooConfigDream findMany
+   */
+  export type KidooConfigDreamFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KidooConfigDream
+     */
+    select?: KidooConfigDreamSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KidooConfigDream
+     */
+    omit?: KidooConfigDreamOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KidooConfigDreamInclude<ExtArgs> | null
+    /**
+     * Filter, which KidooConfigDreams to fetch.
+     */
+    where?: KidooConfigDreamWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of KidooConfigDreams to fetch.
+     */
+    orderBy?: KidooConfigDreamOrderByWithRelationInput | KidooConfigDreamOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing KidooConfigDreams.
+     */
+    cursor?: KidooConfigDreamWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` KidooConfigDreams from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` KidooConfigDreams.
+     */
+    skip?: number
+    distinct?: KidooConfigDreamScalarFieldEnum | KidooConfigDreamScalarFieldEnum[]
+  }
+
+  /**
+   * KidooConfigDream create
+   */
+  export type KidooConfigDreamCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KidooConfigDream
+     */
+    select?: KidooConfigDreamSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KidooConfigDream
+     */
+    omit?: KidooConfigDreamOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KidooConfigDreamInclude<ExtArgs> | null
+    /**
+     * The data needed to create a KidooConfigDream.
+     */
+    data: XOR<KidooConfigDreamCreateInput, KidooConfigDreamUncheckedCreateInput>
+  }
+
+  /**
+   * KidooConfigDream createMany
+   */
+  export type KidooConfigDreamCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many KidooConfigDreams.
+     */
+    data: KidooConfigDreamCreateManyInput | KidooConfigDreamCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * KidooConfigDream createManyAndReturn
+   */
+  export type KidooConfigDreamCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KidooConfigDream
+     */
+    select?: KidooConfigDreamSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the KidooConfigDream
+     */
+    omit?: KidooConfigDreamOmit<ExtArgs> | null
+    /**
+     * The data used to create many KidooConfigDreams.
+     */
+    data: KidooConfigDreamCreateManyInput | KidooConfigDreamCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KidooConfigDreamIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * KidooConfigDream update
+   */
+  export type KidooConfigDreamUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KidooConfigDream
+     */
+    select?: KidooConfigDreamSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KidooConfigDream
+     */
+    omit?: KidooConfigDreamOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KidooConfigDreamInclude<ExtArgs> | null
+    /**
+     * The data needed to update a KidooConfigDream.
+     */
+    data: XOR<KidooConfigDreamUpdateInput, KidooConfigDreamUncheckedUpdateInput>
+    /**
+     * Choose, which KidooConfigDream to update.
+     */
+    where: KidooConfigDreamWhereUniqueInput
+  }
+
+  /**
+   * KidooConfigDream updateMany
+   */
+  export type KidooConfigDreamUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update KidooConfigDreams.
+     */
+    data: XOR<KidooConfigDreamUpdateManyMutationInput, KidooConfigDreamUncheckedUpdateManyInput>
+    /**
+     * Filter which KidooConfigDreams to update
+     */
+    where?: KidooConfigDreamWhereInput
+    /**
+     * Limit how many KidooConfigDreams to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * KidooConfigDream updateManyAndReturn
+   */
+  export type KidooConfigDreamUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KidooConfigDream
+     */
+    select?: KidooConfigDreamSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the KidooConfigDream
+     */
+    omit?: KidooConfigDreamOmit<ExtArgs> | null
+    /**
+     * The data used to update KidooConfigDreams.
+     */
+    data: XOR<KidooConfigDreamUpdateManyMutationInput, KidooConfigDreamUncheckedUpdateManyInput>
+    /**
+     * Filter which KidooConfigDreams to update
+     */
+    where?: KidooConfigDreamWhereInput
+    /**
+     * Limit how many KidooConfigDreams to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KidooConfigDreamIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * KidooConfigDream upsert
+   */
+  export type KidooConfigDreamUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KidooConfigDream
+     */
+    select?: KidooConfigDreamSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KidooConfigDream
+     */
+    omit?: KidooConfigDreamOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KidooConfigDreamInclude<ExtArgs> | null
+    /**
+     * The filter to search for the KidooConfigDream to update in case it exists.
+     */
+    where: KidooConfigDreamWhereUniqueInput
+    /**
+     * In case the KidooConfigDream found by the `where` argument doesn't exist, create a new KidooConfigDream with this data.
+     */
+    create: XOR<KidooConfigDreamCreateInput, KidooConfigDreamUncheckedCreateInput>
+    /**
+     * In case the KidooConfigDream was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<KidooConfigDreamUpdateInput, KidooConfigDreamUncheckedUpdateInput>
+  }
+
+  /**
+   * KidooConfigDream delete
+   */
+  export type KidooConfigDreamDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KidooConfigDream
+     */
+    select?: KidooConfigDreamSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KidooConfigDream
+     */
+    omit?: KidooConfigDreamOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KidooConfigDreamInclude<ExtArgs> | null
+    /**
+     * Filter which KidooConfigDream to delete.
+     */
+    where: KidooConfigDreamWhereUniqueInput
+  }
+
+  /**
+   * KidooConfigDream deleteMany
+   */
+  export type KidooConfigDreamDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which KidooConfigDreams to delete
+     */
+    where?: KidooConfigDreamWhereInput
+    /**
+     * Limit how many KidooConfigDreams to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * KidooConfigDream without action
+   */
+  export type KidooConfigDreamDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KidooConfigDream
+     */
+    select?: KidooConfigDreamSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the KidooConfigDream
+     */
+    omit?: KidooConfigDreamOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: KidooConfigDreamInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -11024,6 +12328,23 @@ export namespace Prisma {
   };
 
   export type KidooConfigBasicScalarFieldEnum = (typeof KidooConfigBasicScalarFieldEnum)[keyof typeof KidooConfigBasicScalarFieldEnum]
+
+
+  export const KidooConfigDreamScalarFieldEnum: {
+    id: 'id',
+    kidooId: 'kidooId',
+    colorR: 'colorR',
+    colorG: 'colorG',
+    colorB: 'colorB',
+    bedtimeHour: 'bedtimeHour',
+    bedtimeMinute: 'bedtimeMinute',
+    brightness: 'brightness',
+    allNight: 'allNight',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type KidooConfigDreamScalarFieldEnum = (typeof KidooConfigDreamScalarFieldEnum)[keyof typeof KidooConfigDreamScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -11253,6 +12574,7 @@ export namespace Prisma {
     user?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
     tags?: TagListRelationFilter
     configBasic?: XOR<KidooConfigBasicNullableScalarRelationFilter, KidooConfigBasicWhereInput> | null
+    configDream?: XOR<KidooConfigDreamNullableScalarRelationFilter, KidooConfigDreamWhereInput> | null
   }
 
   export type KidooOrderByWithRelationInput = {
@@ -11274,6 +12596,7 @@ export namespace Prisma {
     user?: UserOrderByWithRelationInput
     tags?: TagOrderByRelationAggregateInput
     configBasic?: KidooConfigBasicOrderByWithRelationInput
+    configDream?: KidooConfigDreamOrderByWithRelationInput
   }
 
   export type KidooWhereUniqueInput = Prisma.AtLeast<{
@@ -11298,6 +12621,7 @@ export namespace Prisma {
     user?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
     tags?: TagListRelationFilter
     configBasic?: XOR<KidooConfigBasicNullableScalarRelationFilter, KidooConfigBasicWhereInput> | null
+    configDream?: XOR<KidooConfigDreamNullableScalarRelationFilter, KidooConfigDreamWhereInput> | null
   }, "id" | "deviceId">
 
   export type KidooOrderByWithAggregationInput = {
@@ -11793,6 +13117,93 @@ export namespace Prisma {
     updatedAt?: DateTimeWithAggregatesFilter<"KidooConfigBasic"> | Date | string
   }
 
+  export type KidooConfigDreamWhereInput = {
+    AND?: KidooConfigDreamWhereInput | KidooConfigDreamWhereInput[]
+    OR?: KidooConfigDreamWhereInput[]
+    NOT?: KidooConfigDreamWhereInput | KidooConfigDreamWhereInput[]
+    id?: StringFilter<"KidooConfigDream"> | string
+    kidooId?: StringFilter<"KidooConfigDream"> | string
+    colorR?: IntNullableFilter<"KidooConfigDream"> | number | null
+    colorG?: IntNullableFilter<"KidooConfigDream"> | number | null
+    colorB?: IntNullableFilter<"KidooConfigDream"> | number | null
+    bedtimeHour?: IntNullableFilter<"KidooConfigDream"> | number | null
+    bedtimeMinute?: IntNullableFilter<"KidooConfigDream"> | number | null
+    brightness?: IntNullableFilter<"KidooConfigDream"> | number | null
+    allNight?: BoolFilter<"KidooConfigDream"> | boolean
+    createdAt?: DateTimeFilter<"KidooConfigDream"> | Date | string
+    updatedAt?: DateTimeFilter<"KidooConfigDream"> | Date | string
+    kidoo?: XOR<KidooScalarRelationFilter, KidooWhereInput>
+  }
+
+  export type KidooConfigDreamOrderByWithRelationInput = {
+    id?: SortOrder
+    kidooId?: SortOrder
+    colorR?: SortOrderInput | SortOrder
+    colorG?: SortOrderInput | SortOrder
+    colorB?: SortOrderInput | SortOrder
+    bedtimeHour?: SortOrderInput | SortOrder
+    bedtimeMinute?: SortOrderInput | SortOrder
+    brightness?: SortOrderInput | SortOrder
+    allNight?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    kidoo?: KidooOrderByWithRelationInput
+  }
+
+  export type KidooConfigDreamWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    kidooId?: string
+    AND?: KidooConfigDreamWhereInput | KidooConfigDreamWhereInput[]
+    OR?: KidooConfigDreamWhereInput[]
+    NOT?: KidooConfigDreamWhereInput | KidooConfigDreamWhereInput[]
+    colorR?: IntNullableFilter<"KidooConfigDream"> | number | null
+    colorG?: IntNullableFilter<"KidooConfigDream"> | number | null
+    colorB?: IntNullableFilter<"KidooConfigDream"> | number | null
+    bedtimeHour?: IntNullableFilter<"KidooConfigDream"> | number | null
+    bedtimeMinute?: IntNullableFilter<"KidooConfigDream"> | number | null
+    brightness?: IntNullableFilter<"KidooConfigDream"> | number | null
+    allNight?: BoolFilter<"KidooConfigDream"> | boolean
+    createdAt?: DateTimeFilter<"KidooConfigDream"> | Date | string
+    updatedAt?: DateTimeFilter<"KidooConfigDream"> | Date | string
+    kidoo?: XOR<KidooScalarRelationFilter, KidooWhereInput>
+  }, "id" | "kidooId">
+
+  export type KidooConfigDreamOrderByWithAggregationInput = {
+    id?: SortOrder
+    kidooId?: SortOrder
+    colorR?: SortOrderInput | SortOrder
+    colorG?: SortOrderInput | SortOrder
+    colorB?: SortOrderInput | SortOrder
+    bedtimeHour?: SortOrderInput | SortOrder
+    bedtimeMinute?: SortOrderInput | SortOrder
+    brightness?: SortOrderInput | SortOrder
+    allNight?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: KidooConfigDreamCountOrderByAggregateInput
+    _avg?: KidooConfigDreamAvgOrderByAggregateInput
+    _max?: KidooConfigDreamMaxOrderByAggregateInput
+    _min?: KidooConfigDreamMinOrderByAggregateInput
+    _sum?: KidooConfigDreamSumOrderByAggregateInput
+  }
+
+  export type KidooConfigDreamScalarWhereWithAggregatesInput = {
+    AND?: KidooConfigDreamScalarWhereWithAggregatesInput | KidooConfigDreamScalarWhereWithAggregatesInput[]
+    OR?: KidooConfigDreamScalarWhereWithAggregatesInput[]
+    NOT?: KidooConfigDreamScalarWhereWithAggregatesInput | KidooConfigDreamScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"KidooConfigDream"> | string
+    kidooId?: StringWithAggregatesFilter<"KidooConfigDream"> | string
+    colorR?: IntNullableWithAggregatesFilter<"KidooConfigDream"> | number | null
+    colorG?: IntNullableWithAggregatesFilter<"KidooConfigDream"> | number | null
+    colorB?: IntNullableWithAggregatesFilter<"KidooConfigDream"> | number | null
+    bedtimeHour?: IntNullableWithAggregatesFilter<"KidooConfigDream"> | number | null
+    bedtimeMinute?: IntNullableWithAggregatesFilter<"KidooConfigDream"> | number | null
+    brightness?: IntNullableWithAggregatesFilter<"KidooConfigDream"> | number | null
+    allNight?: BoolWithAggregatesFilter<"KidooConfigDream"> | boolean
+    createdAt?: DateTimeWithAggregatesFilter<"KidooConfigDream"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"KidooConfigDream"> | Date | string
+  }
+
   export type UserCreateInput = {
     id?: string
     email: string
@@ -11908,6 +13319,7 @@ export namespace Prisma {
     user?: UserCreateNestedOneWithoutKidoosInput
     tags?: TagCreateNestedManyWithoutKidooInput
     configBasic?: KidooConfigBasicCreateNestedOneWithoutKidooInput
+    configDream?: KidooConfigDreamCreateNestedOneWithoutKidooInput
   }
 
   export type KidooUncheckedCreateInput = {
@@ -11928,6 +13340,7 @@ export namespace Prisma {
     sleepTimeout?: number
     tags?: TagUncheckedCreateNestedManyWithoutKidooInput
     configBasic?: KidooConfigBasicUncheckedCreateNestedOneWithoutKidooInput
+    configDream?: KidooConfigDreamUncheckedCreateNestedOneWithoutKidooInput
   }
 
   export type KidooUpdateInput = {
@@ -11948,6 +13361,7 @@ export namespace Prisma {
     user?: UserUpdateOneWithoutKidoosNestedInput
     tags?: TagUpdateManyWithoutKidooNestedInput
     configBasic?: KidooConfigBasicUpdateOneWithoutKidooNestedInput
+    configDream?: KidooConfigDreamUpdateOneWithoutKidooNestedInput
   }
 
   export type KidooUncheckedUpdateInput = {
@@ -11968,6 +13382,7 @@ export namespace Prisma {
     sleepTimeout?: IntFieldUpdateOperationsInput | number
     tags?: TagUncheckedUpdateManyWithoutKidooNestedInput
     configBasic?: KidooConfigBasicUncheckedUpdateOneWithoutKidooNestedInput
+    configDream?: KidooConfigDreamUncheckedUpdateOneWithoutKidooNestedInput
   }
 
   export type KidooCreateManyInput = {
@@ -12503,6 +13918,103 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type KidooConfigDreamCreateInput = {
+    id?: string
+    colorR?: number | null
+    colorG?: number | null
+    colorB?: number | null
+    bedtimeHour?: number | null
+    bedtimeMinute?: number | null
+    brightness?: number | null
+    allNight?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    kidoo: KidooCreateNestedOneWithoutConfigDreamInput
+  }
+
+  export type KidooConfigDreamUncheckedCreateInput = {
+    id?: string
+    kidooId: string
+    colorR?: number | null
+    colorG?: number | null
+    colorB?: number | null
+    bedtimeHour?: number | null
+    bedtimeMinute?: number | null
+    brightness?: number | null
+    allNight?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type KidooConfigDreamUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    colorR?: NullableIntFieldUpdateOperationsInput | number | null
+    colorG?: NullableIntFieldUpdateOperationsInput | number | null
+    colorB?: NullableIntFieldUpdateOperationsInput | number | null
+    bedtimeHour?: NullableIntFieldUpdateOperationsInput | number | null
+    bedtimeMinute?: NullableIntFieldUpdateOperationsInput | number | null
+    brightness?: NullableIntFieldUpdateOperationsInput | number | null
+    allNight?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    kidoo?: KidooUpdateOneRequiredWithoutConfigDreamNestedInput
+  }
+
+  export type KidooConfigDreamUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    kidooId?: StringFieldUpdateOperationsInput | string
+    colorR?: NullableIntFieldUpdateOperationsInput | number | null
+    colorG?: NullableIntFieldUpdateOperationsInput | number | null
+    colorB?: NullableIntFieldUpdateOperationsInput | number | null
+    bedtimeHour?: NullableIntFieldUpdateOperationsInput | number | null
+    bedtimeMinute?: NullableIntFieldUpdateOperationsInput | number | null
+    brightness?: NullableIntFieldUpdateOperationsInput | number | null
+    allNight?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type KidooConfigDreamCreateManyInput = {
+    id?: string
+    kidooId: string
+    colorR?: number | null
+    colorG?: number | null
+    colorB?: number | null
+    bedtimeHour?: number | null
+    bedtimeMinute?: number | null
+    brightness?: number | null
+    allNight?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type KidooConfigDreamUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    colorR?: NullableIntFieldUpdateOperationsInput | number | null
+    colorG?: NullableIntFieldUpdateOperationsInput | number | null
+    colorB?: NullableIntFieldUpdateOperationsInput | number | null
+    bedtimeHour?: NullableIntFieldUpdateOperationsInput | number | null
+    bedtimeMinute?: NullableIntFieldUpdateOperationsInput | number | null
+    brightness?: NullableIntFieldUpdateOperationsInput | number | null
+    allNight?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type KidooConfigDreamUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    kidooId?: StringFieldUpdateOperationsInput | string
+    colorR?: NullableIntFieldUpdateOperationsInput | number | null
+    colorG?: NullableIntFieldUpdateOperationsInput | number | null
+    colorB?: NullableIntFieldUpdateOperationsInput | number | null
+    bedtimeHour?: NullableIntFieldUpdateOperationsInput | number | null
+    bedtimeMinute?: NullableIntFieldUpdateOperationsInput | number | null
+    brightness?: NullableIntFieldUpdateOperationsInput | number | null
+    allNight?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -12731,6 +14243,11 @@ export namespace Prisma {
   export type KidooConfigBasicNullableScalarRelationFilter = {
     is?: KidooConfigBasicWhereInput | null
     isNot?: KidooConfigBasicWhereInput | null
+  }
+
+  export type KidooConfigDreamNullableScalarRelationFilter = {
+    is?: KidooConfigDreamWhereInput | null
+    isNot?: KidooConfigDreamWhereInput | null
   }
 
   export type KidooCountOrderByAggregateInput = {
@@ -13158,6 +14675,66 @@ export namespace Prisma {
     _max?: NestedBigIntNullableFilter<$PrismaModel>
   }
 
+  export type KidooConfigDreamCountOrderByAggregateInput = {
+    id?: SortOrder
+    kidooId?: SortOrder
+    colorR?: SortOrder
+    colorG?: SortOrder
+    colorB?: SortOrder
+    bedtimeHour?: SortOrder
+    bedtimeMinute?: SortOrder
+    brightness?: SortOrder
+    allNight?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type KidooConfigDreamAvgOrderByAggregateInput = {
+    colorR?: SortOrder
+    colorG?: SortOrder
+    colorB?: SortOrder
+    bedtimeHour?: SortOrder
+    bedtimeMinute?: SortOrder
+    brightness?: SortOrder
+  }
+
+  export type KidooConfigDreamMaxOrderByAggregateInput = {
+    id?: SortOrder
+    kidooId?: SortOrder
+    colorR?: SortOrder
+    colorG?: SortOrder
+    colorB?: SortOrder
+    bedtimeHour?: SortOrder
+    bedtimeMinute?: SortOrder
+    brightness?: SortOrder
+    allNight?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type KidooConfigDreamMinOrderByAggregateInput = {
+    id?: SortOrder
+    kidooId?: SortOrder
+    colorR?: SortOrder
+    colorG?: SortOrder
+    colorB?: SortOrder
+    bedtimeHour?: SortOrder
+    bedtimeMinute?: SortOrder
+    brightness?: SortOrder
+    allNight?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type KidooConfigDreamSumOrderByAggregateInput = {
+    colorR?: SortOrder
+    colorG?: SortOrder
+    colorB?: SortOrder
+    bedtimeHour?: SortOrder
+    bedtimeMinute?: SortOrder
+    brightness?: SortOrder
+  }
+
   export type AccountCreateNestedManyWithoutUserInput = {
     create?: XOR<AccountCreateWithoutUserInput, AccountUncheckedCreateWithoutUserInput> | AccountCreateWithoutUserInput[] | AccountUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AccountCreateOrConnectWithoutUserInput | AccountCreateOrConnectWithoutUserInput[]
@@ -13403,6 +14980,12 @@ export namespace Prisma {
     connect?: KidooConfigBasicWhereUniqueInput
   }
 
+  export type KidooConfigDreamCreateNestedOneWithoutKidooInput = {
+    create?: XOR<KidooConfigDreamCreateWithoutKidooInput, KidooConfigDreamUncheckedCreateWithoutKidooInput>
+    connectOrCreate?: KidooConfigDreamCreateOrConnectWithoutKidooInput
+    connect?: KidooConfigDreamWhereUniqueInput
+  }
+
   export type TagUncheckedCreateNestedManyWithoutKidooInput = {
     create?: XOR<TagCreateWithoutKidooInput, TagUncheckedCreateWithoutKidooInput> | TagCreateWithoutKidooInput[] | TagUncheckedCreateWithoutKidooInput[]
     connectOrCreate?: TagCreateOrConnectWithoutKidooInput | TagCreateOrConnectWithoutKidooInput[]
@@ -13414,6 +14997,12 @@ export namespace Prisma {
     create?: XOR<KidooConfigBasicCreateWithoutKidooInput, KidooConfigBasicUncheckedCreateWithoutKidooInput>
     connectOrCreate?: KidooConfigBasicCreateOrConnectWithoutKidooInput
     connect?: KidooConfigBasicWhereUniqueInput
+  }
+
+  export type KidooConfigDreamUncheckedCreateNestedOneWithoutKidooInput = {
+    create?: XOR<KidooConfigDreamCreateWithoutKidooInput, KidooConfigDreamUncheckedCreateWithoutKidooInput>
+    connectOrCreate?: KidooConfigDreamCreateOrConnectWithoutKidooInput
+    connect?: KidooConfigDreamWhereUniqueInput
   }
 
   export type BoolFieldUpdateOperationsInput = {
@@ -13462,6 +15051,16 @@ export namespace Prisma {
     update?: XOR<XOR<KidooConfigBasicUpdateToOneWithWhereWithoutKidooInput, KidooConfigBasicUpdateWithoutKidooInput>, KidooConfigBasicUncheckedUpdateWithoutKidooInput>
   }
 
+  export type KidooConfigDreamUpdateOneWithoutKidooNestedInput = {
+    create?: XOR<KidooConfigDreamCreateWithoutKidooInput, KidooConfigDreamUncheckedCreateWithoutKidooInput>
+    connectOrCreate?: KidooConfigDreamCreateOrConnectWithoutKidooInput
+    upsert?: KidooConfigDreamUpsertWithoutKidooInput
+    disconnect?: KidooConfigDreamWhereInput | boolean
+    delete?: KidooConfigDreamWhereInput | boolean
+    connect?: KidooConfigDreamWhereUniqueInput
+    update?: XOR<XOR<KidooConfigDreamUpdateToOneWithWhereWithoutKidooInput, KidooConfigDreamUpdateWithoutKidooInput>, KidooConfigDreamUncheckedUpdateWithoutKidooInput>
+  }
+
   export type TagUncheckedUpdateManyWithoutKidooNestedInput = {
     create?: XOR<TagCreateWithoutKidooInput, TagUncheckedCreateWithoutKidooInput> | TagCreateWithoutKidooInput[] | TagUncheckedCreateWithoutKidooInput[]
     connectOrCreate?: TagCreateOrConnectWithoutKidooInput | TagCreateOrConnectWithoutKidooInput[]
@@ -13484,6 +15083,16 @@ export namespace Prisma {
     delete?: KidooConfigBasicWhereInput | boolean
     connect?: KidooConfigBasicWhereUniqueInput
     update?: XOR<XOR<KidooConfigBasicUpdateToOneWithWhereWithoutKidooInput, KidooConfigBasicUpdateWithoutKidooInput>, KidooConfigBasicUncheckedUpdateWithoutKidooInput>
+  }
+
+  export type KidooConfigDreamUncheckedUpdateOneWithoutKidooNestedInput = {
+    create?: XOR<KidooConfigDreamCreateWithoutKidooInput, KidooConfigDreamUncheckedCreateWithoutKidooInput>
+    connectOrCreate?: KidooConfigDreamCreateOrConnectWithoutKidooInput
+    upsert?: KidooConfigDreamUpsertWithoutKidooInput
+    disconnect?: KidooConfigDreamWhereInput | boolean
+    delete?: KidooConfigDreamWhereInput | boolean
+    connect?: KidooConfigDreamWhereUniqueInput
+    update?: XOR<XOR<KidooConfigDreamUpdateToOneWithWhereWithoutKidooInput, KidooConfigDreamUpdateWithoutKidooInput>, KidooConfigDreamUncheckedUpdateWithoutKidooInput>
   }
 
   export type KidooCreateNestedOneWithoutTagsInput = {
@@ -13644,6 +15253,20 @@ export namespace Prisma {
     upsert?: KidooUpsertWithoutConfigBasicInput
     connect?: KidooWhereUniqueInput
     update?: XOR<XOR<KidooUpdateToOneWithWhereWithoutConfigBasicInput, KidooUpdateWithoutConfigBasicInput>, KidooUncheckedUpdateWithoutConfigBasicInput>
+  }
+
+  export type KidooCreateNestedOneWithoutConfigDreamInput = {
+    create?: XOR<KidooCreateWithoutConfigDreamInput, KidooUncheckedCreateWithoutConfigDreamInput>
+    connectOrCreate?: KidooCreateOrConnectWithoutConfigDreamInput
+    connect?: KidooWhereUniqueInput
+  }
+
+  export type KidooUpdateOneRequiredWithoutConfigDreamNestedInput = {
+    create?: XOR<KidooCreateWithoutConfigDreamInput, KidooUncheckedCreateWithoutConfigDreamInput>
+    connectOrCreate?: KidooCreateOrConnectWithoutConfigDreamInput
+    upsert?: KidooUpsertWithoutConfigDreamInput
+    connect?: KidooWhereUniqueInput
+    update?: XOR<XOR<KidooUpdateToOneWithWhereWithoutConfigDreamInput, KidooUpdateWithoutConfigDreamInput>, KidooUncheckedUpdateWithoutConfigDreamInput>
   }
 
   export type NestedStringFilter<$PrismaModel = never> = {
@@ -13968,6 +15591,7 @@ export namespace Prisma {
     sleepTimeout?: number
     tags?: TagCreateNestedManyWithoutKidooInput
     configBasic?: KidooConfigBasicCreateNestedOneWithoutKidooInput
+    configDream?: KidooConfigDreamCreateNestedOneWithoutKidooInput
   }
 
   export type KidooUncheckedCreateWithoutUserInput = {
@@ -13987,6 +15611,7 @@ export namespace Prisma {
     sleepTimeout?: number
     tags?: TagUncheckedCreateNestedManyWithoutKidooInput
     configBasic?: KidooConfigBasicUncheckedCreateNestedOneWithoutKidooInput
+    configDream?: KidooConfigDreamUncheckedCreateNestedOneWithoutKidooInput
   }
 
   export type KidooCreateOrConnectWithoutUserInput = {
@@ -14334,6 +15959,37 @@ export namespace Prisma {
     create: XOR<KidooConfigBasicCreateWithoutKidooInput, KidooConfigBasicUncheckedCreateWithoutKidooInput>
   }
 
+  export type KidooConfigDreamCreateWithoutKidooInput = {
+    id?: string
+    colorR?: number | null
+    colorG?: number | null
+    colorB?: number | null
+    bedtimeHour?: number | null
+    bedtimeMinute?: number | null
+    brightness?: number | null
+    allNight?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type KidooConfigDreamUncheckedCreateWithoutKidooInput = {
+    id?: string
+    colorR?: number | null
+    colorG?: number | null
+    colorB?: number | null
+    bedtimeHour?: number | null
+    bedtimeMinute?: number | null
+    brightness?: number | null
+    allNight?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type KidooConfigDreamCreateOrConnectWithoutKidooInput = {
+    where: KidooConfigDreamWhereUniqueInput
+    create: XOR<KidooConfigDreamCreateWithoutKidooInput, KidooConfigDreamUncheckedCreateWithoutKidooInput>
+  }
+
   export type UserUpsertWithoutKidoosInput = {
     update: XOR<UserUpdateWithoutKidoosInput, UserUncheckedUpdateWithoutKidoosInput>
     create: XOR<UserCreateWithoutKidoosInput, UserUncheckedCreateWithoutKidoosInput>
@@ -14426,6 +16082,43 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type KidooConfigDreamUpsertWithoutKidooInput = {
+    update: XOR<KidooConfigDreamUpdateWithoutKidooInput, KidooConfigDreamUncheckedUpdateWithoutKidooInput>
+    create: XOR<KidooConfigDreamCreateWithoutKidooInput, KidooConfigDreamUncheckedCreateWithoutKidooInput>
+    where?: KidooConfigDreamWhereInput
+  }
+
+  export type KidooConfigDreamUpdateToOneWithWhereWithoutKidooInput = {
+    where?: KidooConfigDreamWhereInput
+    data: XOR<KidooConfigDreamUpdateWithoutKidooInput, KidooConfigDreamUncheckedUpdateWithoutKidooInput>
+  }
+
+  export type KidooConfigDreamUpdateWithoutKidooInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    colorR?: NullableIntFieldUpdateOperationsInput | number | null
+    colorG?: NullableIntFieldUpdateOperationsInput | number | null
+    colorB?: NullableIntFieldUpdateOperationsInput | number | null
+    bedtimeHour?: NullableIntFieldUpdateOperationsInput | number | null
+    bedtimeMinute?: NullableIntFieldUpdateOperationsInput | number | null
+    brightness?: NullableIntFieldUpdateOperationsInput | number | null
+    allNight?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type KidooConfigDreamUncheckedUpdateWithoutKidooInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    colorR?: NullableIntFieldUpdateOperationsInput | number | null
+    colorG?: NullableIntFieldUpdateOperationsInput | number | null
+    colorB?: NullableIntFieldUpdateOperationsInput | number | null
+    bedtimeHour?: NullableIntFieldUpdateOperationsInput | number | null
+    bedtimeMinute?: NullableIntFieldUpdateOperationsInput | number | null
+    brightness?: NullableIntFieldUpdateOperationsInput | number | null
+    allNight?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type KidooCreateWithoutTagsInput = {
     id?: string
     name: string
@@ -14443,6 +16136,7 @@ export namespace Prisma {
     sleepTimeout?: number
     user?: UserCreateNestedOneWithoutKidoosInput
     configBasic?: KidooConfigBasicCreateNestedOneWithoutKidooInput
+    configDream?: KidooConfigDreamCreateNestedOneWithoutKidooInput
   }
 
   export type KidooUncheckedCreateWithoutTagsInput = {
@@ -14462,6 +16156,7 @@ export namespace Prisma {
     brightness?: number
     sleepTimeout?: number
     configBasic?: KidooConfigBasicUncheckedCreateNestedOneWithoutKidooInput
+    configDream?: KidooConfigDreamUncheckedCreateNestedOneWithoutKidooInput
   }
 
   export type KidooCreateOrConnectWithoutTagsInput = {
@@ -14572,6 +16267,7 @@ export namespace Prisma {
     sleepTimeout?: IntFieldUpdateOperationsInput | number
     user?: UserUpdateOneWithoutKidoosNestedInput
     configBasic?: KidooConfigBasicUpdateOneWithoutKidooNestedInput
+    configDream?: KidooConfigDreamUpdateOneWithoutKidooNestedInput
   }
 
   export type KidooUncheckedUpdateWithoutTagsInput = {
@@ -14591,6 +16287,7 @@ export namespace Prisma {
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
     configBasic?: KidooConfigBasicUncheckedUpdateOneWithoutKidooNestedInput
+    configDream?: KidooConfigDreamUncheckedUpdateOneWithoutKidooNestedInput
   }
 
   export type UserUpsertWithoutTagsInput = {
@@ -14959,6 +16656,7 @@ export namespace Prisma {
     sleepTimeout?: number
     user?: UserCreateNestedOneWithoutKidoosInput
     tags?: TagCreateNestedManyWithoutKidooInput
+    configDream?: KidooConfigDreamCreateNestedOneWithoutKidooInput
   }
 
   export type KidooUncheckedCreateWithoutConfigBasicInput = {
@@ -14978,6 +16676,7 @@ export namespace Prisma {
     brightness?: number
     sleepTimeout?: number
     tags?: TagUncheckedCreateNestedManyWithoutKidooInput
+    configDream?: KidooConfigDreamUncheckedCreateNestedOneWithoutKidooInput
   }
 
   export type KidooCreateOrConnectWithoutConfigBasicInput = {
@@ -15013,6 +16712,7 @@ export namespace Prisma {
     sleepTimeout?: IntFieldUpdateOperationsInput | number
     user?: UserUpdateOneWithoutKidoosNestedInput
     tags?: TagUpdateManyWithoutKidooNestedInput
+    configDream?: KidooConfigDreamUpdateOneWithoutKidooNestedInput
   }
 
   export type KidooUncheckedUpdateWithoutConfigBasicInput = {
@@ -15032,6 +16732,103 @@ export namespace Prisma {
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
     tags?: TagUncheckedUpdateManyWithoutKidooNestedInput
+    configDream?: KidooConfigDreamUncheckedUpdateOneWithoutKidooNestedInput
+  }
+
+  export type KidooCreateWithoutConfigDreamInput = {
+    id?: string
+    name: string
+    model?: string
+    macAddress?: string | null
+    deviceId: string
+    firmwareVersion?: string | null
+    lastConnected?: Date | string | null
+    isConnected?: boolean
+    wifiSSID?: string | null
+    isSynced?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    brightness?: number
+    sleepTimeout?: number
+    user?: UserCreateNestedOneWithoutKidoosInput
+    tags?: TagCreateNestedManyWithoutKidooInput
+    configBasic?: KidooConfigBasicCreateNestedOneWithoutKidooInput
+  }
+
+  export type KidooUncheckedCreateWithoutConfigDreamInput = {
+    id?: string
+    name: string
+    model?: string
+    macAddress?: string | null
+    deviceId: string
+    firmwareVersion?: string | null
+    lastConnected?: Date | string | null
+    isConnected?: boolean
+    wifiSSID?: string | null
+    userId?: string | null
+    isSynced?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    brightness?: number
+    sleepTimeout?: number
+    tags?: TagUncheckedCreateNestedManyWithoutKidooInput
+    configBasic?: KidooConfigBasicUncheckedCreateNestedOneWithoutKidooInput
+  }
+
+  export type KidooCreateOrConnectWithoutConfigDreamInput = {
+    where: KidooWhereUniqueInput
+    create: XOR<KidooCreateWithoutConfigDreamInput, KidooUncheckedCreateWithoutConfigDreamInput>
+  }
+
+  export type KidooUpsertWithoutConfigDreamInput = {
+    update: XOR<KidooUpdateWithoutConfigDreamInput, KidooUncheckedUpdateWithoutConfigDreamInput>
+    create: XOR<KidooCreateWithoutConfigDreamInput, KidooUncheckedCreateWithoutConfigDreamInput>
+    where?: KidooWhereInput
+  }
+
+  export type KidooUpdateToOneWithWhereWithoutConfigDreamInput = {
+    where?: KidooWhereInput
+    data: XOR<KidooUpdateWithoutConfigDreamInput, KidooUncheckedUpdateWithoutConfigDreamInput>
+  }
+
+  export type KidooUpdateWithoutConfigDreamInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    model?: StringFieldUpdateOperationsInput | string
+    macAddress?: NullableStringFieldUpdateOperationsInput | string | null
+    deviceId?: StringFieldUpdateOperationsInput | string
+    firmwareVersion?: NullableStringFieldUpdateOperationsInput | string | null
+    lastConnected?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isConnected?: BoolFieldUpdateOperationsInput | boolean
+    wifiSSID?: NullableStringFieldUpdateOperationsInput | string | null
+    isSynced?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    brightness?: IntFieldUpdateOperationsInput | number
+    sleepTimeout?: IntFieldUpdateOperationsInput | number
+    user?: UserUpdateOneWithoutKidoosNestedInput
+    tags?: TagUpdateManyWithoutKidooNestedInput
+    configBasic?: KidooConfigBasicUpdateOneWithoutKidooNestedInput
+  }
+
+  export type KidooUncheckedUpdateWithoutConfigDreamInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    model?: StringFieldUpdateOperationsInput | string
+    macAddress?: NullableStringFieldUpdateOperationsInput | string | null
+    deviceId?: StringFieldUpdateOperationsInput | string
+    firmwareVersion?: NullableStringFieldUpdateOperationsInput | string | null
+    lastConnected?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isConnected?: BoolFieldUpdateOperationsInput | boolean
+    wifiSSID?: NullableStringFieldUpdateOperationsInput | string | null
+    userId?: NullableStringFieldUpdateOperationsInput | string | null
+    isSynced?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    brightness?: IntFieldUpdateOperationsInput | number
+    sleepTimeout?: IntFieldUpdateOperationsInput | number
+    tags?: TagUncheckedUpdateManyWithoutKidooNestedInput
+    configBasic?: KidooConfigBasicUncheckedUpdateOneWithoutKidooNestedInput
   }
 
   export type AccountCreateManyUserInput = {
@@ -15174,6 +16971,7 @@ export namespace Prisma {
     sleepTimeout?: IntFieldUpdateOperationsInput | number
     tags?: TagUpdateManyWithoutKidooNestedInput
     configBasic?: KidooConfigBasicUpdateOneWithoutKidooNestedInput
+    configDream?: KidooConfigDreamUpdateOneWithoutKidooNestedInput
   }
 
   export type KidooUncheckedUpdateWithoutUserInput = {
@@ -15193,6 +16991,7 @@ export namespace Prisma {
     sleepTimeout?: IntFieldUpdateOperationsInput | number
     tags?: TagUncheckedUpdateManyWithoutKidooNestedInput
     configBasic?: KidooConfigBasicUncheckedUpdateOneWithoutKidooNestedInput
+    configDream?: KidooConfigDreamUncheckedUpdateOneWithoutKidooNestedInput
   }
 
   export type KidooUncheckedUpdateManyWithoutUserInput = {

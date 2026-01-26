@@ -46,6 +46,12 @@ public:
    * @return true si un client est connecté, false sinon
    */
   static bool isConnected();
+  
+  /**
+   * Obtenir le nom du dispositif BLE
+   * @return Pointeur vers le nom du dispositif, ou nullptr si non initialisé
+   */
+  static const char* getDeviceName();
 
 private:
   // Variables statiques

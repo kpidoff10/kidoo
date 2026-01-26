@@ -18,6 +18,5 @@ export function StepContent({ children, style }: StepContentProps) {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
   },
 });

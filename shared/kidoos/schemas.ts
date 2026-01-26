@@ -14,6 +14,8 @@ export const createKidooInputSchema = z.object({
   deviceId: z.string().uuid(),
   wifiSSID: z.string().optional(),
   firmwareVersion: z.string().optional(),
+  brightness: z.number().int().min(0).max(100).optional(), // Brightness en pourcentage (0-100)
+  sleepTimeout: z.number().int().min(0).optional(), // Sleep timeout en millisecondes
 });
 
 export type CreateKidooInput = z.infer<typeof createKidooInputSchema>;

@@ -1,5 +1,7 @@
 #include "ble_manager.h"
 #include "../../../model_config.h"
+#include "commands/ble_command_handler.h"
+#include "../ble_config/ble_config_manager.h"
 
 #ifdef HAS_BLE
 #include <BLEDevice.h>
@@ -17,24 +19,79 @@ static BLEServer* pServer = nullptr;
 static BLEService* pService = nullptr;
 static BLECharacteristic* pTxCharacteristic = nullptr;
 
+// Callback pour les données reçues sur la caractéristique RX
+class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
+  void onWrite(BLECharacteristic* pCharacteristic) {
+    // getValue() retourne un String Arduino (pas std::string)
+    String data = pCharacteristic->getValue();
+    if (data.length() > 0) {
+      Serial.println("[BLE] ========================================");
+      Serial.println("[BLE] >>> COMMANDE BLE RECUE <<<");
+      Serial.print("[BLE] Taille des donnees: ");
+      Serial.println(data.length());
+      Serial.print("[BLE] Donnees brutes: ");
+      Serial.println(data);
+      
+      // Nettoyer les données : supprimer les caractères nuls et espaces en fin
+      data.trim();
+      // Supprimer les caractères nuls éventuels
+      int nullPos = data.indexOf('\0');
+      if (nullPos >= 0) {
+        data = data.substring(0, nullPos);
+        Serial.print("[BLE] Donnees nettoyees (caractere nul supprime): ");
+        Serial.println(data);
+      }
+      
+      // Traiter la commande
+      Serial.println("[BLE] Appel de BLECommandHandler::handleCommand...");
+      bool result = BLECommandHandler::handleCommand(data);
+      Serial.print("[BLE] Resultat de handleCommand: ");
+      Serial.println(result ? "true" : "false");
+      
+      Serial.println("[BLE] ========================================");
+    }
+  }
+};
+
 // Callbacks pour les événements de connexion/déconnexion
 class MyServerCallbacks: public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {
     Serial.println("[BLE] ========================================");
-    Serial.println("[BLE] Client connecte !");
-    Serial.print("[BLE] Nombre de connexions: ");
+    Serial.println("[BLE] >>> CONNEXION BLE ETABLIE <<<");
+    Serial.print("[BLE] ID de connexion: ");
     Serial.println(pServer->getConnId());
+    Serial.print("[BLE] Nombre de clients connectes: ");
+    Serial.println(pServer->getConnectedCount());
+    Serial.print("[BLE] Nom du dispositif: ");
+    const char* deviceName = BLEManager::getDeviceName();
+    if (deviceName != nullptr) {
+      Serial.println(deviceName);
+    } else {
+      Serial.println("N/A");
+    }
+    Serial.println("[BLE] MTU configure a 512 bytes");
+    Serial.println("[BLE] Le client peut maintenant envoyer des commandes");
     Serial.println("[BLE] ========================================");
   }
 
   void onDisconnect(BLEServer* pServer) {
     Serial.println("[BLE] ========================================");
-    Serial.println("[BLE] Client deconnecte");
+    Serial.println("[BLE] >>> DECONNEXION BLE <<<");
+    Serial.print("[BLE] Nombre de clients restants: ");
+    Serial.println(pServer->getConnectedCount());
     Serial.println("[BLE] ========================================");
     
-    // IMPORTANT: Ne PAS redémarrer l'advertising automatiquement après déconnexion
-    // L'advertising sera géré par BLEConfigManager qui vérifie si le BLE doit rester actif
-    // Si le BLE est toujours activé (via BLEConfigManager), il redémarrera l'advertising via update()
+    // Redémarrer l'advertising si le BLE est toujours activé (via BLEConfigManager)
+    // Cela permet de rediffuser immédiatement après une déconnexion
+    #ifdef HAS_BLE
+    if (BLEConfigManager::isInitialized() && BLEConfigManager::isBLEEnabled()) {
+      // Attendre un court délai pour s'assurer que la déconnexion est complète
+      delay(100);
+      // Redémarrer l'advertising pour permettre une nouvelle connexion
+      BLEManager::startAdvertising();
+      Serial.println("[BLE] Advertising redemarre apres deconnexion (BLE toujours active)");
+    }
+    #endif
   }
 };
 #endif
@@ -76,6 +133,11 @@ bool BLEManager::init(const char* deviceName) {
   // Initialiser BLEDevice
   BLEDevice::init(deviceName);
   
+  // Configurer le MTU pour permettre l'envoi de commandes plus longues
+  // MTU de 512 bytes (maximum recommandé pour BLE)
+  BLEDevice::setMTU(512);
+  Serial.println("[BLE] MTU configure a 512 bytes");
+  
   // Créer le serveur BLE
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
@@ -88,13 +150,21 @@ bool BLEManager::init(const char* deviceName) {
     CHARACTERISTIC_UUID_TX,
     BLECharacteristic::PROPERTY_NOTIFY
   );
+  // Note: BLE2902 est déprécié dans NimBLE mais nécessaire pour la compatibilité
+  // Le descripteur est automatiquement ajouté par NimBLE pour les notifications
+  #ifndef CONFIG_BT_NIMBLE_ENABLED
   pTxCharacteristic->addDescriptor(new BLE2902());
+  #endif
   
   // Créer la caractéristique RX (write)
   BLECharacteristic* pRxCharacteristic = pService->createCharacteristic(
     CHARACTERISTIC_UUID_RX,
     BLECharacteristic::PROPERTY_WRITE
   );
+  pRxCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
+  
+  // Initialiser le command handler avec la caractéristique TX
+  BLECommandHandler::init(pTxCharacteristic);
   
   // Démarrer le service
   pService->start();
@@ -172,4 +242,8 @@ bool BLEManager::isConnected() {
 #else
   return false;
 #endif
+}
+
+const char* BLEManager::getDeviceName() {
+  return deviceName;
 }

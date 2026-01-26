@@ -126,7 +126,15 @@ export async function publishToKidoo(
   message: Record<string, unknown> | string
 ): Promise<boolean> {
   const channel = getKidooChannel(macAddress);
-  return publishToChannel(channel, message);
+  console.log(`[PUBNUB] Publication sur channel: ${channel}`);
+  console.log(`[PUBNUB] MAC address reçue: ${macAddress}`);
+  const result = await publishToChannel(channel, message);
+  if (result) {
+    console.log(`[PUBNUB] Message publié avec succès sur ${channel}`);
+  } else {
+    console.error(`[PUBNUB] Échec de la publication sur ${channel}`);
+  }
+  return result;
 }
 
 /**
@@ -146,6 +154,11 @@ export async function sendCommand(
     ...params,
     timestamp: Date.now(),
   };
+  
+  const channel = getKidooChannel(macAddress);
+  console.log(`[PUBNUB] Envoi commande "${action}" sur channel: ${channel}`);
+  console.log(`[PUBNUB] MAC address reçue: ${macAddress}`);
+  console.log(`[PUBNUB] Message:`, JSON.stringify(message));
   
   return publishToKidoo(macAddress, message);
 }

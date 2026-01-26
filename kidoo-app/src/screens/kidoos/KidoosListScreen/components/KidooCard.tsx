@@ -3,12 +3,13 @@
  */
 
 import React from 'react';
-import { TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Pressable, View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { Card, Text, Badge } from '@/components/ui';
+import { Card, Text } from '@/components/ui';
 import { useTheme } from '@/theme';
 import { Kidoo } from '@/api';
+import { getKidooModelDisplayName, getKidooModelIcon } from '@/config';
 import moment from 'moment';
 
 interface KidooCardProps {
@@ -26,12 +27,19 @@ export function KidooCard({ kidoo, onPress }: KidooCardProps) {
   };
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+    <Pressable
+      onPress={onPress}
+      android_ripple={{ color: 'transparent' }}
+      style={({ pressed }) => [
+        { marginBottom: 12 },
+        pressed && { opacity: 0.7 },
+      ]}
+    >
       <Card variant="elevated" style={styles.card}>
         <View style={styles.header}>
           <View style={styles.iconContainer}>
             <Ionicons
-              name="cube-outline"
+              name={getKidooModelIcon(kidoo.model) as any}
               size={32}
               color={kidoo.isConnected ? colors.primary : colors.textTertiary}
             />
@@ -40,16 +48,9 @@ export function KidooCard({ kidoo, onPress }: KidooCardProps) {
           <View style={[styles.info, { marginLeft: spacing[3] }]}>
             <Text bold>{kidoo.name}</Text>
             <Text variant="caption" color="secondary">
-              {t('kidoos.model')}: {kidoo.model}
+              {t('kidoos.model')}: {getKidooModelDisplayName(kidoo.model)}
             </Text>
           </View>
-
-          <Badge
-            label={kidoo.isConnected ? t('kidoos.online') : t('kidoos.offline')}
-            variant={kidoo.isConnected ? 'success' : 'default'}
-            dot
-            size="sm"
-          />
         </View>
 
         {!kidoo.isConnected && kidoo.lastConnected && (
@@ -62,13 +63,13 @@ export function KidooCard({ kidoo, onPress }: KidooCardProps) {
           </Text>
         )}
       </Card>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: 12,
+    marginBottom: 0,
   },
   header: {
     flexDirection: 'row',

@@ -13,6 +13,7 @@ export type RootStackParamList = {
   // Modals
   KidooDetail: { kidooId: string };
   EditProfile: undefined;
+  BedtimeConfig: { kidooId: string };
 };
 
 export type MainTabsParamList = {

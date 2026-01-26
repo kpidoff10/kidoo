@@ -87,6 +87,23 @@ export async function GET(
     if (response) {
       console.log(`[GET-INFO] Réponse reçue:`, response);
       
+      // Mettre à jour l'adresse MAC si elle est différente (corriger les erreurs d'enregistrement)
+      if (response.mac && typeof response.mac === 'string') {
+        // Nettoyer l'adresse MAC (enlever les : et -)
+        const cleanMac = response.mac.replace(/[:-]/g, '').toUpperCase();
+        const currentMac = kidoo.macAddress?.replace(/[:-]/g, '').toUpperCase();
+        
+        if (currentMac !== cleanMac) {
+          console.log(`[GET-INFO] Mise à jour de l'adresse MAC: ${kidoo.macAddress} -> ${response.mac}`);
+          await prisma.kidoo.update({
+            where: { id: kidoo.id },
+            data: { macAddress: response.mac },
+          });
+          // Mettre à jour la variable locale pour les prochaines opérations
+          kidoo.macAddress = response.mac;
+        }
+      }
+      
       // Mettre à jour la base de données avec les nouvelles infos
       await updateKidooInfo(kidoo.id, kidoo.model, response);
       

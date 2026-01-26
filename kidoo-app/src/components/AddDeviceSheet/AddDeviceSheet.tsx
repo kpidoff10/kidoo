@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, BottomSheet, Stepper, StepperStep } from '@/components/ui';
 import { useTheme } from '@/theme';
 import { UseBottomSheetReturn } from '@/hooks/useBottomSheet';
-import { BLEDevice } from '@/contexts/BluetoothContext';
+import { BLEDevice } from '@/contexts';
 import { AddDeviceProvider, useAddDevice } from './AddDeviceContext';
 import {
   StepperContainer,
@@ -18,6 +18,7 @@ import {
   ActionsRow,
   Step1Name,
   Step2WiFi,
+  Step3Finalization,
 } from './components';
 
 export interface AddDeviceSheetProps {
@@ -42,9 +43,18 @@ export interface AddDeviceSheetProps {
   onClose?: () => void;
   
   /**
-   * Callback appelé lors de la complétion
+   * Callback appelé lors de la complétion avec les données du formulaire
    */
-  onComplete?: () => void;
+  onComplete?: (data: { 
+    name: string; 
+    wifiSSID: string; 
+    wifiPassword?: string; 
+    deviceId?: string;
+    macAddress?: string;
+    brightness?: number;
+    sleepTimeout?: number;
+    firmwareVersion?: string;
+  }) => void;
 }
 
 /**
@@ -65,6 +75,9 @@ function AddDeviceSheetContent({
     previousStep,
     resetAll,
     canGoNext,
+    isConnecting,
+    hasError,
+    getValues,
   } = useAddDevice();
 
   const handleDismiss = useCallback(() => {
@@ -78,10 +91,19 @@ function AddDeviceSheetContent({
       nextStep();
     } else {
       // Dernière étape, compléter
-      onComplete?.();
+      // Si on est en train de se connecter, ne pas permettre de terminer
+      if (isConnecting) {
+        return;
+      }
+      const formValues = getValues();
+      onComplete?.({
+        name: formValues.name || '',
+        wifiSSID: formValues.wifiSSID || '',
+        wifiPassword: formValues.wifiPassword,
+      });
       bottomSheet.close();
     }
-  }, [bottomSheet, currentStep, nextStep, onComplete]);
+  }, [bottomSheet, currentStep, nextStep, onComplete, isConnecting, getValues]);
 
   const handlePrevious = useCallback(() => {
     previousStep();
@@ -116,12 +138,27 @@ function AddDeviceSheetContent({
       title: t('device.add.step3.title', { defaultValue: 'Finalisation' }),
       icon: 'checkmark-circle-outline',
       content: (
-        <View>
-          {/* TODO: Ajouter la finalisation */}
-        </View>
+        <Step3Finalization 
+          device={device} 
+          onSuccess={(data) => {
+            // Quand tout est réussi, récupérer les valeurs du formulaire et terminer
+            const formValues = getValues();
+            onComplete?.({
+              name: formValues.name || '',
+              wifiSSID: formValues.wifiSSID || '',
+              wifiPassword: formValues.wifiPassword,
+              deviceId: data?.deviceId, // UUID renvoyé par l'ESP32
+              macAddress: data?.macAddress, // Adresse MAC WiFi renvoyée par l'ESP32
+              brightness: data?.brightness, // Brightness en pourcentage (0-100)
+              sleepTimeout: data?.sleepTimeout, // Sleep timeout en millisecondes
+              firmwareVersion: data?.firmwareVersion, // Version du firmware ESP32
+            });
+            bottomSheet.close();
+          }}
+        />
       ),
     },
-  ], [t]);
+  ], [t, device, bottomSheet, onComplete]);
 
   return (
     <BottomSheet
@@ -129,13 +166,15 @@ function AddDeviceSheetContent({
       name={bottomSheet.id}
       detents={['auto']}
       onDismiss={handleDismiss}
-      headerTitle={t('device.add.title', { defaultValue: 'Ajouter un device' })}
+      headerTitle={t('device.add.title', { defaultValue: 'Ajouter un nouveau Kidoo' })}
     >
       <View>
-        {/* Stepper horizontal */}
-        <StepperContainer>
-          <Stepper steps={steps} activeStep={currentStep} orientation="horizontal" />
-        </StepperContainer>
+        {/* Stepper horizontal - masqué au step 3 (finalisation) */}
+        {currentStep < 2 && (
+          <StepperContainer>
+            <Stepper steps={steps} activeStep={currentStep} orientation="horizontal" />
+          </StepperContainer>
+        )}
 
         {/* Contenu de l'étape active */}
         <StepContent>
@@ -161,8 +200,9 @@ function AddDeviceSheetContent({
                 disabled={!canGoNext()}
               />
             </ActionsRow>
-          ) : (
-            // Steps 2 et 3 : Bouton Retour et Suivant/Terminer côte à côte
+          ) : currentStep === 1 ? (
+            // Step 2 : Bouton Retour et Suivant côte à côte
+            // La connexion BLE ne se fait qu'au step 3, donc isConnecting ne devrait jamais être true ici
             <ActionsRow>
               <Button
                 title={t('common.back', { defaultValue: 'Retour' })}
@@ -171,15 +211,24 @@ function AddDeviceSheetContent({
                 style={{ flex: 1, marginRight: spacing[2] }}
               />
               <Button
-                title={currentStep === 2 
-                  ? t('device.add.complete', { defaultValue: 'Terminer' })
-                  : t('common.next', { defaultValue: 'Suivant' })}
+                title={t('common.next', { defaultValue: 'Suivant' })}
                 variant="primary"
                 onPress={handleNext}
                 style={{ flex: 1 }}
-                disabled={currentStep === 1 && !canGoNext()}
+                disabled={!canGoNext()}
               />
             </ActionsRow>
+          ) : (
+            // Step 3 (Finalisation) : Afficher le bouton retour seulement s'il y a une erreur
+            // Sinon, les boutons sont gérés par Step3Finalization (écran de succès)
+            hasError ? (
+              <Button
+                title={t('common.back', { defaultValue: 'Retour' })}
+                variant="outline"
+                onPress={handlePrevious}
+                style={{ width: '100%' }}
+              />
+            ) : null
           )}
         </ActionsContainer>
       </View>

@@ -13,6 +13,8 @@ export * from './kidoos/schemas';
 // Kidoos - Config (persistant)
 export * from './kidoos/config/brightness';
 export * from './kidoos/config/sleep-timeout';
+export * from './kidoos/config/name';
+export * from './kidoos/config/dream-bedtime';
 
 // Kidoos - Commands (temps réel)
 export * from './kidoos/commands/get-info';

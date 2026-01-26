@@ -69,7 +69,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
       });
     }
 
-    const { name, model, deviceId, macAddress, firmwareVersion } = validationResult.data;
+    const { name, model, deviceId, macAddress, firmwareVersion, brightness, sleepTimeout } = validationResult.data;
 
     // Vérifier si un kidoo avec ce deviceId existe déjà
     const existingKidoo = await prisma.kidoo.findUnique({
@@ -100,6 +100,8 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
         deviceId,
         macAddress: macAddress || null,
         firmwareVersion: firmwareVersion || null,
+        brightness: brightness !== undefined ? brightness : undefined, // Brightness en pourcentage (0-100)
+        sleepTimeout: sleepTimeout !== undefined ? sleepTimeout : undefined, // Sleep timeout en millisecondes
         userId,
         isConnected: false,
         isSynced: true, // Marqué comme synchronisé avec le serveur

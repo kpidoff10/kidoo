@@ -8,7 +8,7 @@ import { View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button, BottomSheet, Text } from '@/components/ui';
 import { useTheme } from '@/theme';
-import { BLEDevice, useBluetooth } from '@/contexts/BluetoothContext';
+import { BLEDevice, useBluetooth } from '@/contexts';
 import { useAuth } from '@/contexts';
 import { UseBottomSheetReturn } from '@/hooks/useBottomSheet';
 import { useKidoos } from '@/hooks/useKidoos';
@@ -18,7 +18,7 @@ interface AddKidooSheetProps {
   bottomSheet: UseBottomSheetReturn;
   device: BLEDevice | null;
   onClose?: () => void;
-  onAdd?: () => void;
+  onAdd?: (device: BLEDevice) => void;
 }
 
 export function AddKidooSheet({ bottomSheet, device, onClose, onAdd }: AddKidooSheetProps) {
@@ -101,7 +101,7 @@ export function AddKidooSheet({ bottomSheet, device, onClose, onAdd }: AddKidooS
         headerTitle={device.name || t('kidoos.unknownDevice', { defaultValue: 'Appareil inconnu' })}
         headerIcon="cube-outline"
       >
-        <View style={styles.content}>
+  
           <View style={styles.deviceInfo}>
             {isDeveloper && device.rssi !== null && (
               <Text variant="caption" color="tertiary" style={{ marginTop: spacing[1], textAlign: 'center' }}>
@@ -128,20 +128,21 @@ export function AddKidooSheet({ bottomSheet, device, onClose, onAdd }: AddKidooS
             <Button
               title={t('kidoos.add', { defaultValue: 'Ajouter' })}
               variant="primary"
-              onPress={onAdd}
+              onPress={() => {
+                if (device) {
+                  onAdd?.(device);
+                }
+              }}
               style={styles.addButton}
             />
           </View>
-        </View>
+
       </BottomSheet>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    padding: 0,
-  },
   deviceInfo: {
     alignItems: 'center',
     marginBottom: 24,

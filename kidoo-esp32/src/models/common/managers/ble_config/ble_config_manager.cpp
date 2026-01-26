@@ -91,11 +91,13 @@ void BLEConfigManager::update() {
       } else if (!connected && !feedbackActive && bleEnabled && feedbackEnabled) {
         // Le client s'est déconnecté, réactiver le feedback lumineux (PULSE bleu)
         // Seulement si le feedback était activé au départ
-        // IMPORTANT: Éteindre d'abord pour éviter le flash de la couleur précédente
+        // IMPORTANT: Faire un clear() d'abord pour éliminer toute couleur résiduelle
         #ifdef HAS_LED
         if (HAS_LED) {
-          LEDManager::clear();  // Éteindre d'abord pour transition propre
+          LEDManager::clear();  // Éteindre d'abord pour éliminer les couleurs résiduelles
+          delay(150);  // Attendre que clear() soit traité par le thread LED
           LEDManager::setColor(0, 0, 255);  // Bleu
+          delay(150);  // Attendre que la couleur bleue soit bien définie avant d'activer PULSE
           LEDManager::setEffect(LED_EFFECT_PULSE);  // Respiration
         }
         #endif
@@ -164,12 +166,14 @@ bool BLEConfigManager::enableBLE(uint32_t durationMs, bool enableFeedback) {
     bool connected = BLEManager::isConnected();
     if (!connected) {
       // Pas de connexion, activer le PULSE bleu pour indiquer le mode appairage
-      // IMPORTANT: Éteindre d'abord pour éviter le flash de la couleur précédente (ex: vert de l'init)
+      // IMPORTANT: Faire un clear() d'abord pour éliminer toute couleur résiduelle (ex: orange de l'init)
       #ifdef HAS_LED
       if (HAS_LED) {
-        LEDManager::clear();  // Éteindre d'abord pour transition propre
+        LEDManager::clear();  // Éteindre d'abord pour éliminer les couleurs résiduelles
+        delay(150);  // Attendre que clear() soit traité par le thread LED
         LEDManager::setColor(0, 0, 255);  // Bleu
-        LEDManager::setEffect(LED_EFFECT_PULSE);  // Effet de respiration (pulse)
+        delay(150);  // Attendre que la couleur bleue soit bien définie avant d'activer PULSE
+        LEDManager::setEffect(LED_EFFECT_PULSE);  // Effet de respiration
       }
       #endif
     } else {

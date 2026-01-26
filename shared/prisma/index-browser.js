@@ -218,6 +218,20 @@ exports.Prisma.KidooConfigBasicScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.KidooConfigDreamScalarFieldEnum = {
+  id: 'id',
+  kidooId: 'kidooId',
+  colorR: 'colorR',
+  colorG: 'colorG',
+  colorB: 'colorB',
+  bedtimeHour: 'bedtimeHour',
+  bedtimeMinute: 'bedtimeMinute',
+  brightness: 'brightness',
+  allNight: 'allNight',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -246,7 +260,8 @@ exports.Prisma.ModelName = {
   Session: 'Session',
   VerificationToken: 'VerificationToken',
   File: 'File',
-  KidooConfigBasic: 'KidooConfigBasic'
+  KidooConfigBasic: 'KidooConfigBasic',
+  KidooConfigDream: 'KidooConfigDream'
 };
 
 /**

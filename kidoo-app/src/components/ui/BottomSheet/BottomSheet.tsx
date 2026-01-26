@@ -91,6 +91,7 @@ export const BottomSheet = forwardRef<TrueSheet, BottomSheetProps>(
         ref={ref}
         detents={detents}
         style={defaultStyle}
+        backgroundColor={colors.surface}
         onDidDismiss={onDismiss ? () => onDismiss() : undefined}
         {...props}
       >
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: spacing[10],
+    marginBottom: spacing[4],
   },
   iconContainer: {
     width: 64,

@@ -11,6 +11,8 @@ import { withAuth, AuthenticatedRequest } from '@/lib/withAuth';
 import { sendCommand, isPubNubConfigured } from '@/lib/pubnub';
 import { brightnessCommandSchema } from '@/shared';
 import { Kidoo } from '@prisma/client';
+import { createErrorResponse, createSuccessResponse } from '@/lib/api-response';
+import { BrightnessErrors } from './errors';
 
 /**
  * PATCH/POST /api/kidoos/[id]/commands/common/brightness

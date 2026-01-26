@@ -7,6 +7,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <esp_mac.h>  // Pour esp_read_mac() et ESP_MAC_WIFI_STA
 #include "../wifi/wifi_manager.h"
 #include "../serial/serial_commands.h"
 #include "../init/init_manager.h"
@@ -42,11 +43,22 @@ bool PubNubManager::init() {
     return false;
   }
   
-  // Construire le nom du channel basé sur l'adresse MAC (unique par appareil)
+  // Construire le nom du channel basé sur l'adresse MAC WiFi (unique par appareil)
+  // Sur ESP32-C3, BLE et WiFi ont des adresses MAC différentes
+  // On utilise esp_read_mac() pour obtenir l'adresse MAC WiFi spécifiquement
   uint8_t mac[6];
-  WiFi.macAddress(mac);
+  esp_err_t err = esp_read_mac(mac, ESP_MAC_WIFI_STA);
+  if (err != ESP_OK) {
+    // Fallback: utiliser WiFi.macAddress() si esp_read_mac() échoue
+    Serial.print("[PUBNUB] esp_read_mac() échoué (err=");
+    Serial.print(err);
+    Serial.println("), utilisation de WiFi.macAddress()");
+    WiFi.macAddress(mac);
+  }
   snprintf(channel, sizeof(channel), "kidoo-%02X%02X%02X%02X%02X%02X",
     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  Serial.print("[PUBNUB] Channel construit avec MAC: ");
+  Serial.println(channel);
   
   // Créer la file d'attente pour les publications
   publishQueue = xQueueCreate(PUBLISH_QUEUE_SIZE, sizeof(PublishMessage));
@@ -64,6 +76,13 @@ bool PubNubManager::init() {
 }
 
 bool PubNubManager::connect() {
+  Serial.print("[PUBNUB] connect() appelé - initialized: ");
+  Serial.print(initialized);
+  Serial.print(", threadRunning: ");
+  Serial.print(threadRunning);
+  Serial.print(", WiFi connecté: ");
+  Serial.println(WiFiManager::isConnected());
+  
   if (!initialized) {
     Serial.println("[PUBNUB] Non initialise");
     return false;
@@ -77,8 +96,15 @@ bool PubNubManager::connect() {
   
   // Si le thread tourne déjà, on est déjà connecté
   if (threadRunning) {
-    Serial.println("[PUBNUB] Deja connecte");
+    Serial.println("[PUBNUB] Deja connecte (threadRunning=true)");
     return true;
+  }
+  
+  // Si taskHandle existe mais threadRunning est false, nettoyer d'abord
+  if (taskHandle != nullptr) {
+    Serial.println("[PUBNUB] Nettoyage d'un ancien thread...");
+    vTaskDelete(taskHandle);
+    taskHandle = nullptr;
   }
   
   Serial.println("[PUBNUB] Demarrage du thread...");
@@ -88,6 +114,12 @@ bool PubNubManager::connect() {
   
   // Créer le thread FreeRTOS sur Core 0 (même core que WiFi stack)
   Serial.printf("[PUBNUB] Core=%d, Priority=%d, Stack=%d\n", TASK_CORE, TASK_PRIORITY, STACK_SIZE);
+  
+  // IMPORTANT: Mettre threadRunning à true AVANT de créer le thread
+  // pour éviter les conditions de course
+  threadRunning = true;
+  connected = true;
+  
   BaseType_t result = xTaskCreatePinnedToCore(
     threadFunction,     // Fonction du thread
     "PubNubTask",       // Nom du thread
@@ -100,12 +132,16 @@ bool PubNubManager::connect() {
   
   if (result != pdPASS) {
     Serial.println("[PUBNUB] Erreur creation thread");
+    threadRunning = false;
+    connected = false;
+    taskHandle = nullptr;
     return false;
   }
   
-  threadRunning = true;
-  connected = true;
   Serial.println("[PUBNUB] Thread demarre!");
+  
+  // Attendre un peu pour que le thread démarre
+  vTaskDelay(pdMS_TO_TICKS(100));
   
   // Publier le statut "online"
   publishStatus();
@@ -151,9 +187,21 @@ void PubNubManager::loop() {
 }
 
 void PubNubManager::threadFunction(void* parameter) {
-  Serial.println("[PUBNUB] Thread actif");
+  Serial.println("[PUBNUB] Thread actif - entrée dans threadFunction");
   
+  int loopCount = 0;
   while (threadRunning) {
+    loopCount++;
+    
+    // Log périodique pour vérifier que la boucle tourne (toutes les 500 itérations = ~50 secondes)
+    if (loopCount == 1) {
+      Serial.println("[PUBNUB] Première itération de la boucle");
+    } else if (loopCount % 500 == 0) {
+      Serial.print("[PUBNUB] Boucle active (iteration ");
+      Serial.print(loopCount);
+      Serial.println(")");
+    }
+    
     // Vérifier la connexion WiFi
     if (!WiFiManager::isConnected()) {
       if (connected) {
@@ -172,24 +220,41 @@ void PubNubManager::threadFunction(void* parameter) {
     }
     
     // Traiter les messages à publier en attente
-    PublishMessage pubMsg;
-    while (xQueueReceive(publishQueue, &pubMsg, 0) == pdTRUE) {
-      publishInternal(pubMsg.message);
+    if (publishQueue != nullptr) {
+      PublishMessage pubMsg;
+      while (xQueueReceive(publishQueue, &pubMsg, 0) == pdTRUE) {
+        publishInternal(pubMsg.message);
+      }
     }
     
     // Subscribe (long polling)
-    subscribe();
+    bool subscribeResult = subscribe();
+    if (!subscribeResult) {
+      // Ne pas logger à chaque fois pour éviter le spam
+      // Serial.println("[PUBNUB] Subscribe a échoué");
+    }
     
     // Petit délai entre les polls
     vTaskDelay(pdMS_TO_TICKS(SUBSCRIBE_INTERVAL_MS));
   }
   
-  Serial.println("[PUBNUB] Thread arrete");
+  Serial.println("[PUBNUB] Thread arrete (threadRunning=false)");
   vTaskDelete(nullptr);
 }
 
 bool PubNubManager::subscribe() {
   if (!WiFiManager::isConnected()) {
+    Serial.println("[PUBNUB] Subscribe: WiFi non connecté");
+    return false;
+  }
+  
+  if (strlen(channel) == 0) {
+    Serial.println("[PUBNUB] Subscribe: Channel vide!");
+    return false;
+  }
+  
+  if (strlen(DEFAULT_PUBNUB_SUBSCRIBE_KEY) == 0) {
+    Serial.println("[PUBNUB] Subscribe: Subscribe key vide!");
     return false;
   }
   
@@ -214,19 +279,56 @@ bool PubNubManager::subscribe() {
   if (httpCode == HTTP_CODE_OK) {
     String payload = http.getString();
     http.end();
+    
+    // Log pour debug : afficher la taille de la réponse
+    if (payload.length() > 0) {
+      Serial.print("[PUBNUB] Réponse reçue (");
+      Serial.print(payload.length());
+      Serial.println(" bytes)");
+    }
+    
     processMessages(payload.c_str());
     return true;
   } else {
+    // Les erreurs -11 (HTTPC_ERROR_CONNECTION_LOST) et -1 (HTTPC_ERROR_CONNECTION_REFUSED/timeout)
+    // sont normales avec PubNub en long polling
+    // -11 : connexion fermée entre deux requêtes (normal)
+    // -1 : timeout de connexion ou refus temporaire (peut arriver avec PubNub)
+    // Ne logger que les autres erreurs pour éviter le spam
+    if (httpCode != -11 && httpCode != -1) {
+      Serial.print("[PUBNUB] Erreur subscribe HTTP: ");
+      Serial.println(httpCode);
+    }
     http.end();
     return false;
   }
 }
 
 void PubNubManager::processMessages(const char* json) {
+  // Log pour debug : afficher le JSON brut reçu
+  if (json != nullptr && strlen(json) > 0) {
+    Serial.print("[PUBNUB] JSON brut reçu: ");
+    // Limiter la taille du log pour éviter les problèmes de mémoire
+    int len = strlen(json);
+    if (len > 200) {
+      Serial.print("(tronqué, ");
+      Serial.print(len);
+      Serial.print(" bytes) ");
+      char truncated[201];
+      strncpy(truncated, json, 200);
+      truncated[200] = '\0';
+      Serial.println(truncated);
+    } else {
+      Serial.println(json);
+    }
+  }
+  
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, json);
   
   if (error) {
+    Serial.print("[PUBNUB] Erreur parsing JSON: ");
+    Serial.println(error.c_str());
     return;
   }
   
@@ -237,11 +339,33 @@ void PubNubManager::processMessages(const char* json) {
   }
   
   // Traiter les messages
+  if (!doc[0].is<JsonArray>()) {
+    return;
+  }
+  
   JsonArray messages = doc[0].as<JsonArray>();
+  
+  // Compter les messages de manière sûre
+  int messageCount = 0;
+  for (JsonVariant msg : messages) {
+    messageCount++;
+  }
+  
+  if (messageCount > 0) {
+    Serial.print("[PUBNUB] ");
+    Serial.print(messageCount);
+    Serial.println(" message(s) reçu(s)");
+  }
+  
   for (JsonVariant msg : messages) {
     if (msg.is<const char*>()) {
       // Message texte simple = commande série
-      executeCommand(msg.as<const char*>());
+      const char* textMsg = msg.as<const char*>();
+      if (textMsg != nullptr) {
+        Serial.print("[PUBNUB] Message texte reçu: ");
+        Serial.println(textMsg);
+        executeCommand(textMsg);
+      }
     } else if (msg.is<JsonObject>()) {
       JsonObject obj = msg.as<JsonObject>();
       
@@ -252,11 +376,48 @@ void PubNubManager::processMessages(const char* json) {
       
       // Si c'est une action, utiliser les routes
       if (obj["action"].is<const char*>()) {
-        ModelPubNubRoutes::processMessage(obj);
+        const char* action = obj["action"].as<const char*>();
+        if (action != nullptr) {
+          Serial.print("[PUBNUB] Commande reçue - Action: ");
+          Serial.print(action);
+          
+          // Log des paramètres si présents (de manière sûre)
+          if (obj["params"].is<JsonObject>()) {
+            Serial.print(" (avec params)");
+          } else if (obj["value"].is<int>()) {
+            Serial.print(" - value: ");
+            Serial.print(obj["value"].as<int>());
+          } else if (obj["value"].is<float>()) {
+            Serial.print(" - value: ");
+            Serial.print(obj["value"].as<float>());
+          } else if (obj["delay"].is<int>()) {
+            Serial.print(" - delay: ");
+            Serial.print(obj["delay"].as<int>());
+            Serial.print("ms");
+          }
+          
+          // Log du timestamp si présent
+          if (obj["timestamp"].is<unsigned long>() || obj["timestamp"].is<long>()) {
+            Serial.print(" - timestamp: ");
+            Serial.print(obj["timestamp"].as<unsigned long>());
+          }
+          Serial.println();
+          
+          ModelPubNubRoutes::processMessage(obj);
+        }
       }
       // Si c'est une commande série (legacy)
       else if (obj["cmd"].is<const char*>()) {
-        executeCommand(obj["cmd"].as<const char*>());
+        const char* cmd = obj["cmd"].as<const char*>();
+        if (cmd != nullptr) {
+          Serial.print("[PUBNUB] Commande série (legacy) reçue: ");
+          Serial.println(cmd);
+          executeCommand(cmd);
+        }
+      }
+      // Message JSON sans action reconnue - log minimal pour éviter les problèmes de mémoire
+      else {
+        Serial.println("[PUBNUB] Message JSON reçu (format non reconnu)");
       }
     }
   }

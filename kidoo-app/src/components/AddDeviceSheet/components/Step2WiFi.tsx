@@ -3,18 +3,31 @@
  * Deuxième étape du formulaire d'ajout de device
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { TextInput, PasswordInput } from '@/components/ui';
 import { useTheme } from '@/theme';
+import { useCurrentWiFiSSID } from '@/hooks';
 import { useAddDevice } from '../AddDeviceContext';
 
 export function Step2WiFi() {
   const { t } = useTranslation();
   const { spacing } = useTheme();
-  const { control, formState: { errors } } = useAddDevice();
+  const { control, formState: { errors }, getValues, setValue } = useAddDevice();
+  const { ssid: currentSSID } = useCurrentWiFiSSID();
+
+  // Préremplir le SSID avec le réseau WiFi actuel si disponible et si le champ est vide
+  useEffect(() => {
+    if (currentSSID) {
+      const currentValue = getValues('wifiSSID');
+      // Ne remplir que si le champ est vide
+      if (!currentValue || currentValue.trim().length === 0) {
+        setValue('wifiSSID', currentSSID, { shouldValidate: false });
+      }
+    }
+  }, [currentSSID, getValues, setValue]);
 
   return (
     <View>

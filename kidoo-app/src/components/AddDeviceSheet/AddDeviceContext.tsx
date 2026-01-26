@@ -23,6 +23,9 @@ interface AddDeviceState {
     wifiSSID?: string;
     wifiPassword?: string;
   };
+  isConnecting: boolean; // Indique si une connexion (BLE ou WiFi) est en cours
+  isSuccess: boolean; // Indique si la configuration est complètement réussie
+  hasError: boolean; // Indique s'il y a une erreur dans le step 3
 }
 
 interface AddDeviceContextType extends AddDeviceState {
@@ -31,6 +34,7 @@ interface AddDeviceContextType extends AddDeviceState {
   handleSubmit: ReturnType<typeof useForm<AddDeviceFormData>>['handleSubmit'];
   formState: ReturnType<typeof useForm<AddDeviceFormData>>['formState'];
   getValues: ReturnType<typeof useForm<AddDeviceFormData>>['getValues'];
+  setValue: ReturnType<typeof useForm<AddDeviceFormData>>['setValue'];
   reset: ReturnType<typeof useForm<AddDeviceFormData>>['reset'];
   trigger: ReturnType<typeof useForm<AddDeviceFormData>>['trigger'];
   
@@ -44,6 +48,11 @@ interface AddDeviceContextType extends AddDeviceState {
   
   // Validation
   canGoNext: () => boolean;
+  
+  // Connexion
+  setIsConnecting: (isConnecting: boolean) => void;
+  setIsSuccess: (isSuccess: boolean) => void;
+  setHasError: (hasError: boolean) => void;
 }
 
 const AddDeviceContext = createContext<AddDeviceContextType | undefined>(undefined);
@@ -57,12 +66,16 @@ export function AddDeviceProvider({ children, defaultName = '' }: AddDeviceProvi
   const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<AddDeviceState['formData']>({});
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   const {
     control,
     handleSubmit,
     formState,
     getValues,
+    setValue,
     reset,
     trigger,
   } = useForm<AddDeviceFormData>({
@@ -83,6 +96,9 @@ export function AddDeviceProvider({ children, defaultName = '' }: AddDeviceProvi
       if (isValid) {
         const values = getValues();
         setFormData((prev) => ({ ...prev, name: values.name }));
+        // Réinitialiser isConnecting quand on quitte le step 0 (la connexion BLE ne se fait qu'au step 3)
+        setIsConnecting(false);
+        setHasError(false);
         setCurrentStep((prev) => prev + 1);
       }
     } else if (currentStep === 1) {
@@ -95,19 +111,25 @@ export function AddDeviceProvider({ children, defaultName = '' }: AddDeviceProvi
           wifiSSID: values.wifiSSID,
           wifiPassword: values.wifiPassword,
         }));
+        // Réinitialiser isConnecting avant d'aller au step 3 (la connexion BLE se fera au step 3)
+        setIsConnecting(false);
+        setHasError(false);
         setCurrentStep((prev) => prev + 1);
       }
     } else {
       // Dernière étape
       setCurrentStep((prev) => prev + 1);
     }
-  }, [currentStep, trigger, getValues]);
+  }, [currentStep, trigger, getValues, setIsConnecting, setHasError]);
 
   const previousStep = useCallback(() => {
     if (currentStep > 0) {
+      // Réinitialiser isConnecting quand on revient en arrière (la connexion BLE ne se fait qu'au step 3)
+      setIsConnecting(false);
+      setHasError(false);
       setCurrentStep((prev) => prev - 1);
     }
-  }, [currentStep]);
+  }, [currentStep, setIsConnecting, setHasError]);
 
   const goToStep = useCallback((step: number) => {
     if (step >= 0 && step <= 2) {
@@ -129,6 +151,9 @@ export function AddDeviceProvider({ children, defaultName = '' }: AddDeviceProvi
   const resetAll = useCallback(() => {
     setCurrentStep(0);
     setFormData({});
+    setIsConnecting(false);
+    setIsSuccess(false);
+    setHasError(false);
     reset({
       name: defaultName || '',
       wifiSSID: '',
@@ -152,10 +177,14 @@ export function AddDeviceProvider({ children, defaultName = '' }: AddDeviceProvi
   const value: AddDeviceContextType = {
     currentStep,
     formData,
+    isConnecting,
+    isSuccess,
+    hasError,
     control,
     handleSubmit,
     formState,
     getValues,
+    setValue,
     reset,
     trigger,
     nextStep,
@@ -163,6 +192,9 @@ export function AddDeviceProvider({ children, defaultName = '' }: AddDeviceProvi
     goToStep,
     resetAll,
     canGoNext,
+    setIsConnecting,
+    setIsSuccess,
+    setHasError,
   };
 
   return (

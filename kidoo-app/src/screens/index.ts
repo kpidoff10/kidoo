@@ -11,6 +11,8 @@ export { HomeScreen } from './home/HomeScreen';
 
 // Kidoos
 export { KidoosListScreen } from './kidoos/KidoosListScreen';
+export { KidooDetailScreen } from './kidoos/KidooDetailScreen';
+export { BedtimeConfigScreen } from './kidoos/BedtimeConfigScreen';
 
 // Profile
 export { ProfileSheet } from './profile/ProfileSheet';
