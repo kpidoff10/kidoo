@@ -1061,8 +1061,9 @@ void LEDManager::updateEffects() {
         rotateStartTime = currentTime;
       }
       
-      // Cycle de rotation : ~4 secondes pour un tour complet, peu importe le nombre de LEDs
-      const uint32_t ROTATE_CYCLE_MS = 4000;  // 4 secondes
+      // Cycle de rotation : ~5 secondes pour un tour complet (ralenti pour plus de fluidité)
+      // Plus lent = chaque LED reste allumée plus longtemps = animation plus fluide
+      const uint32_t ROTATE_CYCLE_MS = 5000;  // 5 secondes (au lieu de 4)
       uint32_t elapsed = (currentTime - rotateStartTime) % ROTATE_CYCLE_MS;
       
       // Calculer la position de la tête du serpent avec précision fractionnaire
@@ -1071,8 +1072,10 @@ void LEDManager::updateEffects() {
       uint16_t headPosition = (headPositionPrecise >> 8) % NUM_LEDS;  // Position de la tête (LED principale)
       uint8_t headSubPosition = headPositionPrecise & 0xFF;  // Position fractionnaire (0-255)
       
-      // Longueur du serpent (nombre de LEDs)
-      const uint8_t snakeLength = NUM_LEDS / 4;  // 25% de la bande
+      // Longueur du serpent (nombre de LEDs) - queue optimale avec fade-out très progressif
+      // 30% de la bande pour queue visible mais pas trop longue
+      // Le fade-out progressif fait que les dernières LEDs restent allumées longtemps
+      const uint8_t snakeLength = (NUM_LEDS * 30) / 100;  // 30% de la bande (optimal)
       
       // Éteindre toutes les LEDs
       if (strip != nullptr) {
@@ -1114,58 +1117,65 @@ void LEDManager::updateEffects() {
           continue;
         }
         
-        // Calculer l'intensité avec dégradé progressif de la queue vers la tête
-        // Utiliser une courbe sinusoïdale pour fluidité maximale (transition ultra-douce)
+        // Calculer l'intensité avec dégradé très progressif de la queue vers la tête
+        // Queue très longue qui reste allumée longtemps avec luminosité qui diminue très doucement
         uint8_t intensity;
         if (absDistance == 0) {
           // Tête : luminosité maximale (255)
           intensity = 255;
         } else {
-          // Queue vers tête : dégradé progressif avec courbe sinusoïdale
+          // Queue vers tête : dégradé très progressif avec courbe exponentielle douce
           // Utiliser la distance inverse : proche de la tête = plus élevé
           uint32_t fadeFactor = maxSnakeDistance - absDistance;
           
-          // Normaliser sur 0-256 pour calcul sinusoïdal
+          // Normaliser sur 0-256 pour calcul de courbe
           uint32_t normalizedFade = (fadeFactor * 256) / maxSnakeDistance;  // 0-256
           
-          // Courbe sinusoïdale pour transition ultra-fluide et naturelle
-          // sin(π/2 * x) où x va de 0 à 1, donne une courbe très douce
-          // Approximation : utiliser une table de lookup ou calcul polynomial
-          // Pour x de 0 à 256, on veut sin(π/2 * x/256)
-          // Approximation polynomiale de sin : sin(x) ≈ x - x³/6 + x⁵/120 (pour x petit)
-          // Mais on utilise une approximation plus simple et efficace
-          
-          // Convertir en angle (0 à 90 degrés, soit 0 à π/2)
-          // Utiliser une approximation sinusoïdale avec interpolation quadratique
-          // Pour fluidité maximale : courbe qui monte très doucement
-          
-          // Méthode : utiliser une courbe qui combine plusieurs techniques
-          // 1. Normalisation douce
+          // Courbe optimisée : queue qui s'éteint rapidement mais dernières LEDs restent visibles
+          // avec fade-out progressif pour fluidité maximale
           uint32_t x = normalizedFade;  // 0-256
           
-          // 2. Courbe sinusoïdale approximée : sin(π/2 * x/256)
-          // Approximation : pour x de 0 à 256, on utilise une interpolation
-          // Formule simplifiée : utilise une courbe qui ressemble à sin mais plus rapide à calculer
-          // On utilise une combinaison de courbes pour fluidité maximale
+          // Courbe en 3 zones pour fade-out progressif mais queue qui s'éteint assez vite
+          // - Queue lointaine (x < 80) : s'éteint rapidement (presque invisible)
+          // - Queue moyenne (80 < x < 180) : fade-out progressif (visible mais faible)
+          // - Queue proche vers tête (x > 180) : montée rapide vers maximum
           
-          // Courbe sinusoïdale optimisée pour fluidité maximale
-          // Approximation efficace : combinaison de courbes pour transition ultra-douce
-          uint32_t sinFade;
+          uint32_t fadeValue;
           
-          // Calculer les composantes de la courbe
-          uint32_t x2 = (x * x) / 256;        // x²/256 : courbe douce
-          uint32_t x3 = (x2 * x) / 256;      // x³/256² : transition progressive
+          if (x < 80) {
+            // Queue très lointaine (x = 0-80) : s'éteint rapidement
+            // Courbe quadratique pour extinction rapide mais douce
+            uint32_t xNormalized = x;  // 0-80
+            fadeValue = (xNormalized * xNormalized) / 80;  // 0-80, extinction rapide
+          } else if (x < 180) {
+            // Queue moyenne (x = 80-180) : fade-out progressif
+            // Les dernières LEDs restent visibles avec luminosité qui diminue doucement
+            uint32_t xNormalized = x - 80;  // 0-100
+            uint32_t baseValue = 80;  // Valeur de base depuis la queue lointaine
+            // Courbe quadratique douce pour fade-out progressif
+            uint32_t increment = (xNormalized * xNormalized) / 40;  // 0-250
+            fadeValue = baseValue + increment;  // 80-330
+          } else {
+            // Queue proche et tête (x = 180-256) : montée rapide vers maximum
+            uint32_t xNormalized = x - 180;  // 0-76
+            uint32_t baseValue = 330;  // Valeur de base depuis la queue moyenne
+            // Courbe cubique pour montée rapide mais fluide vers la tête
+            uint32_t increment = (xNormalized * xNormalized * xNormalized) / 300;  // 0-76
+            fadeValue = baseValue + increment;  // 330-406
+          }
           
-          // Combinaison optimisée : 80% courbe douce, 20% transition
-          // Cela donne une montée très douce au début, transition fluide ensuite
-          // Formule : 0.8 * x² + 0.2 * x³ pour fluidité maximale
-          sinFade = (x2 * 4 + x3) / 5;
+          // Limiter à 256 maximum
+          if (fadeValue > 256) fadeValue = 256;
           
-          // S'assurer que la valeur reste dans les limites
-          if (sinFade > 256) sinFade = 256;
+          // Intensité optimisée : queue s'éteint assez vite mais dernières LEDs restent visibles
+          // Queue lointaine : 15 (très faible, presque éteinte)
+          // Queue moyenne : 15-150 (fade-out progressif, reste visible)
+          // Queue proche : 150-255 (montée rapide vers tête)
+          // Cela donne une queue qui s'éteint assez vite mais les dernières LEDs restent visibles
+          intensity = 15 + ((fadeValue * 240) / 256);
           
-          // Intensité de 30 (queue) à 255 (tête) avec courbe sinusoïdale
-          intensity = 30 + ((sinFade * 225) / 256);
+          // S'assurer que l'intensité minimale est respectée
+          if (intensity < 15) intensity = 15;
         }
         
         // Appliquer la couleur avec l'intensité calculée

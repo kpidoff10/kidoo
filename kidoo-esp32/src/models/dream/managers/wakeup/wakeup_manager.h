@@ -99,12 +99,15 @@ private:
   // Variables statiques
   static bool initialized;
   static WakeupConfig config;
+  static WakeupConfig lastConfig;  // Sauvegarde de la dernière config pour détecter les changements
   static bool wakeupActive;
   static unsigned long wakeupStartTime;
   static unsigned long lastCheckTime;
   static unsigned long lastFadeUpdateTime;
   static uint8_t lastTriggeredHour;
   static uint8_t lastTriggeredMinute;
+  static bool checkingEnabled;  // Si true, vérifier toutes les minutes. Si false, attendre le jour suivant
+  static uint8_t lastCheckedDay;  // Dernier jour vérifié (1-7, RTC format)
   
   // États de transition
   static bool fadeInActive;
@@ -130,6 +133,9 @@ private:
   static uint8_t weekdayToIndex(uint8_t dayOfWeek); // Convertir RTC dayOfWeek (1-7) vers index (0-6)
   static const char* indexToWeekday(uint8_t index); // Convertir index (0-6) vers weekday string
   static void checkWakeupTrigger();
+  static void updateCheckingState();  // Vérifier si la routine est activée pour aujourd'hui et mettre à jour checkingEnabled
+  static bool configChanged();  // Comparer la config actuelle avec lastConfig
+  static unsigned long calculateNextCheckInterval();  // Calculer le prochain intervalle de vérification basé sur la distance jusqu'à l'heure de déclenchement
   static void startWakeup();
   static void updateFadeIn();
   static void updateFadeOut();

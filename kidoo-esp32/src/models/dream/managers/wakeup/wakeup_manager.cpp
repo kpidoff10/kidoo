@@ -6,12 +6,15 @@
 // Variables statiques
 bool WakeupManager::initialized = false;
 WakeupConfig WakeupManager::config;
+WakeupConfig WakeupManager::lastConfig;
 bool WakeupManager::wakeupActive = false;
 unsigned long WakeupManager::wakeupStartTime = 0;
 unsigned long WakeupManager::lastCheckTime = 0;
 unsigned long WakeupManager::lastFadeUpdateTime = 0;
 uint8_t WakeupManager::lastTriggeredHour = 255;  // 255 = jamais déclenché
 uint8_t WakeupManager::lastTriggeredMinute = 255;
+bool WakeupManager::checkingEnabled = false;
+uint8_t WakeupManager::lastCheckedDay = 0;  // 0 = jamais vérifié
 bool WakeupManager::fadeInActive = false;
 bool WakeupManager::fadeOutActive = false;
 unsigned long WakeupManager::fadeStartTime = 0;
@@ -28,7 +31,10 @@ uint8_t WakeupManager::lastBrightness = 255;
 static const unsigned long FADE_IN_DURATION_MS = 60000;      // 1 minute
 static const unsigned long FADE_OUT_DURATION_MS = 300000;    // 5 minutes
 static const unsigned long WAKEUP_DURATION_MS = 1800000;     // 30 minutes après l'heure de réveil avant fade-out
-static const unsigned long CHECK_INTERVAL_MS = 60000;        // Vérifier toutes les minutes
+static const unsigned long CHECK_INTERVAL_MS = 60000;        // Vérifier toutes les minutes (quand proche de l'heure)
+static const unsigned long CHECK_INTERVAL_3H_MS = 10800000;  // 3 heures (quand très loin)
+static const unsigned long CHECK_INTERVAL_1H_MS = 3600000;   // 1 heure (quand loin)
+static const unsigned long CHECK_INTERVAL_30M_MS = 1800000;  // 30 minutes (quand proche)
 static const unsigned long FADE_UPDATE_INTERVAL_MS = 100;     // Mettre à jour le fade toutes les 100ms (10 fois par seconde)
 static const int WAKEUP_TRIGGER_MINUTES_BEFORE = 15;         // Déclencher 15 minutes avant
 
@@ -52,12 +58,37 @@ bool WakeupManager::init() {
   }
   
   initialized = true;
+  
+  // Initialiser l'état de vérification
+  if (RTCManager::isAvailable()) {
+    DateTime now = RTCManager::getDateTime();
+    lastCheckedDay = now.dayOfWeek;
+    updateCheckingState();
+    
+    // Initialiser lastCheckTime pour démarrer avec le bon intervalle
+    lastCheckTime = millis();
+    
+    // Afficher l'intervalle de vérification calculé
+    if (checkingEnabled) {
+      unsigned long interval = calculateNextCheckInterval();
+      Serial.printf("[WAKEUP] Intervalle de verification initial: %lu ms (%.1f heures)\n",
+                    interval, interval / 3600000.0f);
+    }
+  } else {
+    checkingEnabled = false;
+    lastCheckedDay = 0;
+    lastCheckTime = millis();
+  }
+  
   Serial.println("[WAKEUP] Gestionnaire initialise");
   
   return true;
 }
 
 bool WakeupManager::loadConfig() {
+  // Sauvegarder l'ancienne config pour détecter les changements
+  lastConfig = config;
+  
   // Charger la configuration depuis la SD
   SDConfig sdConfig = SDManager::getConfig();
   
@@ -111,9 +142,34 @@ bool WakeupManager::reloadConfig() {
   
   bool result = loadConfig();
   
-  // Vérifier immédiatement si c'est l'heure de déclencher le wake-up
+  // Si la config a changé, vérifier si la routine est activée pour aujourd'hui
   if (result && initialized && RTCManager::isAvailable()) {
-    checkNow();
+    if (configChanged()) {
+      Serial.println("[WAKEUP] Configuration modifiee, verification de l'etat pour aujourd'hui");
+      updateCheckingState();
+      
+      // Réinitialiser lastCheckTime pour recalculer l'intervalle avec la nouvelle config
+      lastCheckTime = millis();
+      
+      // Afficher le nouvel intervalle de vérification
+      if (checkingEnabled) {
+        unsigned long interval = calculateNextCheckInterval();
+        Serial.printf("[WAKEUP] Nouvel intervalle de verification: %lu ms (%.1f heures)\n",
+                      interval, interval / 3600000.0f);
+      }
+      
+      // Si maintenant activé pour aujourd'hui, vérifier immédiatement
+      if (checkingEnabled) {
+        checkNow();
+      }
+    } else {
+      // Config identique, juste vérifier maintenant si déjà en cours de vérification
+      if (checkingEnabled) {
+        // Réinitialiser quand même lastCheckTime pour recalculer l'intervalle (au cas où l'heure aurait changé)
+        lastCheckTime = millis();
+        checkNow();
+      }
+    }
   }
   
   return result;
@@ -210,10 +266,34 @@ void WakeupManager::update() {
     return;
   }
   
+  DateTime now = RTCManager::getDateTime();
+  
+  // Vérifier si le jour a changé
+  if (lastCheckedDay != now.dayOfWeek) {
+    Serial.printf("[WAKEUP] Changement de jour detecte: %d -> %d\n", lastCheckedDay, now.dayOfWeek);
+    lastCheckedDay = now.dayOfWeek;
+    updateCheckingState();  // Mettre à jour l'état de vérification pour le nouveau jour
+  }
+  
+  // Ne vérifier que si la routine est activée pour aujourd'hui
+  if (!checkingEnabled) {
+    return;  // Routine non activée pour aujourd'hui, pas besoin de vérifier
+  }
+  
   unsigned long currentTime = millis();
   
-  // Vérifier périodiquement (toutes les minutes)
-  if (currentTime - lastCheckTime >= CHECK_INTERVAL_MS) {
+  // Calculer le prochain intervalle de vérification basé sur la distance jusqu'à l'heure de déclenchement
+  unsigned long nextCheckInterval = calculateNextCheckInterval();
+  
+  // Vérifier périodiquement avec un intervalle adaptatif
+  unsigned long elapsed;
+  if (currentTime >= lastCheckTime) {
+    elapsed = currentTime - lastCheckTime;
+  } else {
+    elapsed = (ULONG_MAX - lastCheckTime) + currentTime + 1;
+  }
+  
+  if (elapsed >= nextCheckInterval) {
     lastCheckTime = currentTime;
     checkWakeupTrigger();
   }
@@ -271,6 +351,108 @@ void WakeupManager::update() {
       lastFadeUpdateTime = currentTime;
       updateFadeOut();
     }
+  }
+}
+
+void WakeupManager::updateCheckingState() {
+  if (!RTCManager::isAvailable()) {
+    checkingEnabled = false;
+    return;
+  }
+  
+  DateTime now = RTCManager::getDateTime();
+  uint8_t dayIndex = weekdayToIndex(now.dayOfWeek);
+  
+  // Vérifier si la routine est activée pour aujourd'hui
+  bool wasEnabled = checkingEnabled;
+  checkingEnabled = config.schedules[dayIndex].activated;
+  
+  if (checkingEnabled) {
+    if (!wasEnabled) {
+      // Réinitialiser lastCheckTime quand on active la vérification
+      lastCheckTime = millis();
+    }
+    unsigned long interval = calculateNextCheckInterval();
+    Serial.printf("[WAKEUP] Routine activee pour aujourd'hui (%s), verification adaptative activee (intervalle: %lu ms = %.1f heures)\n",
+                  indexToWeekday(dayIndex), interval, interval / 3600000.0f);
+  } else {
+    Serial.printf("[WAKEUP] Routine non activee pour aujourd'hui (%s), verification desactivee jusqu'au jour suivant\n",
+                  indexToWeekday(dayIndex));
+  }
+}
+
+bool WakeupManager::configChanged() {
+  // Comparer les schedules (les plus importants pour l'optimisation)
+  for (int i = 0; i < 7; i++) {
+    if (config.schedules[i].hour != lastConfig.schedules[i].hour ||
+        config.schedules[i].minute != lastConfig.schedules[i].minute ||
+        config.schedules[i].activated != lastConfig.schedules[i].activated) {
+      return true;
+    }
+  }
+  
+  // Comparer aussi les autres paramètres (au cas où)
+  if (config.colorR != lastConfig.colorR ||
+      config.colorG != lastConfig.colorG ||
+      config.colorB != lastConfig.colorB ||
+      config.brightness != lastConfig.brightness) {
+    return true;
+  }
+  
+  return false;
+}
+
+unsigned long WakeupManager::calculateNextCheckInterval() {
+  if (!RTCManager::isAvailable()) {
+    return CHECK_INTERVAL_MS;  // Par défaut, toutes les minutes
+  }
+  
+  DateTime now = RTCManager::getDateTime();
+  uint8_t dayIndex = weekdayToIndex(now.dayOfWeek);
+  
+  if (!config.schedules[dayIndex].activated) {
+    return CHECK_INTERVAL_3H_MS;  // Non activé, vérifier toutes les 3h au cas où
+  }
+  
+  // Calculer l'heure de déclenchement (15 minutes avant l'heure de réveil)
+  int targetHour = config.schedules[dayIndex].hour;
+  int targetMinute = config.schedules[dayIndex].minute - WAKEUP_TRIGGER_MINUTES_BEFORE;
+  
+  // Gérer le débordement si targetMinute < 0
+  if (targetMinute < 0) {
+    targetMinute += 60;
+    targetHour -= 1;
+    if (targetHour < 0) {
+      targetHour += 24;
+    }
+  }
+  
+  // Calculer les minutes jusqu'à l'heure de déclenchement
+  int currentMinutes = now.hour * 60 + now.minute;
+  int triggerMinutes = targetHour * 60 + targetMinute;
+  int minutesUntilTarget = triggerMinutes - currentMinutes;
+  
+  // Si l'heure de déclenchement est passée aujourd'hui, c'est pour demain
+  if (minutesUntilTarget < 0) {
+    minutesUntilTarget += 24 * 60;  // Ajouter 24 heures
+  }
+  
+  // Convertir en heures
+  float hoursUntilTarget = minutesUntilTarget / 60.0f;
+  
+  // Déterminer l'intervalle de vérification basé sur la distance
+  if (hoursUntilTarget > 6.0f) {
+    // Plus de 6 heures avant : vérifier toutes les 3 heures
+    return CHECK_INTERVAL_3H_MS;
+  } else if (hoursUntilTarget > 3.0f) {
+    // 3-6 heures avant : vérifier toutes les heures
+    return CHECK_INTERVAL_1H_MS;
+  } else if (hoursUntilTarget > 1.0f) {
+    // 1-3 heures avant : vérifier toutes les 30 minutes
+    return CHECK_INTERVAL_30M_MS;
+  } else {
+    // Moins d'1 heure avant : vérifier toutes les minutes
+    return CHECK_INTERVAL_MS;
   }
 }
 

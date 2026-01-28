@@ -377,6 +377,8 @@ bool ModelDreamPubNubRoutes::handleStartTestBedtime(const JsonObject& json) {
   int colorG = -1;
   int colorB = -1;
   int brightness = -1;
+  const char* effectStr = nullptr;
+  bool hasEffect = false;
   
   Serial.print("[PUBNUB-ROUTE] start-test-bedtime: Message JSON reçu - ");
   serializeJson(json, Serial);
@@ -390,6 +392,10 @@ bool ModelDreamPubNubRoutes::handleStartTestBedtime(const JsonObject& json) {
     if (params["colorG"].is<int>()) colorG = params["colorG"].as<int>();
     if (params["colorB"].is<int>()) colorB = params["colorB"].as<int>();
     if (params["brightness"].is<int>()) brightness = params["brightness"].as<int>();
+    if (params["effect"].is<const char*>()) {
+      effectStr = params["effect"].as<const char*>();
+      hasEffect = true;
+    }
     
     Serial.print("[PUBNUB-ROUTE] start-test-bedtime: Paramètres extraits - RGB(");
     Serial.print(colorR);
@@ -407,6 +413,10 @@ bool ModelDreamPubNubRoutes::handleStartTestBedtime(const JsonObject& json) {
     if (json["colorG"].is<int>()) colorG = json["colorG"].as<int>();
     if (json["colorB"].is<int>()) colorB = json["colorB"].as<int>();
     if (json["brightness"].is<int>()) brightness = json["brightness"].as<int>();
+    if (json["effect"].is<const char*>()) {
+      effectStr = json["effect"].as<const char*>();
+      hasEffect = true;
+    }
   }
   
   // Valider les paramètres
@@ -427,12 +437,37 @@ bool ModelDreamPubNubRoutes::handleStartTestBedtime(const JsonObject& json) {
   // (setColor et setBrightness appellent déjà wakeUp(), mais on le fait explicitement pour être sûr)
   LEDManager::wakeUp();
   
+  // Convertir l'effet string en enum LEDEffect si fourni
+  LEDEffect effect = LED_EFFECT_NONE;
+  if (hasEffect && effectStr != nullptr) {
+    if (strcmp(effectStr, "none") == 0 || strcmp(effectStr, "") == 0) {
+      effect = LED_EFFECT_NONE;
+    } else if (strcmp(effectStr, "pulse") == 0) {
+      effect = LED_EFFECT_PULSE;
+    } else if (strcmp(effectStr, "rotate") == 0) {
+      effect = LED_EFFECT_ROTATE;
+    } else if (strcmp(effectStr, "rainbow") == 0) {
+      effect = LED_EFFECT_RAINBOW;
+    } else if (strcmp(effectStr, "rainbow-soft") == 0) {
+      effect = LED_EFFECT_RAINBOW_SOFT;
+    } else if (strcmp(effectStr, "glossy") == 0) {
+      effect = LED_EFFECT_GLOSSY;
+    } else if (strcmp(effectStr, "breathe") == 0) {
+      effect = LED_EFFECT_BREATHE;
+    } else if (strcmp(effectStr, "nightlight") == 0) {
+      effect = LED_EFFECT_NIGHTLIGHT;
+    } else {
+      Serial.printf("[PUBNUB-ROUTE] start-test-bedtime: Effet inconnu '%s', utilisation de NONE\n", effectStr);
+      effect = LED_EFFECT_NONE;
+    }
+  }
+  
   // Appliquer les paramètres du test
-  // Ordre : d'abord s'assurer qu'on est en mode NONE (pour désactiver les effets animés),
+  // Ordre : d'abord appliquer l'effet (ou NONE si pas d'effet),
   // puis appliquer la couleur et la brightness
-  // Note: setEffect(LED_EFFECT_NONE) réinitialise la couleur à noir si on change d'effet,
+  // Note: setEffect peut réinitialiser la couleur à noir si on change d'effet,
   // donc on doit réappliquer la couleur après
-  LEDManager::setEffect(LED_EFFECT_NONE); // Désactiver les effets animés (peut réinitialiser la couleur)
+  LEDManager::setEffect(effect); // Appliquer l'effet configuré (ou NONE)
   LEDManager::setColor(colorR, colorG, colorB); // Appliquer la couleur (après setEffect pour qu'elle soit préservée)
   LEDManager::setBrightness(brightnessValue); // Appliquer la brightness
   
@@ -456,7 +491,12 @@ bool ModelDreamPubNubRoutes::handleStartTestBedtime(const JsonObject& json) {
   Serial.print(colorB);
   Serial.print("), Brightness: ");
   Serial.print(brightness);
-  Serial.println("%");
+  Serial.print("%");
+  if (hasEffect && effectStr != nullptr) {
+    Serial.print(", Effect: ");
+    Serial.print(effectStr);
+  }
+  Serial.println();
   
   return true;
 }
@@ -777,6 +817,33 @@ bool ModelDreamPubNubRoutes::handleSetBedtimeConfig(const JsonObject& json) {
     // Recharger la configuration dans le BedtimeManager
     BedtimeManager::reloadConfig();
     
+    // Déclencher automatiquement le test avec la nouvelle configuration
+    Serial.println("[PUBNUB-ROUTE] set-bedtime-config: Déclenchement automatique du test...");
+    
+    // Créer un JsonObject avec les paramètres pour le test
+    // Utiliser les valeurs qui viennent d'être sauvegardées dans la config
+    StaticJsonDocument<512> testJson;
+    JsonObject testParams = testJson.createNestedObject("params");
+    
+    // Utiliser les valeurs sauvegardées dans la config (qui viennent d'être mises à jour)
+    testParams["colorR"] = config.bedtime_colorR;
+    testParams["colorG"] = config.bedtime_colorG;
+    testParams["colorB"] = config.bedtime_colorB;
+    testParams["brightness"] = config.bedtime_brightness;
+    
+    // Ajouter l'effet si configuré
+    if (strlen(config.bedtime_effect) > 0 && strcmp(config.bedtime_effect, "none") != 0) {
+      testParams["effect"] = config.bedtime_effect;
+    }
+    
+    // Appeler handleStartTestBedtime avec les paramètres
+    // Le test affichera la couleur, brightness et effet configurés
+    if (handleStartTestBedtime(testJson.as<JsonObject>())) {
+      Serial.println("[PUBNUB-ROUTE] set-bedtime-config: Test automatique démarré avec succès");
+    } else {
+      Serial.println("[PUBNUB-ROUTE] set-bedtime-config: Erreur lors du démarrage du test automatique");
+    }
+    
     return true;
   } else {
     Serial.println("[PUBNUB-ROUTE] set-bedtime-config: Erreur lors de la sauvegarde");
@@ -1011,6 +1078,27 @@ bool ModelDreamPubNubRoutes::handleSetWakeupConfig(const JsonObject& json) {
     
     // Recharger la configuration dans le WakeupManager
     WakeupManager::reloadConfig();
+    
+    // Déclencher automatiquement le test avec la nouvelle configuration
+    Serial.println("[PUBNUB-ROUTE] set-wakeup-config: Déclenchement automatique du test...");
+    
+    // Créer un JsonObject avec les paramètres pour le test
+    // Utiliser les valeurs sauvegardées dans la config
+    StaticJsonDocument<512> testJson;
+    JsonObject testParams = testJson.createNestedObject("params");
+    
+    // Utiliser les valeurs sauvegardées dans la config
+    testParams["colorR"] = config.wakeup_colorR;
+    testParams["colorG"] = config.wakeup_colorG;
+    testParams["colorB"] = config.wakeup_colorB;
+    testParams["brightness"] = config.wakeup_brightness;
+    
+    // Appeler handleStartTestWakeup avec les paramètres
+    if (handleStartTestWakeup(testJson.as<JsonObject>())) {
+      Serial.println("[PUBNUB-ROUTE] set-wakeup-config: Test automatique démarré avec succès");
+    } else {
+      Serial.println("[PUBNUB-ROUTE] set-wakeup-config: Erreur lors du démarrage du test automatique");
+    }
     
     return true;
   } else {
