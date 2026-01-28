@@ -20,10 +20,10 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@/shared": ["../shared"],
-      "@/shared/*": ["../shared/*"],
-      "@kidoo/shared": ["../shared"],
-      "@kidoo/shared/*": ["../shared/*"]
+      "@/shared": ["./shared", "../shared"],
+      "@/shared/*": ["./shared/*", "../shared/*"],
+      "@kidoo/shared": ["./shared", "../shared"],
+      "@kidoo/shared/*": ["./shared/*", "../shared/*"]
     }
   },
   "include": [

@@ -1,4 +1,12 @@
 {
+  "name": "kidoo-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "kidoo-server",
+    "kidoo-app",
+    "shared"
+  ],
   "dependencies": {
     "react-native-draggable-flatlist": "^4.0.3"
   }

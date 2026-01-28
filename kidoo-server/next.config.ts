@@ -7,10 +7,18 @@ const nextConfig: NextConfig = {
   // Configuration Webpack pour résoudre les modules externes (shared/)
   // Cette configuration est utilisée avec --webpack flag
   webpack: (config) => {
-    // Ajouter un alias pour résoudre @/shared depuis le dossier shared/
+    // Ajouter un alias pour résoudre @/shared depuis le workspace npm
+    // Avec npm workspaces, @kidoo/shared est disponible dans node_modules
     config.resolve = config.resolve || {};
     config.resolve.alias = config.resolve.alias || {};
-    config.resolve.alias['@/shared'] = path.resolve(__dirname, '../shared');
+    // Essayer d'abord le workspace npm, puis le dossier parent (fallback pour dev local sans workspace)
+    try {
+      const workspaceShared = require.resolve('@kidoo/shared');
+      config.resolve.alias['@/shared'] = path.dirname(workspaceShared);
+    } catch (e) {
+      // Fallback vers le dossier parent si le workspace n'est pas disponible
+      config.resolve.alias['@/shared'] = path.resolve(__dirname, '../shared');
+    }
     
     // Résoudre @prisma/client-runtime-utils depuis kidoo-server/node_modules
     // car le client Prisma généré dans shared/ en a besoin
