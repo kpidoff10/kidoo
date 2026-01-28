@@ -15,6 +15,9 @@
  * - led: Contrôler les LEDs (couleur, effet)
  * - start-test-bedtime: Démarrer le test de l'heure de coucher
  * - stop-test-bedtime: Arrêter le test de l'heure de coucher
+ * - start-bedtime: Démarrer manuellement la routine de coucher (empêche le déclenchement automatique)
+ * - stop-bedtime: Arrêter manuellement la routine de coucher
+ * - stop-routine: Arrêter la routine active (bedtime ou wakeup)
  * - set-bedtime-config: Sauvegarder la configuration de l'heure de coucher sur la SD
  * - start-test-wakeup: Démarrer le test de l'heure de réveil
  * - stop-test-wakeup: Arrêter le test de l'heure de réveil
@@ -28,6 +31,8 @@
  * { "action": "led", "color": "#FF0000", "effect": "solid" }
  * { "action": "start-test-bedtime", "params": { "colorR": 255, "colorG": 107, "colorB": 107, "brightness": 50 } }
  * { "action": "stop-test-bedtime" }
+ * { "action": "start-bedtime" }
+ * { "action": "stop-bedtime" }
  * { "action": "set-bedtime-config", "params": { "colorR": 255, "colorG": 107, "colorB": 107, "brightness": 50, "allNight": false, "weekdaySchedule": {...} } }
  * { "action": "start-test-wakeup", "params": { "colorR": 255, "colorG": 200, "colorB": 100, "brightness": 50 } }
  * { "action": "stop-test-wakeup" }
@@ -77,6 +82,9 @@ private:
   static bool handleLed(const JsonObject& json);
   static bool handleStartTestBedtime(const JsonObject& json);
   static bool handleStopTestBedtime(const JsonObject& json);
+  static bool handleStartBedtime(const JsonObject& json);
+  static bool handleStopBedtime(const JsonObject& json);
+  static bool handleStopRoutine(const JsonObject& json);
   static bool handleSetBedtimeConfig(const JsonObject& json);
   static bool handleStartTestWakeup(const JsonObject& json);
   static bool handleStopTestWakeup(const JsonObject& json);

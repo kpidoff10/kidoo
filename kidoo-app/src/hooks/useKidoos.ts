@@ -169,6 +169,60 @@ export function useDreamBedtimeConfig(kidooId: string) {
 }
 
 /**
+ * Hook pour contrôler manuellement la routine de coucher (Dream)
+ */
+export function useControlDreamBedtime() {
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      action,
+    }: {
+      id: string;
+      action: 'start' | 'stop';
+    }) => kidoosApi.controlDreamBedtime(id, action),
+    onError: () => {
+      showToast.error({
+        title: t('toast.error'),
+        message: t('errors.generic'),
+      });
+    },
+    onSuccess: (data, variables) => {
+      showToast.success({
+        title: t('toast.success'),
+        message: variables.action === 'start' 
+          ? t('kidoos.dream.bedtime.started', { defaultValue: 'Routine démarrée' })
+          : t('kidoos.dream.bedtime.stopped', { defaultValue: 'Routine arrêtée' }),
+      });
+    },
+  });
+}
+
+/**
+ * Hook pour arrêter la routine active (bedtime ou wakeup) (Dream)
+ */
+export function useStopDreamRoutine() {
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: (id: string) => kidoosApi.stopDreamRoutine(id),
+    onError: () => {
+      showToast.error({
+        title: t('toast.error'),
+        message: t('errors.generic'),
+      });
+    },
+    onSuccess: () => {
+      showToast.success({
+        title: t('toast.success'),
+        message: t('kidoos.dream.routine.stopped', { defaultValue: 'Routine arrêtée' }),
+      });
+    },
+  });
+}
+
+/**
  * Hook pour tester la configuration de l'heure de coucher (Dream)
  */
 export function useTestDreamBedtime() {

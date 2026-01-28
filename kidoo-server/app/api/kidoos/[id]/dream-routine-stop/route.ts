@@ -1,6 +1,6 @@
 /**
- * Route API pour démarrer/arrêter manuellement la routine de coucher du modèle Dream
- * POST /api/kidoos/[id]/dream-bedtime - Démarre ou arrête la routine manuellement
+ * Route API pour arrêter la routine active (bedtime ou wakeup) du modèle Dream
+ * POST /api/kidoos/[id]/dream-routine-stop - Arrête la routine active
  */
 
 import { prisma } from '@/lib/prisma';
@@ -9,8 +9,8 @@ import { createErrorResponse, createSuccessResponse } from '@/lib/api-response';
 import { sendCommand, isPubNubConfigured } from '@/lib/pubnub';
 
 /**
- * POST /api/kidoos/[id]/dream-bedtime
- * Démarre ou arrête manuellement la routine de coucher
+ * POST /api/kidoos/[id]/dream-routine-stop
+ * Arrête la routine active (bedtime ou wakeup)
  */
 export const POST = withAuth(async (
   request: AuthenticatedRequest,
@@ -19,17 +19,6 @@ export const POST = withAuth(async (
   try {
     const { userId } = request;
     const { id } = await params;
-
-    // Récupérer et valider le body
-    const body = await request.json();
-    const { action } = body;
-
-    if (action !== 'start' && action !== 'stop') {
-      return createErrorResponse('VALIDATION_ERROR', 400, {
-        message: 'L\'action doit être "start" ou "stop"',
-        field: 'action',
-      });
-    }
 
     // Vérifier que le Kidoo existe et appartient à l'utilisateur
     const kidoo = await prisma.kidoo.findUnique({
@@ -69,22 +58,21 @@ export const POST = withAuth(async (
       });
     }
 
-    // Envoyer la commande appropriée
-    const command = action === 'start' ? 'start-bedtime' : 'stop-bedtime';
-    const sent = await sendCommand(kidoo.macAddress, command);
+    // Envoyer la commande pour arrêter la routine active
+    const sent = await sendCommand(kidoo.macAddress, 'stop-routine');
     
     if (!sent) {
       return createErrorResponse('INTERNAL_ERROR', 500, {
-        message: `Échec de l'envoi de la commande ${action}`,
+        message: 'Échec de l\'envoi de la commande d\'arrêt',
       });
     }
 
     return createSuccessResponse(
-      { action },
-      { message: action === 'start' ? 'Routine démarrée' : 'Routine arrêtée' }
+      { stopped: true },
+      { message: 'Routine arrêtée' }
     );
   } catch (error) {
-    console.error('Erreur lors du contrôle de la routine de coucher:', error);
+    console.error('Erreur lors de l\'arrêt de la routine:', error);
     return createErrorResponse('INTERNAL_ERROR', 500, {
       details: error instanceof Error ? error.message : undefined,
     });

@@ -90,11 +90,23 @@ public:
    */
   static bool isBedtimeActive();
 
+  /**
+   * Démarrer le bedtime manuellement (via PubNub)
+   * Empêche le déclenchement automatique programmé
+   */
+  static void startBedtimeManually();
+
+  /**
+   * Arrêter le bedtime manuellement (via PubNub)
+   */
+  static void stopBedtimeManually();
+
 private:
   // Variables statiques
   static bool initialized;
   static BedtimeConfig config;
   static bool bedtimeActive;
+  static bool manuallyStarted; // Flag pour indiquer que le bedtime a été démarré manuellement
   static unsigned long bedtimeStartTime;
   static unsigned long lastCheckTime;
   static uint8_t lastTriggeredHour;

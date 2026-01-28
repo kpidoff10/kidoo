@@ -90,6 +90,11 @@ public:
    */
   static bool isWakeupActive();
 
+  /**
+   * Arrêter le wake-up manuellement (via PubNub)
+   */
+  static void stopWakeupManually();
+
 private:
   // Variables statiques
   static bool initialized;

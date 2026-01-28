@@ -52,6 +52,15 @@ bool ModelDreamPubNubRoutes::processMessage(const JsonObject& json) {
   else if (strcmp(action, "stop-test-bedtime") == 0) {
     return handleStopTestBedtime(json);
   }
+  else if (strcmp(action, "start-bedtime") == 0) {
+    return handleStartBedtime(json);
+  }
+  else if (strcmp(action, "stop-bedtime") == 0) {
+    return handleStopBedtime(json);
+  }
+  else if (strcmp(action, "stop-routine") == 0) {
+    return handleStopRoutine(json);
+  }
   else if (strcmp(action, "set-bedtime-config") == 0) {
     return handleSetBedtimeConfig(json);
   }
@@ -449,6 +458,82 @@ bool ModelDreamPubNubRoutes::handleStartTestBedtime(const JsonObject& json) {
   Serial.print(brightness);
   Serial.println("%");
   
+  return true;
+}
+
+bool ModelDreamPubNubRoutes::handleStartBedtime(const JsonObject& json) {
+  // Format: { "action": "start-bedtime" }
+  // Démarre manuellement la routine de coucher avec la configuration sauvegardée
+  // Empêche le déclenchement automatique programmé
+  
+  Serial.println("[PUBNUB-ROUTE] start-bedtime: Démarrage manuel de la routine de coucher");
+  
+  // Vérifier que BedtimeManager est initialisé
+  if (!BedtimeManager::isBedtimeEnabled()) {
+    Serial.println("[PUBNUB-ROUTE] start-bedtime: ERREUR - Bedtime non configuré ou non activé");
+    return false;
+  }
+  
+  // Vérifier si le bedtime est déjà actif
+  if (BedtimeManager::isBedtimeActive()) {
+    Serial.println("[PUBNUB-ROUTE] start-bedtime: Bedtime déjà actif");
+    return true; // Pas une erreur, juste déjà actif
+  }
+  
+  // Démarrer le bedtime manuellement
+  BedtimeManager::startBedtimeManually();
+  
+  Serial.println("[PUBNUB-ROUTE] start-bedtime: Routine de coucher démarrée manuellement");
+  return true;
+}
+
+bool ModelDreamPubNubRoutes::handleStopBedtime(const JsonObject& json) {
+  // Format: { "action": "stop-bedtime" }
+  // Arrête manuellement la routine de coucher
+  
+  Serial.println("[PUBNUB-ROUTE] stop-bedtime: Arrêt manuel de la routine de coucher");
+  
+  // Vérifier si le bedtime est actif
+  if (!BedtimeManager::isBedtimeActive()) {
+    Serial.println("[PUBNUB-ROUTE] stop-bedtime: Aucun bedtime actif");
+    return false;
+  }
+  
+  // Arrêter le bedtime manuellement
+  BedtimeManager::stopBedtimeManually();
+  
+  Serial.println("[PUBNUB-ROUTE] stop-bedtime: Routine de coucher arrêtée manuellement");
+  return true;
+}
+
+bool ModelDreamPubNubRoutes::handleStopRoutine(const JsonObject& json) {
+  // Format: { "action": "stop-routine" }
+  // Arrête la routine active (bedtime ou wakeup)
+  
+  Serial.println("[PUBNUB-ROUTE] stop-routine: Arrêt de la routine active");
+  
+  bool stopped = false;
+  
+  // Vérifier si le bedtime est actif
+  if (BedtimeManager::isBedtimeActive()) {
+    Serial.println("[PUBNUB-ROUTE] stop-routine: Arrêt du bedtime actif");
+    BedtimeManager::stopBedtimeManually();
+    stopped = true;
+  }
+  
+  // Vérifier si le wakeup est actif
+  if (WakeupManager::isWakeupActive()) {
+    Serial.println("[PUBNUB-ROUTE] stop-routine: Arrêt du wakeup actif");
+    WakeupManager::stopWakeupManually();
+    stopped = true;
+  }
+  
+  if (!stopped) {
+    Serial.println("[PUBNUB-ROUTE] stop-routine: Aucune routine active");
+    return false;
+  }
+  
+  Serial.println("[PUBNUB-ROUTE] stop-routine: Routine arrêtée");
   return true;
 }
 
@@ -914,6 +999,9 @@ void ModelDreamPubNubRoutes::printRoutes() {
   Serial.println("{ \"action\": \"led\", \"effect\": \"none|pulse|rotate|rainbow|glossy|off\" }");
   Serial.println("{ \"action\": \"start-test-bedtime\", \"params\": { \"colorR\": 0-255, \"colorG\": 0-255, \"colorB\": 0-255, \"brightness\": 0-100 } }");
   Serial.println("{ \"action\": \"stop-test-bedtime\" }");
+  Serial.println("{ \"action\": \"start-bedtime\" }");
+  Serial.println("{ \"action\": \"stop-bedtime\" }");
+  Serial.println("{ \"action\": \"stop-routine\" }");
   Serial.println("{ \"action\": \"set-bedtime-config\", \"params\": { \"colorR\": 0-255, \"colorG\": 0-255, \"colorB\": 0-255, \"brightness\": 0-100, \"allNight\": true|false, \"weekdaySchedule\": {...} } }");
   Serial.println("{ \"action\": \"start-test-wakeup\", \"params\": { \"colorR\": 0-255, \"colorG\": 0-255, \"colorB\": 0-255, \"brightness\": 0-100 } }");
   Serial.println("{ \"action\": \"stop-test-wakeup\" }");

@@ -21,3 +21,4 @@ export * from './BottomSheetActions';
 export * from './InfoBottomSheet';
 export * from './MenuList';
 export * from './ContentScrollView';
+export * from './Accordion';

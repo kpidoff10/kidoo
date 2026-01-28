@@ -2,7 +2,7 @@
  * Handler pour le modèle Kidoo Dream
  */
 
-import { ModelHandler } from './types';
+import { ModelHandler, CustomAction } from './types';
 import { MenuListItem } from '@/components/ui/MenuList/MenuList';
 import { Kidoo } from '@/api';
 
@@ -50,6 +50,43 @@ export class DreamModelHandler implements ModelHandler {
     });
 
     return items;
+  }
+
+  getCustomActions(
+    kidoo: Kidoo,
+    t: (key: string, options?: any) => string,
+    callbacks?: {
+      onStartBedtime?: () => void;
+      onStopBedtime?: () => void;
+      onStopRoutine?: () => void;
+      [key: string]: (() => void) | undefined;
+    }
+  ): CustomAction[] {
+    const actions: CustomAction[] = [];
+
+    // Bouton pour lancer la routine de coucher
+    actions.push({
+      id: 'start-bedtime',
+      label: t('kidoos.dream.bedtime.startRoutine', { defaultValue: 'Lancer la routine' }),
+      icon: 'play',
+      variant: 'primary',
+      onPress: callbacks?.onStartBedtime || (() => {
+        console.log('Start bedtime routine pressed for Dream');
+      }),
+    });
+
+    // Bouton pour arrêter la routine active (bedtime ou wakeup)
+    actions.push({
+      id: 'stop-routine',
+      label: t('kidoos.dream.routine.stop', { defaultValue: 'Arrêter la routine' }),
+      icon: 'stop',
+      variant: 'secondary',
+      onPress: callbacks?.onStopRoutine || (() => {
+        console.log('Stop routine pressed for Dream');
+      }),
+    });
+
+    return actions;
   }
 
   // Fonctions spécifiques au Dream peuvent être ajoutées ici

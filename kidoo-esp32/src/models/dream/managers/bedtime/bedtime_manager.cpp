@@ -6,6 +6,7 @@
 bool BedtimeManager::initialized = false;
 BedtimeConfig BedtimeManager::config;
 bool BedtimeManager::bedtimeActive = false;
+bool BedtimeManager::manuallyStarted = false;
 unsigned long BedtimeManager::bedtimeStartTime = 0;
 unsigned long BedtimeManager::lastCheckTime = 0;
 uint8_t BedtimeManager::lastTriggeredHour = 255;  // 255 = jamais déclenché
@@ -252,8 +253,10 @@ void BedtimeManager::checkBedtimeTrigger() {
                   bedtimeActive ? "Oui" : "Non", lastTriggeredHour, lastTriggeredMinute);
     
     // Déclencher le bedtime si pas déjà actif et qu'on n'a pas déjà déclenché cette minute
+    // ET que le bedtime n'a pas été démarré manuellement
     // Cela évite de déclencher plusieurs fois dans la même minute
     if (!bedtimeActive && 
+        !manuallyStarted &&
         (lastTriggeredHour != now.hour || lastTriggeredMinute != now.minute)) {
       Serial.println("[BEDTIME] >>> DÉCLENCHEMENT DU BEDTIME <<<");
       startBedtime();
@@ -262,6 +265,8 @@ void BedtimeManager::checkBedtimeTrigger() {
     } else {
       if (bedtimeActive) {
         Serial.println("[BEDTIME] Bedtime déjà actif, pas de nouveau déclenchement");
+      } else if (manuallyStarted) {
+        Serial.println("[BEDTIME] Bedtime démarré manuellement, pas de déclenchement automatique");
       } else {
         Serial.println("[BEDTIME] Déjà déclenché cette minute, pas de nouveau déclenchement");
       }
@@ -340,6 +345,7 @@ void BedtimeManager::updateFadeOut() {
     fadeOutActive = false;
     LEDManager::clear();
     bedtimeActive = false; // Arrêter le bedtime après le fade-out
+    manuallyStarted = false; // Réinitialiser le flag manuel
     Serial.println("[BEDTIME] Fade-out termine, LEDs eteintes, bedtime arrete");
   } else {
     // Interpolation linéaire de la brightness vers 0
@@ -357,6 +363,7 @@ void BedtimeManager::stopBedtime() {
   bedtimeActive = false;
   fadeInActive = false;
   fadeOutActive = false;
+  manuallyStarted = false; // Réinitialiser le flag manuel
   
   // Réautoriser le sleep mode
   LEDManager::allowSleep();
@@ -382,4 +389,21 @@ BedtimeConfig BedtimeManager::getConfig() {
 
 bool BedtimeManager::isBedtimeActive() {
   return bedtimeActive;
+}
+
+void BedtimeManager::startBedtimeManually() {
+  Serial.println("[BEDTIME] Démarrage manuel du bedtime");
+  
+  // Marquer comme démarré manuellement pour empêcher le déclenchement automatique
+  manuallyStarted = true;
+  
+  // Démarrer le bedtime normalement
+  startBedtime();
+}
+
+void BedtimeManager::stopBedtimeManually() {
+  Serial.println("[BEDTIME] Arrêt manuel du bedtime");
+  
+  // Arrêter le bedtime (qui réinitialisera aussi manuallyStarted)
+  stopBedtime();
 }

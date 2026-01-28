@@ -206,6 +206,37 @@ export const kidoosApi = {
   },
 
   /**
+   * Démarrer/arrêter manuellement la routine de coucher (Dream)
+   */
+  async controlDreamBedtime(
+    id: string,
+    action: 'start' | 'stop'
+  ): Promise<{
+    action: 'start' | 'stop';
+  }> {
+    const response = await apiClient.post<ApiResponse<{
+      action: 'start' | 'stop';
+    }>>(`/api/kidoos/${id}/dream-bedtime`, {
+      action,
+    });
+    return response.data.data;
+  },
+
+  /**
+   * Arrêter la routine active (bedtime ou wakeup) (Dream)
+   */
+  async stopDreamRoutine(
+    id: string
+  ): Promise<{
+    stopped: boolean;
+  }> {
+    const response = await apiClient.post<ApiResponse<{
+      stopped: boolean;
+    }>>(`/api/kidoos/${id}/dream-routine-stop`);
+    return response.data.data;
+  },
+
+  /**
    * Tester la configuration de l'heure de coucher (Dream)
    * Teste uniquement la couleur et la luminosité
    */

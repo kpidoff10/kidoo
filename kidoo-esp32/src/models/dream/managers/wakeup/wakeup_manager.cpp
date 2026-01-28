@@ -502,3 +502,10 @@ WakeupConfig WakeupManager::getConfig() {
 bool WakeupManager::isWakeupActive() {
   return wakeupActive;
 }
+
+void WakeupManager::stopWakeupManually() {
+  Serial.println("[WAKEUP] Arrêt manuel du wake-up");
+  
+  // Arrêter le wake-up (qui réinitialisera aussi les états)
+  stopWakeup();
+}
