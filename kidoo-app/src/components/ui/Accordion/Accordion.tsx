@@ -124,7 +124,7 @@ export function Accordion({
           activeOpacity={0.7}
           style={styles.header}
         >
-          <Text style={styles.title} variant="body2" color="secondary">
+          <Text style={styles.title} variant="body" color="secondary">
             {title}
           </Text>
           <Animated.View

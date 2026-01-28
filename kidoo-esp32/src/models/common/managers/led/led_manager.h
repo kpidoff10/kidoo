@@ -36,7 +36,10 @@ enum LEDEffect {
   LED_EFFECT_RAINBOW,       // Arc-en-ciel
   LED_EFFECT_PULSE,         // Pulsation
   LED_EFFECT_GLOSSY,        // Effet glossy
-  LED_EFFECT_ROTATE         // Effet de rotation (utilise la couleur définie)
+  LED_EFFECT_ROTATE,        // Effet de rotation (utilise la couleur définie)
+  LED_EFFECT_NIGHTLIGHT,    // Effet de veilleuse (vagues bleu/blanc)
+  LED_EFFECT_BREATHE,       // Effet de respiration avec changement de couleur
+  LED_EFFECT_RAINBOW_SOFT   // Arc-en-ciel doux (animation lente pour veilleuse)
 };
 
 // Structure de commande pour le thread LED
@@ -99,6 +102,9 @@ private:
   static void updateWakeFade();  // Animation de fade depuis sleep
   static void resetPulseEffect();  // Réinitialiser l'effet PULSE pour transition fluide
   
+  // Utilitaire pour obtenir le nom d'un effet
+  static const char* getEffectName(LEDEffect effect);
+  
   // Variables statiques
   static bool initialized;
   static TaskHandle_t taskHandle;
@@ -109,6 +115,7 @@ private:
   static uint32_t currentColor;  // Couleur au format RGB (0xRRGGBB)
   static unsigned long lastUpdateTime;
   static unsigned long lastActivityTime;  // Dernière activité (pour sleep mode)
+  static unsigned long rotateActivationTime;  // Temps d'activation de ROTATE pour désactivation auto
   static bool isSleeping;  // État du sleep mode
   static bool isFadingToSleep;  // En cours d'animation de fade vers sleep
   static bool isFadingFromSleep;  // En cours d'animation de fade depuis sleep

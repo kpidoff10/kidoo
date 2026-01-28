@@ -2,6 +2,7 @@
 #include "../../model_config.h"
 #include "../managers/bedtime/bedtime_manager.h"
 #include "../managers/wakeup/wakeup_manager.h"
+#include "../../common/managers/led/led_manager.h"
 #include <Arduino.h>
 
 /**
@@ -130,6 +131,72 @@ bool ModelDreamSerialCommands::processCommand(const String& command) {
     
     return true;
   }
+  else if (cmd == "nightlight" || cmd == "veilleuse") {
+    // Commande: nightlight on | nightlight off
+    if (args == "on" || args == "enable" || args == "start") {
+      Serial.println("[DREAM] Activation de l'effet veilleuse");
+      LEDManager::wakeUp();
+      LEDManager::setEffect(LED_EFFECT_NIGHTLIGHT);
+      Serial.println("[DREAM] Effet veilleuse active (vagues bleu/blanc)");
+      return true;
+    }
+    else if (args == "off" || args == "disable" || args == "stop") {
+      Serial.println("[DREAM] Desactivation de l'effet veilleuse");
+      LEDManager::setEffect(LED_EFFECT_NONE);
+      LEDManager::clear();
+      Serial.println("[DREAM] Effet veilleuse desactive");
+      return true;
+    }
+    else {
+      Serial.println("[DREAM] Usage: nightlight on | nightlight off");
+      Serial.println("[DREAM]   Active ou desactive l'effet de veilleuse (vagues bleu/blanc)");
+      return true;
+    }
+  }
+  else if (cmd == "breathe" || cmd == "respiration") {
+    // Commande: breathe on | breathe off
+    if (args == "on" || args == "enable" || args == "start") {
+      Serial.println("[DREAM] Activation de l'effet respiration");
+      LEDManager::wakeUp();
+      LEDManager::setEffect(LED_EFFECT_BREATHE);
+      Serial.println("[DREAM] Effet respiration active (respiration avec changement de couleur toutes les 30s)");
+      return true;
+    }
+    else if (args == "off" || args == "disable" || args == "stop") {
+      Serial.println("[DREAM] Desactivation de l'effet respiration");
+      LEDManager::setEffect(LED_EFFECT_NONE);
+      LEDManager::clear();
+      Serial.println("[DREAM] Effet respiration desactive");
+      return true;
+    }
+    else {
+      Serial.println("[DREAM] Usage: breathe on | breathe off");
+      Serial.println("[DREAM]   Active ou desactive l'effet de respiration (respiration avec changement de couleur)");
+      return true;
+    }
+  }
+  else if (cmd == "rainbow" || cmd == "arcenciel") {
+    // Commande: rainbow on | rainbow off
+    if (args == "on" || args == "enable" || args == "start") {
+      Serial.println("[DREAM] Activation de l'effet arc-en-ciel doux (veilleuse)");
+      LEDManager::wakeUp();
+      LEDManager::setEffect(LED_EFFECT_RAINBOW_SOFT);
+      Serial.println("[DREAM] Effet arc-en-ciel doux active (animation lente et apaisante)");
+      return true;
+    }
+    else if (args == "off" || args == "disable" || args == "stop") {
+      Serial.println("[DREAM] Desactivation de l'effet arc-en-ciel doux");
+      LEDManager::setEffect(LED_EFFECT_NONE);
+      LEDManager::clear();
+      Serial.println("[DREAM] Effet arc-en-ciel doux desactive");
+      return true;
+    }
+    else {
+      Serial.println("[DREAM] Usage: rainbow on | rainbow off");
+      Serial.println("[DREAM]   Active ou desactive l'effet arc-en-ciel doux (animation lente et apaisante)");
+      return true;
+    }
+  }
   
   return false; // Commande non reconnue
 }
@@ -142,6 +209,12 @@ void ModelDreamSerialCommands::printHelp() {
   Serial.println("  dream-info         - Afficher les infos du modele Dream");
   Serial.println("  bedtime-show       - Afficher la configuration bedtime (coucher)");
   Serial.println("  wakeup-show        - Afficher la configuration wakeup (reveil)");
+  Serial.println("  nightlight on      - Activer l'effet veilleuse (vagues bleu/blanc)");
+  Serial.println("  nightlight off     - Desactiver l'effet veilleuse");
+  Serial.println("  rainbow on         - Activer l'effet arc-en-ciel doux (animation lente et apaisante)");
+  Serial.println("  rainbow off        - Desactiver l'effet arc-en-ciel doux");
+  Serial.println("  breathe on         - Activer l'effet respiration (respiration avec changement de couleur)");
+  Serial.println("  breathe off        - Desactiver l'effet respiration");
   Serial.println("========================================");
   Serial.println("");
 }

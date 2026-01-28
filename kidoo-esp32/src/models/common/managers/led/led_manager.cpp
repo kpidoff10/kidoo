@@ -3,6 +3,11 @@
 #include "../sd/sd_manager.h"
 #include "../../../model_config.h"
 #include "../../config/core_config.h"
+#include <math.h>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 #ifdef HAS_WIFI
 #include "../wifi/wifi_manager.h"
@@ -54,6 +59,7 @@ bool LEDManager::isFadingToSleep = false;
 bool LEDManager::isFadingFromSleep = false;
 unsigned long LEDManager::sleepFadeStartTime = 0;
 LEDEffect LEDManager::savedEffect = LED_EFFECT_NONE;
+unsigned long LEDManager::rotateActivationTime = 0;  // Temps d'activation de l'effet ROTATE pour désactivation automatique
 uint32_t LEDManager::sleepTimeoutMs = 0;
 bool LEDManager::sleepPrevented = false;
 bool LEDManager::pulseNeedsReset = false;
@@ -214,9 +220,16 @@ bool LEDManager::setBrightness(uint8_t brightness) {
   return result;
 }
 
+const char* LEDManager::getEffectName(LEDEffect effect) {
+  static const char* effectNames[] = {"NONE", "RAINBOW", "PULSE", "GLOSSY", "ROTATE", "NIGHTLIGHT", "BREATHE", "RAINBOW_SOFT"};
+  if (effect >= 0 && effect < sizeof(effectNames) / sizeof(effectNames[0])) {
+    return effectNames[effect];
+  }
+  return "UNKNOWN";
+}
+
 bool LEDManager::setEffect(LEDEffect effect) {
-  const char* effectNames[] = {"NONE", "RAINBOW", "PULSE", "GLOSSY", "ROTATE"};
-  Serial.printf("[LED] setEffect: %s, sleepState=%d\n", effectNames[effect], getSleepState() ? 1 : 0);
+  Serial.printf("[LED] setEffect: %s, sleepState=%d\n", getEffectName(effect), getSleepState() ? 1 : 0);
   
   bool isTurningOff = (effect == LED_EFFECT_NONE);
   
@@ -229,9 +242,13 @@ bool LEDManager::setEffect(LEDEffect effect) {
   bool result = sendCommand(cmd);
   
   // Réveiller automatiquement les LEDs pour tous les changements d'effet (sauf éteindre)
-  // Cela permet de sortir du mode sommeil à chaque changement
+  // MAIS seulement si on est vraiment en sleep mode pour éviter les flashes inutiles
   if (result && !isTurningOff) {
-    wakeUp();
+    // Ne réveiller que si on est vraiment en sleep mode
+    // Sinon, on laisse le thread LED gérer directement le changement d'effet
+    if (getSleepState()) {
+      wakeUp();
+    }
   } else if (isTurningOff) {
     Serial.println("[LED] setEffect: Effet NONE detecte, pas de reveil");
   }
@@ -301,20 +318,44 @@ void LEDManager::ledTask(void* parameter) {
       needsUpdate = true;
     }
     
-    // Vérifier le sleep mode
-    checkSleepMode();
-    
-    // Gérer l'animation de fade vers sleep
-    if (isFadingToSleep) {
-      updateSleepFade();
-      needsUpdate = true;
-    }
-    
-    // Gérer l'animation de fade depuis sleep (réveil)
+    // Gérer l'animation de fade depuis sleep (réveil) AVANT checkSleepMode()
+    // Cela permet de réinitialiser lastActivityTime avant que checkSleepMode() ne vérifie le timeout
     if (isFadingFromSleep) {
       updateWakeFade();
       needsUpdate = true;
     }
+    
+    // Désactiver automatiquement l'effet ROTATE de validation après 8 secondes
+    // Cela permet au sleep mode de se déclencher normalement après le démarrage
+    if (currentEffect == LED_EFFECT_ROTATE && rotateActivationTime > 0) {
+      unsigned long currentTime = millis();
+      const unsigned long ROTATE_VALIDATION_TIMEOUT_MS = 8000;  // 8 secondes
+      
+      // Gérer le wrap-around de millis()
+      unsigned long elapsed;
+      if (currentTime >= rotateActivationTime) {
+        elapsed = currentTime - rotateActivationTime;
+      } else {
+        elapsed = ULONG_MAX - rotateActivationTime + currentTime;
+      }
+      
+      if (elapsed >= ROTATE_VALIDATION_TIMEOUT_MS) {
+        Serial.println("[LED] Desactivation automatique de l'effet ROTATE de validation");
+        currentEffect = LED_EFFECT_NONE;
+        rotateActivationTime = 0;
+        // Éteindre les LEDs pour permettre le sleep mode
+        if (strip != nullptr) {
+          for (int i = 0; i < NUM_LEDS; i++) {
+            strip->setPixelColor(i, 0);
+          }
+        }
+        needsUpdate = true;
+      }
+    }
+    
+    // Vérifier le sleep mode APRÈS avoir géré les animations de fade
+    // Cela permet de s'assurer que lastActivityTime est à jour avant la vérification
+    checkSleepMode();
     
     // Gérer le test séquentiel si actif
     if (testSequentialActive && strip != nullptr && hardwareInitialized) {
@@ -364,9 +405,9 @@ void LEDManager::ledTask(void* parameter) {
     }
     
     // Mettre à jour les effets animés si nécessaire
-    // Permettre les effets même pendant le fade-in (mais pas pendant le fade-out)
-    // MAIS seulement si le test séquentiel n'est pas actif
-    if (!isSleeping && !isFadingToSleep && !testSequentialActive) {
+    // IMPORTANT: Les effets doivent continuer pendant le fade-out pour créer un fondu progressif
+    // Seulement si le test séquentiel n'est pas actif
+    if (!isSleeping && !testSequentialActive) {
       unsigned long currentTime = millis();
       if (currentTime - lastUpdateTime >= UPDATE_INTERVAL_MS) {
         // Pendant le fade-in, on permet les effets pour qu'ils s'appliquent progressivement
@@ -379,17 +420,24 @@ void LEDManager::ledTask(void* parameter) {
             }
           }
         } else {
-          // Appliquer les effets normalement
+          // Appliquer les effets normalement (y compris pendant fade-out pour fondu progressif)
           updateEffects();
         }
         lastUpdateTime = currentTime;
         needsUpdate = true;
       }
       // S'assurer que la luminosité maximale configurée est toujours respectée
-      // (sauf pendant le fade-in où on utilise la luminosité fade)
-      if (!isFadingFromSleep && strip != nullptr) {
+      // (sauf pendant le fade-in/fade-out où on utilise la luminosité fade)
+      if (!isFadingFromSleep && !isFadingToSleep && strip != nullptr) {
         strip->setBrightness(currentBrightness);
       }
+    }
+    
+    // Gérer l'animation de fade vers sleep APRÈS la mise à jour des effets
+    // Cela permet aux effets de continuer pendant le fade-out avec luminosité réduite
+    if (isFadingToSleep) {
+      updateSleepFade();
+      needsUpdate = true;
     }
     
     // Appliquer les changements aux LEDs SEULEMENT si nécessaire et pas trop souvent
@@ -427,6 +475,10 @@ void LEDManager::processCommand(const LEDCommand& cmd) {
     case LED_CMD_SET_COLOR:
       Serial.printf("[LED] processCommand SET_COLOR: RGB(%d, %d, %d), currentEffect=%d\n", 
                     cmd.data.color.r, cmd.data.color.g, cmd.data.color.b, currentEffect);
+      
+      // Réinitialiser le timer d'activité lors d'un changement de couleur
+      lastActivityTime = millis();
+      
       // Si on change de couleur et qu'on a un effet actif, éteindre d'abord
       // Cela évite le flash de la couleur précédente
       if (currentEffect != LED_EFFECT_NONE && strip != nullptr) {
@@ -436,6 +488,16 @@ void LEDManager::processCommand(const LEDCommand& cmd) {
         }
       }
       currentColor = ((uint32_t)cmd.data.color.r << 16) | ((uint32_t)cmd.data.color.g << 8) | cmd.data.color.b;
+      
+      // Si on définit la couleur SUCCESS (vert: RGB(0, 255, 0)) avec l'effet ROTATE,
+      // démarrer le décompte pour désactivation automatique
+      // Cela permet que le décompte ne commence qu'après la disparition de l'orange
+      if (currentEffect == LED_EFFECT_ROTATE && 
+          cmd.data.color.r == 0 && cmd.data.color.g == 255 && cmd.data.color.b == 0) {
+        rotateActivationTime = millis();
+        Serial.printf("[LED] processCommand SET_COLOR - Couleur SUCCESS (vert) detectee avec ROTATE, demarrage du decompte: %lu ms\n", rotateActivationTime);
+      }
+      
       // Si on change de couleur et qu'on n'a pas d'effet actif, appliquer immédiatement
       // Si on a un effet, la couleur sera appliquée par l'effet
       if (currentEffect == LED_EFFECT_NONE && strip != nullptr) {
@@ -449,6 +511,9 @@ void LEDManager::processCommand(const LEDCommand& cmd) {
       break;
       
     case LED_CMD_SET_BRIGHTNESS:
+      // Réinitialiser le timer d'activité lors d'un changement de luminosité
+      lastActivityTime = millis();
+      
       currentBrightness = cmd.data.brightness;
       if (strip != nullptr) {
         strip->setBrightness(currentBrightness);
@@ -462,9 +527,16 @@ void LEDManager::processCommand(const LEDCommand& cmd) {
       break;
       
     case LED_CMD_SET_EFFECT: {
-      const char* effectNames[] = {"NONE", "RAINBOW", "PULSE", "GLOSSY", "ROTATE"};
       Serial.printf("[LED] processCommand SET_EFFECT: %s (ancien: %s)\n", 
-                    effectNames[cmd.data.effect], effectNames[currentEffect]);
+                    getEffectName(cmd.data.effect), getEffectName(currentEffect));
+      
+      // IMPORTANT: Réinitialiser le timer d'activité IMMÉDIATEMENT au début du traitement
+      // Cela évite que checkSleepMode() (appelé dans la boucle principale) entre en sleep mode
+      // pendant le traitement de la commande
+      if (cmd.data.effect != LED_EFFECT_NONE) {
+        lastActivityTime = millis();
+      }
+      
       // Si on change d'effet, éteindre d'abord pour transition propre
       // Cela évite le flash de la couleur/effet précédent
       if (currentEffect != cmd.data.effect && strip != nullptr) {
@@ -475,6 +547,12 @@ void LEDManager::processCommand(const LEDCommand& cmd) {
       }
       LEDEffect previousEffect = currentEffect;
       currentEffect = cmd.data.effect;
+      
+      // Note: rotateActivationTime sera défini explicitement lors du passage au vert (SUCCESS)
+      // pour que le décompte ne commence qu'après la disparition de l'orange
+      if (currentEffect != LED_EFFECT_ROTATE) {
+        rotateActivationTime = 0;  // Réinitialiser si on change d'effet
+      }
       // Si on change vers NONE, vérifier si on veut éteindre ou afficher une couleur fixe
       if (currentEffect == LED_EFFECT_NONE && strip != nullptr) {
         if (previousEffect != LED_EFFECT_NONE) {
@@ -625,14 +703,21 @@ void LEDManager::checkSleepMode() {
   }
   #endif
   
+  // IMPORTANT: Ne pas entrer en sleep mode si un effet animé est actif
+  // Les effets animés (RAINBOW, PULSE, GLOSSY, ROTATE, NIGHTLIGHT, BREATHE) sont des activités actives
+  // qui devraient empêcher le sleep mode
+  // LED_EFFECT_NONE avec une couleur fixe peut entrer en sleep mode normalement
+  bool hasActiveAnimatedEffect = (currentEffect != LED_EFFECT_NONE);
+  
   unsigned long currentTime = millis();
   unsigned long timeSinceActivity = currentTime - lastActivityTime;
   
   // Vérifier si on doit entrer en sleep mode
-  if (!isSleeping && !isFadingToSleep && timeSinceActivity >= sleepTimeoutMs) {
+  // Ne pas entrer en sleep mode si un effet animé est actif (mais LED_EFFECT_NONE peut entrer en sleep)
+  if (!isSleeping && !isFadingToSleep && !hasActiveAnimatedEffect && timeSinceActivity >= sleepTimeoutMs) {
     // Démarrer l'animation de fade vers sleep
-    Serial.printf("[LED] Entree en sleep mode (timeout: %lu ms, inactivite: %lu ms)\n", 
-                  sleepTimeoutMs, timeSinceActivity);
+    Serial.printf("[LED] Entree en sleep mode (timeout: %lu ms, inactivite: %lu ms, lastActivityTime=%lu, currentTime=%lu)\n", 
+                  sleepTimeoutMs, timeSinceActivity, lastActivityTime, currentTime);
     isFadingToSleep = true;
     sleepFadeStartTime = currentTime;
     // Sauvegarder l'effet actuel pour le restaurer au réveil
@@ -661,18 +746,13 @@ void LEDManager::updateSleepFade() {
     // Calculer le facteur de fade (1.0 -> 0.0)
     float fadeFactor = 1.0f - ((float)elapsed / (float)SLEEP_FADE_DURATION_MS);
     
-    // Simple: on baisse juste la luminosité globale
-    // Les couleurs actuelles des LEDs restent inchangées
+    // Appliquer le fondu progressif en baissant la luminosité globale
+    // Les effets continuent de s'afficher (gérés dans la boucle principale) mais avec luminosité réduite
     uint8_t fadedBrightness = (uint8_t)(currentBrightness * fadeFactor);
     if (strip != nullptr) {
       strip->setBrightness(fadedBrightness);
-      
-      // Si la luminosité atteint 0 (ou presque), clear les LEDs
-      if (fadedBrightness == 0) {
-        for (int i = 0; i < NUM_LEDS; i++) {
-          strip->setPixelColor(i, 0);
-        }
-      }
+      // Ne pas clear les LEDs ici, laisser l'effet continuer avec luminosité réduite
+      // Cela crée un fondu progressif naturel
     }
   }
 }
@@ -700,34 +780,24 @@ void LEDManager::wakeUp() {
     
     // Restaurer l'effet s'il y en avait un
     if (savedEffect != LED_EFFECT_NONE) {
-      const char* effectNames[] = {"NONE", "RAINBOW", "PULSE", "GLOSSY", "ROTATE"};
-      Serial.printf("[LED] wakeUp() - Restauration effet: %s\n", effectNames[savedEffect]);
+      Serial.printf("[LED] wakeUp() - Restauration effet: %s\n", getEffectName(savedEffect));
       currentEffect = savedEffect;
       // Si on restaure PULSE, réinitialiser l'effet
       if (currentEffect == LED_EFFECT_PULSE) {
         resetPulseEffect();
       }
     } else {
-      // Pas d'effet sauvegardé -> mettre en vert avec couleur unie
-      Serial.println("[LED] wakeUp() - Pas d'effet sauvegarde, passage en vert (couleur unie)");
-      currentEffect = LED_EFFECT_NONE;
-      // Couleur verte : RGB(0, 255, 0)
-      currentColor = ((uint32_t)0 << 16) | ((uint32_t)255 << 8) | 0;  // Vert pur
-      // Appliquer la couleur verte sur toutes les LEDs
-      if (strip != nullptr) {
-        for (int i = 0; i < NUM_LEDS; i++) {
-          strip->setPixelColor(i, currentColor);
-        }
-        strip->show();
-      }
+      // Pas d'effet sauvegardé -> ne rien restaurer, garder l'état actuel
+      // Cela évite les flashes inutiles quand wakeUp() est appelé sans effet sauvegardé
+      Serial.println("[LED] wakeUp() - Pas d'effet sauvegarde, conservation de l'etat actuel");
+      // Ne pas modifier currentEffect ni currentColor, ils seront mis à jour par la prochaine commande
     }
-    
-    // Réinitialiser le timer d'activité UNIQUEMENT si on était vraiment en sleep
-    // Cela évite de réinitialiser le timer si wakeUp() est appelé alors qu'on n'est pas en sleep
-    lastActivityTime = millis();
   }
-  // Si on n'était pas en sleep, ne PAS réinitialiser lastActivityTime
-  // pour permettre le sleep même si wakeUp() est appelé par erreur
+  
+  // TOUJOURS réinitialiser le timer d'activité quand wakeUp() est appelé
+  // Cela permet de tester les effets via Serial sans que le sleep mode se réactive immédiatement
+  // et garantit que le système reste actif après un réveil explicite
+  lastActivityTime = millis();
   
   // NOTE: Ne pas démarrer automatiquement le WiFi retry depuis wakeUp()
   // car cela peut créer un cycle : WiFi retry -> commande LED -> wakeUp() -> WiFi retry
@@ -764,10 +834,13 @@ void LEDManager::updateWakeFade() {
   
   if (elapsed >= SLEEP_FADE_DURATION_MS) {
     // Animation terminée, restaurer complètement
-    const char* effectNames[] = {"NONE", "RAINBOW", "PULSE", "GLOSSY", "ROTATE"};
-    Serial.printf("[LED] updateWakeFade() - Animation reveil terminee, effet=%s, couleur=0x%06X\n", 
-                  effectNames[currentEffect], currentColor);
+    Serial.printf("[LED] updateWakeFade() - Animation reveil terminee, effet=%s, couleur=0x%06X\n",
+                  getEffectName(currentEffect), currentColor);
     isFadingFromSleep = false;
+    
+    // IMPORTANT: Réinitialiser le timer d'activité quand l'animation de réveil se termine
+    // Cela évite que le sleep mode se réactive immédiatement après le réveil
+    lastActivityTime = millis();
     
     // IMPORTANT: S'assurer que les LEDs sont bien éteintes avant de restaurer l'effet
     // Cela évite le flash de l'animation précédente
@@ -855,6 +928,49 @@ void LEDManager::updateEffects() {
         }
       }
       hue = (hue + 2) % 256;
+      break;
+    }
+    
+    case LED_EFFECT_RAINBOW_SOFT: {
+      // Effet arc-en-ciel doux et lent pour veilleuse
+      // Animation beaucoup plus lente que RAINBOW standard
+      static unsigned long rainbowSoftStartTime = 0;
+      
+      // Initialiser le temps de départ si nécessaire
+      if (rainbowSoftStartTime == 0) {
+        rainbowSoftStartTime = currentTime;
+      }
+      
+      // Cycle complet de l'arc-en-ciel : ~30 secondes pour un tour complet (beaucoup plus lent)
+      const uint32_t RAINBOW_SOFT_CYCLE_MS = 30000;  // 30 secondes
+      
+      // Gérer le wrap-around de millis()
+      uint32_t elapsed;
+      if (currentTime >= rainbowSoftStartTime) {
+        elapsed = (currentTime - rainbowSoftStartTime) % RAINBOW_SOFT_CYCLE_MS;
+      } else {
+        elapsed = (ULONG_MAX - rainbowSoftStartTime + currentTime) % RAINBOW_SOFT_CYCLE_MS;
+      }
+      
+      // Calculer la teinte de base avec précision (0 à 255)
+      // Utiliser une précision élevée pour fluidité maximale
+      uint16_t baseHue = (elapsed * 256) / RAINBOW_SOFT_CYCLE_MS;
+      
+      if (strip != nullptr) {
+        // Répartir l'arc-en-ciel sur toute la bande LED
+        // Chaque LED a une teinte légèrement différente pour créer un dégradé
+        for (int i = 0; i < NUM_LEDS; i++) {
+          // Calculer la teinte pour cette LED (dégradé sur toute la bande)
+          // Utiliser une répartition douce pour un effet apaisant
+          uint16_t hue = (baseHue + (i * 256 / NUM_LEDS)) % 256;
+          
+          // Saturation et luminosité réduites pour un effet plus doux et apaisant
+          // Saturation: 200/255 (78%) pour des couleurs moins vives
+          // Luminosité: 180/255 (70%) pour un effet plus doux
+          uint32_t color = hsvToRgb((uint8_t)hue, 200, 180);
+          strip->setPixelColor(i, color);
+        }
+      }
       break;
     }
     
@@ -1066,6 +1182,204 @@ void LEDManager::updateEffects() {
           
           uint32_t snakeColor = ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
           strip->setPixelColor(ledIndex, snakeColor);
+        }
+      }
+      break;
+    }
+    
+    case LED_EFFECT_NIGHTLIGHT: {
+      // Effet de veilleuse avec vagues bleu/blanc qui se déplacent de gauche à droite
+      // Utiliser le temps réel pour une animation constante et fluide
+      static unsigned long nightlightStartTime = 0;
+      
+      // Initialiser le temps de départ si nécessaire
+      if (nightlightStartTime == 0) {
+        nightlightStartTime = currentTime;
+      }
+      
+      // Cycle de déplacement : ~6 secondes pour traverser toute la bande
+      const uint32_t NIGHTLIGHT_CYCLE_MS = 6000;  // 6 secondes
+      
+      // Gérer le wrap-around de millis()
+      uint32_t elapsed;
+      if (currentTime >= nightlightStartTime) {
+        elapsed = (currentTime - nightlightStartTime) % NIGHTLIGHT_CYCLE_MS;
+      } else {
+        // Wrap-around détecté
+        elapsed = (ULONG_MAX - nightlightStartTime + currentTime) % NIGHTLIGHT_CYCLE_MS;
+      }
+      
+      // Calculer l'offset de déplacement (0 à NUM_LEDS * 2 pour permettre plusieurs cycles visuels)
+      float scrollOffset = ((float)elapsed / (float)NIGHTLIGHT_CYCLE_MS) * (float)(NUM_LEDS * 2);
+      
+      if (strip != nullptr) {
+        // Couleurs de base : bleu et blanc
+        const uint8_t BLUE_R = 30;
+        const uint8_t BLUE_G = 100;
+        const uint8_t BLUE_B = 255;
+        
+        const uint8_t WHITE_R = 200;
+        const uint8_t WHITE_G = 220;
+        const uint8_t WHITE_B = 255;
+        
+        // Créer plusieurs vagues qui se déplacent de gauche à droite
+        for (int i = 0; i < NUM_LEDS; i++) {
+          // Position avec décalage pour créer le mouvement de gauche à droite
+          float position = (float)i - scrollOffset;
+          
+          // Créer 3 vagues sinusoïdales avec différentes fréquences et phases
+          // Vague 1 : longue période (bleu dominant) - mouvement lent
+          float wave1 = sin((position / (float)NUM_LEDS) * 2.0 * M_PI * 1.5) * 0.5 + 0.5;
+          
+          // Vague 2 : période moyenne (blanc subtil) - mouvement moyen
+          float wave2 = sin((position / (float)NUM_LEDS) * 2.0 * M_PI * 2.5 + (M_PI / 3.0)) * 0.5 + 0.5;
+          
+          // Vague 3 : courte période (accent bleu) - mouvement rapide
+          float wave3 = sin((position / (float)NUM_LEDS) * 2.0 * M_PI * 4.0 + (M_PI / 2.0)) * 0.3 + 0.3;
+          
+          // Combiner les vagues (mélange bleu/blanc - bleu dominant)
+          // Assurer un minimum de luminosité pour éviter les zones complètement sombres
+          float blueFactor = wave1 * 0.6 + wave3 * 0.4;
+          float whiteFactor = wave2 * 0.2;
+          
+          // Ajouter un fond bleu minimal pour éviter les zones complètement éteintes
+          float baseBlue = 0.3; // Fond bleu minimal (30%)
+          blueFactor = blueFactor * 0.7 + baseBlue; // 70% de la vague + 30% de fond
+          
+          // Normaliser pour éviter la saturation, mais garder un minimum
+          float total = blueFactor + whiteFactor;
+          if (total > 1.0) {
+            blueFactor /= total;
+            whiteFactor /= total;
+          }
+          
+          // Calculer les composantes RGB finales
+          uint8_t r = (uint8_t)(BLUE_R * blueFactor + WHITE_R * whiteFactor);
+          uint8_t g = (uint8_t)(BLUE_G * blueFactor + WHITE_G * whiteFactor);
+          uint8_t b = (uint8_t)(BLUE_B * blueFactor + WHITE_B * whiteFactor);
+          
+          // Appliquer la luminosité globale
+          r = (r * currentBrightness) / 255;
+          g = (g * currentBrightness) / 255;
+          b = (b * currentBrightness) / 255;
+          
+          uint32_t color = ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+          strip->setPixelColor(i, color);
+        }
+      }
+      break;
+    }
+    
+    case LED_EFFECT_BREATHE: {
+      // Effet de respiration avec changement de couleur toutes les 30 secondes
+      static unsigned long breatheStartTime = 0;
+      static int currentColorIndex = 0;
+      static unsigned long colorChangeStartTime = 0;
+      static uint8_t previousR = 30, previousG = 100, previousB = 255;  // Couleur précédente pour transition
+      
+      // Palette de couleurs pour la respiration (définie en premier pour être accessible partout)
+      // Couleurs douces et apaisantes
+      const uint8_t colors[][3] = {
+        {30, 100, 255},   // Bleu doux
+        {100, 150, 255},  // Bleu ciel
+        {150, 100, 255},  // Violet doux
+        {255, 100, 150},  // Rose doux
+        {255, 150, 100},  // Orange doux
+        {150, 255, 150},  // Vert doux
+        {255, 200, 100}   // Jaune doux
+      };
+      const int numColors = sizeof(colors) / sizeof(colors[0]);
+      
+      // Initialiser le temps de départ si nécessaire
+      if (breatheStartTime == 0) {
+        breatheStartTime = currentTime;
+        colorChangeStartTime = currentTime;
+        // Initialiser avec la première couleur
+        previousR = colors[0][0];
+        previousG = colors[0][1];
+        previousB = colors[0][2];
+      }
+      
+      // Cycle de changement de couleur : 30 secondes
+      const uint32_t COLOR_CHANGE_INTERVAL_MS = 30000;  // 30 secondes
+      const uint32_t COLOR_TRANSITION_DURATION_MS = 2000;  // 2 secondes pour la transition
+      
+      // Gérer le wrap-around de millis()
+      uint32_t elapsed;
+      if (currentTime >= breatheStartTime) {
+        elapsed = currentTime - breatheStartTime;
+      } else {
+        // Wrap-around détecté
+        elapsed = ULONG_MAX - breatheStartTime + currentTime;
+      }
+      
+      // Changer de couleur toutes les 30 secondes
+      int newColorIndex = elapsed / COLOR_CHANGE_INTERVAL_MS;
+      if (newColorIndex != currentColorIndex) {
+        // Sauvegarder la couleur actuelle comme couleur précédente
+        previousR = colors[currentColorIndex % numColors][0];
+        previousG = colors[currentColorIndex % numColors][1];
+        previousB = colors[currentColorIndex % numColors][2];
+        currentColorIndex = newColorIndex;
+        colorChangeStartTime = currentTime;
+      }
+      
+      // Sélectionner la couleur cible (cycle infini)
+      uint8_t targetR = colors[currentColorIndex % numColors][0];
+      uint8_t targetG = colors[currentColorIndex % numColors][1];
+      uint8_t targetB = colors[currentColorIndex % numColors][2];
+      
+      // Calculer la transition progressive entre l'ancienne et la nouvelle couleur
+      uint32_t transitionElapsed;
+      if (currentTime >= colorChangeStartTime) {
+        transitionElapsed = currentTime - colorChangeStartTime;
+      } else {
+        transitionElapsed = ULONG_MAX - colorChangeStartTime + currentTime;
+      }
+      
+      uint8_t currentR, currentG, currentB;
+      if (transitionElapsed < COLOR_TRANSITION_DURATION_MS) {
+        // Transition en cours : mélanger progressivement les couleurs
+        float transitionFactor = (float)transitionElapsed / (float)COLOR_TRANSITION_DURATION_MS;
+        // Utiliser une courbe d'ease-in-out pour une transition plus douce
+        float easedFactor = transitionFactor * transitionFactor * (3.0 - 2.0 * transitionFactor);
+        
+        currentR = (uint8_t)(previousR + (targetR - previousR) * easedFactor);
+        currentG = (uint8_t)(previousG + (targetG - previousG) * easedFactor);
+        currentB = (uint8_t)(previousB + (targetB - previousB) * easedFactor);
+      } else {
+        // Transition terminée : utiliser la couleur cible
+        currentR = targetR;
+        currentG = targetG;
+        currentB = targetB;
+      }
+      
+      // Cycle de respiration : ~3 secondes pour un cycle complet (inspiration + expiration)
+      const uint32_t BREATHE_CYCLE_MS = 3000;  // 3 secondes
+      uint32_t breatheElapsed = elapsed % BREATHE_CYCLE_MS;
+      
+      // Créer l'effet de respiration avec une fonction sinusoïdale
+      // sin va de -1 à 1, on le transforme en 0.3 à 1.0 pour avoir un minimum de luminosité
+      float breatheFactor = sin((float)breatheElapsed / (float)BREATHE_CYCLE_MS * 2.0 * M_PI) * 0.35 + 0.65;
+      // breatheFactor va maintenant de 0.3 à 1.0
+      
+      if (strip != nullptr) {
+        // Calculer les composantes RGB avec l'effet de respiration
+        // Utiliser currentR/G/B qui contient la couleur avec transition progressive
+        uint8_t r = (uint8_t)(currentR * breatheFactor);
+        uint8_t g = (uint8_t)(currentG * breatheFactor);
+        uint8_t b = (uint8_t)(currentB * breatheFactor);
+        
+        // Appliquer la luminosité globale
+        r = (r * currentBrightness) / 255;
+        g = (g * currentBrightness) / 255;
+        b = (b * currentBrightness) / 255;
+        
+        uint32_t color = ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+        
+        // Appliquer la couleur à toutes les LEDs
+        for (int i = 0; i < NUM_LEDS; i++) {
+          strip->setPixelColor(i, color);
         }
       }
       break;

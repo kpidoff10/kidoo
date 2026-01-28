@@ -323,6 +323,9 @@ void SerialCommands::cmdBrightness(const String& args) {
     // Convertir % en valeur brute (0-255) avec arrondi correct
     uint8_t brightness = (uint8_t)((percent * 255 + 50) / 100);
     
+    // Réveiller les LEDs pour désactiver le sleep mode lors des tests
+    LEDManager::wakeUp();
+    
     if (LEDManager::setBrightness(brightness)) {
       // Mettre à jour et sauvegarder la configuration
       SDConfig config = InitManager::getConfig();
@@ -1626,6 +1629,9 @@ void SerialCommands::cmdLEDTest() {
     Serial.println("[LED-TEST] LED Manager non initialise");
     return;
   }
+  
+  // Réveiller les LEDs pour désactiver le sleep mode lors des tests
+  LEDManager::wakeUp();
   
   LEDManager::testLEDsSequential();
 #else
