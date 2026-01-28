@@ -5,8 +5,7 @@
 #include "../../common/managers/pubnub/pubnub_manager.h"
 #include "../../common/managers/sd/sd_manager.h"
 #include "../../common/managers/nfc/nfc_manager.h"
-#include <WiFi.h>
-#include <esp_mac.h>  // Pour esp_read_mac() et ESP_MAC_WIFI_STA
+#include "../../common/utils/mac_utils.h"
 
 /**
  * Routes PubNub spécifiques au modèle Kidoo Basic
@@ -71,11 +70,10 @@ bool ModelBasicPubNubRoutes::handleGetInfo(const JsonObject& json) {
   
   // Récupérer l'adresse MAC WiFi (utilisée pour PubNub)
   // Sur ESP32-C3, BLE et WiFi ont des adresses MAC différentes
-  uint8_t mac[6];
-  esp_read_mac(mac, ESP_MAC_WIFI_STA);
   char macStr[18];
-  snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
-    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  if (!getMacAddressString(macStr, sizeof(macStr), ESP_MAC_WIFI_STA)) {
+    strcpy(macStr, "00:00:00:00:00:00"); // Valeur par défaut en cas d'erreur
+  }
   
   // Construire le JSON de réponse
   // Note: On utilise un buffer assez grand pour toutes les infos
@@ -151,11 +149,13 @@ bool ModelBasicPubNubRoutes::handleBrightness(const JsonObject& json) {
     return false;
   }
   
-  // Valider la plage (1-100%)
-  if (value < 1) value = 1;
+  // Valider la plage (0-100%)
+  if (value < 0) value = 0;
   if (value > 100) value = 100;
   
   // Convertir en 0-255 avec arrondi correct
+  // Formule: (value * 255 + 50) / 100 pour arrondir correctement
+  // 0% → 0, 50% → 127, 100% → 255
   uint8_t brightness = (value * 255 + 50) / 100;
   
   if (LEDManager::setBrightness(brightness)) {

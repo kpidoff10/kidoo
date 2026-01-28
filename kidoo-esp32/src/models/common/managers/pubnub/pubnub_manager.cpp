@@ -45,7 +45,7 @@ bool PubNubManager::init() {
   
   // Construire le nom du channel basé sur l'adresse MAC WiFi (unique par appareil)
   // Sur ESP32-C3, BLE et WiFi ont des adresses MAC différentes
-  // On utilise esp_read_mac() pour obtenir l'adresse MAC WiFi spécifiquement
+  // On obtient directement les bytes de la MAC pour construire le channel
   uint8_t mac[6];
   esp_err_t err = esp_read_mac(mac, ESP_MAC_WIFI_STA);
   if (err != ESP_OK) {
@@ -375,36 +375,51 @@ void PubNubManager::processMessages(const char* json) {
       }
       
       // Si c'est une action, utiliser les routes
+      // Gérer le cas où action est une string ou un objet (format incorrect)
+      JsonObject actionObj = obj;
+      const char* action = nullptr;
+      
       if (obj["action"].is<const char*>()) {
-        const char* action = obj["action"].as<const char*>();
-        if (action != nullptr) {
-          Serial.print("[PUBNUB] Commande reçue - Action: ");
-          Serial.print(action);
-          
-          // Log des paramètres si présents (de manière sûre)
-          if (obj["params"].is<JsonObject>()) {
-            Serial.print(" (avec params)");
-          } else if (obj["value"].is<int>()) {
-            Serial.print(" - value: ");
-            Serial.print(obj["value"].as<int>());
-          } else if (obj["value"].is<float>()) {
-            Serial.print(" - value: ");
-            Serial.print(obj["value"].as<float>());
-          } else if (obj["delay"].is<int>()) {
-            Serial.print(" - delay: ");
-            Serial.print(obj["delay"].as<int>());
-            Serial.print("ms");
-          }
-          
-          // Log du timestamp si présent
-          if (obj["timestamp"].is<unsigned long>() || obj["timestamp"].is<long>()) {
-            Serial.print(" - timestamp: ");
-            Serial.print(obj["timestamp"].as<unsigned long>());
-          }
-          Serial.println();
-          
-          ModelPubNubRoutes::processMessage(obj);
+        // Format normal : action est une string
+        action = obj["action"].as<const char*>();
+      } else if (obj["action"].is<JsonObject>()) {
+        // Format incorrect : action est un objet, extraire l'action depuis l'objet
+        JsonObject nestedAction = obj["action"].as<JsonObject>();
+        if (nestedAction["action"].is<const char*>()) {
+          action = nestedAction["action"].as<const char*>();
+          // Utiliser l'objet imbriqué comme message principal
+          actionObj = nestedAction;
+          Serial.println("[PUBNUB] WARNING: Format de message incorrect detecte (action est un objet)");
         }
+      }
+      
+      if (action != nullptr) {
+        Serial.print("[PUBNUB] Commande reçue - Action: ");
+        Serial.print(action);
+        
+        // Log des paramètres si présents (de manière sûre)
+        if (actionObj["params"].is<JsonObject>()) {
+          Serial.print(" (avec params)");
+        } else if (actionObj["value"].is<int>()) {
+          Serial.print(" - value: ");
+          Serial.print(actionObj["value"].as<int>());
+        } else if (actionObj["value"].is<float>()) {
+          Serial.print(" - value: ");
+          Serial.print(actionObj["value"].as<float>());
+        } else if (actionObj["delay"].is<int>()) {
+          Serial.print(" - delay: ");
+          Serial.print(actionObj["delay"].as<int>());
+          Serial.print("ms");
+        }
+        
+        // Log du timestamp si présent
+        if (actionObj["timestamp"].is<unsigned long>() || actionObj["timestamp"].is<long>()) {
+          Serial.print(" - timestamp: ");
+          Serial.print(actionObj["timestamp"].as<unsigned long>());
+        }
+        Serial.println();
+        
+        ModelPubNubRoutes::processMessage(actionObj);
       }
       // Si c'est une commande série (legacy)
       else if (obj["cmd"].is<const char*>()) {

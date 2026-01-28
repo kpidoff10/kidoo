@@ -69,7 +69,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
       });
     }
 
-    const { name, model, deviceId, macAddress, firmwareVersion, brightness, sleepTimeout } = validationResult.data;
+    const { name, model, deviceId, macAddress, bluetoothMacAddress, firmwareVersion, brightness, sleepTimeout } = validationResult.data;
 
     // Vérifier si un kidoo avec ce deviceId existe déjà
     const existingKidoo = await prisma.kidoo.findUnique({
@@ -98,7 +98,8 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
         name,
         model: model || 'classic', // Utiliser le modèle fourni ou 'classic' par défaut
         deviceId,
-        macAddress: macAddress || null,
+        macAddress: macAddress || null, // Adresse MAC WiFi (renvoyée par l'ESP32 lors du setup)
+        bluetoothMacAddress: bluetoothMacAddress || null, // Adresse MAC Bluetooth (pour comparer lors des scans automatiques)
         firmwareVersion: firmwareVersion || null,
         brightness: brightness !== undefined ? brightness : undefined, // Brightness en pourcentage (0-100)
         sleepTimeout: sleepTimeout !== undefined ? sleepTimeout : undefined, // Sleep timeout en millisecondes

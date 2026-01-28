@@ -56,9 +56,9 @@ export function AddKidooSheet({ bottomSheet, device, onClose, onAdd }: AddKidooS
       return false;
     }
     
-    // Vérifier par deviceId ou macAddress
+    // Vérifier par deviceId, macAddress (WiFi) ou bluetoothMacAddress
     return kidoos.some(
-      (kidoo) => kidoo.deviceId === device.id || kidoo.macAddress === device.id
+      (kidoo) => kidoo.deviceId === device.id || kidoo.macAddress === device.id || kidoo.bluetoothMacAddress === device.id
     );
   }, [device, kidoos]);
 

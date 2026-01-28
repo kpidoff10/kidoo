@@ -136,6 +136,7 @@ exports.Prisma.KidooScalarFieldEnum = {
   name: 'name',
   model: 'model',
   macAddress: 'macAddress',
+  bluetoothMacAddress: 'bluetoothMacAddress',
   deviceId: 'deviceId',
   firmwareVersion: 'firmwareVersion',
   lastConnected: 'lastConnected',
@@ -224,10 +225,34 @@ exports.Prisma.KidooConfigDreamScalarFieldEnum = {
   colorR: 'colorR',
   colorG: 'colorG',
   colorB: 'colorB',
-  bedtimeHour: 'bedtimeHour',
-  bedtimeMinute: 'bedtimeMinute',
   brightness: 'brightness',
   allNight: 'allNight',
+  wakeupColorR: 'wakeupColorR',
+  wakeupColorG: 'wakeupColorG',
+  wakeupColorB: 'wakeupColorB',
+  wakeupBrightness: 'wakeupBrightness',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.KidooConfigDreamBedtimeScheduleScalarFieldEnum = {
+  id: 'id',
+  kidooConfigDreamId: 'kidooConfigDreamId',
+  weekday: 'weekday',
+  hour: 'hour',
+  minute: 'minute',
+  activated: 'activated',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.KidooConfigDreamWakeupScheduleScalarFieldEnum = {
+  id: 'id',
+  kidooConfigDreamId: 'kidooConfigDreamId',
+  weekday: 'weekday',
+  hour: 'hour',
+  minute: 'minute',
+  activated: 'activated',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -261,7 +286,9 @@ exports.Prisma.ModelName = {
   VerificationToken: 'VerificationToken',
   File: 'File',
   KidooConfigBasic: 'KidooConfigBasic',
-  KidooConfigDream: 'KidooConfigDream'
+  KidooConfigDream: 'KidooConfigDream',
+  KidooConfigDreamBedtimeSchedule: 'KidooConfigDreamBedtimeSchedule',
+  KidooConfigDreamWakeupSchedule: 'KidooConfigDreamWakeupSchedule'
 };
 
 /**

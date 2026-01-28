@@ -17,10 +17,12 @@ interface UseKidooMenuItemsParams {
   modelHandler: ModelHandler | undefined;
   onEditName?: () => void;
   onConfigureWiFi?: () => void;
+  onConfigureBrightness?: () => void;
   onConfigureBedtime?: () => void;
+  onConfigureWakeup?: () => void;
 }
 
-export function useKidooMenuItems({ kidoo, modelHandler, onEditName, onConfigureWiFi, onConfigureBedtime }: UseKidooMenuItemsParams): MenuListItem[] {
+export function useKidooMenuItems({ kidoo, modelHandler, onEditName, onConfigureWiFi, onConfigureBrightness, onConfigureBedtime, onConfigureWakeup }: UseKidooMenuItemsParams): MenuListItem[] {
   const { t } = useTranslation();
   const { isDeveloper } = useAuth();
 
@@ -60,6 +62,12 @@ export function useKidooMenuItems({ kidoo, modelHandler, onEditName, onConfigure
         icon: 'wifi-outline',
         onPress: onConfigureWiFi,
       },
+      {
+        label: t('kidoos.brightness.title', { defaultValue: 'Luminosité' }),
+        value: t('kidoos.brightness.description', { defaultValue: 'Régler la luminosité générale' }),
+        icon: 'sunny-outline',
+        onPress: onConfigureBrightness,
+      },
     ];
 
     // Ajouter l'adresse MAC si disponible et en mode développeur
@@ -86,10 +94,11 @@ export function useKidooMenuItems({ kidoo, modelHandler, onEditName, onConfigure
     const modelSpecificItems = modelHandler 
       ? modelHandler.getMenuItems(kidoo, t, {
           onConfigureBedtime,
+          onConfigureWakeup,
         })
       : [];
 
     // Fusionner les items communs et spécifiques
     return [...commonItems, ...modelSpecificItems];
-  }, [kidoo, modelHandler, isDeveloper, onEditName, onConfigureWiFi, onConfigureBedtime, t]);
+  }, [kidoo, modelHandler, isDeveloper, onEditName, onConfigureWiFi, onConfigureBrightness, onConfigureBedtime, onConfigureWakeup, t]);
 }

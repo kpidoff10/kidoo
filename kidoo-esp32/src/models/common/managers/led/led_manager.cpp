@@ -55,8 +55,12 @@ bool LEDManager::isFadingFromSleep = false;
 unsigned long LEDManager::sleepFadeStartTime = 0;
 LEDEffect LEDManager::savedEffect = LED_EFFECT_NONE;
 uint32_t LEDManager::sleepTimeoutMs = 0;
+bool LEDManager::sleepPrevented = false;
 bool LEDManager::pulseNeedsReset = false;
 bool LEDManager::hardwareInitialized = false;
+bool LEDManager::testSequentialActive = false;
+int LEDManager::testSequentialIndex = 0;
+unsigned long LEDManager::testSequentialLastUpdate = 0;
 
 bool LEDManager::init() {
   Serial.println("[LED] Debut init...");
@@ -187,10 +191,9 @@ bool LEDManager::setColor(uint8_t r, uint8_t g, uint8_t b) {
   cmd.data.color.b = b;
   bool result = sendCommand(cmd);
   
-  // Réveiller les LEDs pour les commandes utilisateur explicites
-  // MAIS seulement si elles ne sont pas déjà en sleep mode ET si ce n'est pas une intention d'éteindre
-  // (pour éviter de réveiller si on veut qu'elles restent en sleep ou si on les éteint)
-  if (result && !getSleepState() && !isTurningOff) {
+  // Réveiller automatiquement les LEDs pour tous les changements de couleur (sauf éteindre)
+  // Cela permet de sortir du mode sommeil à chaque changement
+  if (result && !isTurningOff) {
     wakeUp();
   } else if (isTurningOff) {
     Serial.println("[LED] setColor: Couleur noire detectee, pas de reveil");
@@ -203,9 +206,9 @@ bool LEDManager::setBrightness(uint8_t brightness) {
   cmd.type = LED_CMD_SET_BRIGHTNESS;
   cmd.data.brightness = brightness;
   bool result = sendCommand(cmd);
-  // Réveiller les LEDs pour les commandes utilisateur explicites
-  // MAIS seulement si elles ne sont pas déjà en sleep mode
-  if (result && !getSleepState()) {
+  // Réveiller automatiquement les LEDs pour tous les changements de brightness
+  // Cela permet de sortir du mode sommeil à chaque changement
+  if (result) {
     wakeUp();
   }
   return result;
@@ -225,10 +228,9 @@ bool LEDManager::setEffect(LEDEffect effect) {
   cmd.data.effect = effect;
   bool result = sendCommand(cmd);
   
-  // Réveiller les LEDs pour les commandes utilisateur explicites
-  // MAIS seulement si elles ne sont pas déjà en sleep mode ET si ce n'est pas une intention d'éteindre
-  // (pour éviter de réveiller si on veut qu'elles restent en sleep ou si on les éteint)
-  if (result && !getSleepState() && !isTurningOff) {
+  // Réveiller automatiquement les LEDs pour tous les changements d'effet (sauf éteindre)
+  // Cela permet de sortir du mode sommeil à chaque changement
+  if (result && !isTurningOff) {
     wakeUp();
   } else if (isTurningOff) {
     Serial.println("[LED] setEffect: Effet NONE detecte, pas de reveil");
@@ -248,6 +250,20 @@ bool LEDManager::isInitialized() {
 
 uint8_t LEDManager::getCurrentBrightness() {
   return currentBrightness;
+}
+
+bool LEDManager::testLEDsSequential() {
+  if (!initialized) {
+    Serial.println("[LED-TEST] LED Manager non initialise");
+    return false;
+  }
+  
+  Serial.println("[LED-TEST] Demarrage du test sequentiel des LEDs");
+  
+  // Envoyer une commande spéciale pour le test séquentiel
+  LEDCommand cmd;
+  cmd.type = LED_CMD_TEST_SEQUENTIAL;
+  return sendCommand(cmd);
 }
 
 void LEDManager::ledTask(void* parameter) {
@@ -300,9 +316,57 @@ void LEDManager::ledTask(void* parameter) {
       needsUpdate = true;
     }
     
+    // Gérer le test séquentiel si actif
+    if (testSequentialActive && strip != nullptr && hardwareInitialized) {
+      // S'assurer que la luminosité est à 100% pendant le test
+      strip->setBrightness(255);
+      
+      unsigned long currentTime = millis();
+      if (currentTime - testSequentialLastUpdate >= 100) {  // 100ms entre chaque LED
+        if (testSequentialIndex < NUM_LEDS) {
+          // Phase 1: Allumer chaque LED une par une
+          // Éteindre la LED précédente (sauf la première)
+          if (testSequentialIndex > 0) {
+            strip->setPixelColor(testSequentialIndex - 1, 0);
+          }
+          // Allumer la LED actuelle en blanc
+          strip->setPixelColor(testSequentialIndex, strip->Color(255, 255, 255));
+          strip->show();
+          Serial.printf("[LED-TEST] LED %d/%d allumee\n", testSequentialIndex + 1, NUM_LEDS);
+          testSequentialIndex++;
+          testSequentialLastUpdate = currentTime;
+          needsUpdate = true;
+        } else if (testSequentialIndex == NUM_LEDS) {
+          // Phase 2: Attendre 200ms avant d'allumer toutes en rouge
+          if (currentTime - testSequentialLastUpdate >= 200) {
+            // Éteindre la dernière LED
+            strip->setPixelColor(NUM_LEDS - 1, 0);
+            strip->show();
+            testSequentialIndex++;
+            testSequentialLastUpdate = currentTime;
+            needsUpdate = true;
+          }
+        } else if (testSequentialIndex == NUM_LEDS + 1) {
+          // Phase 3: Allumer toutes les LEDs en rouge
+          for (int i = 0; i < NUM_LEDS; i++) {
+            strip->setPixelColor(i, strip->Color(255, 0, 0)); // Rouge pur
+          }
+          strip->show();
+          Serial.println("[LED-TEST] Test termine - Toutes les LEDs sont en rouge");
+          Serial.println("[LED-TEST] Utilisez 'led clear' ou 'brightness 0' pour eteindre");
+          testSequentialActive = false;  // Terminer le test
+          currentColor = strip->Color(255, 0, 0);  // Sauvegarder la couleur rouge
+          // Restaurer la luminosité configurée
+          strip->setBrightness(currentBrightness);
+          needsUpdate = true;
+        }
+      }
+    }
+    
     // Mettre à jour les effets animés si nécessaire
     // Permettre les effets même pendant le fade-in (mais pas pendant le fade-out)
-    if (!isSleeping && !isFadingToSleep) {
+    // MAIS seulement si le test séquentiel n'est pas actif
+    if (!isSleeping && !isFadingToSleep && !testSequentialActive) {
       unsigned long currentTime = millis();
       if (currentTime - lastUpdateTime >= UPDATE_INTERVAL_MS) {
         // Pendant le fade-in, on permet les effets pour qu'ils s'appliquent progressivement
@@ -409,19 +473,24 @@ void LEDManager::processCommand(const LEDCommand& cmd) {
           strip->setPixelColor(i, 0);
         }
       }
+      LEDEffect previousEffect = currentEffect;
       currentEffect = cmd.data.effect;
-      // Si on change vers NONE, réinitialiser aussi la couleur à noir pour éviter le flash
-      // (car si on avait un effet actif avec une couleur, on ne veut pas que cette couleur reste)
+      // Si on change vers NONE, vérifier si on veut éteindre ou afficher une couleur fixe
       if (currentEffect == LED_EFFECT_NONE && strip != nullptr) {
-        currentColor = 0;  // Réinitialiser la couleur à noir
-        // S'assurer que toutes les LEDs sont bien éteintes
-        for (int i = 0; i < NUM_LEDS; i++) {
-          strip->setPixelColor(i, 0);
+        if (previousEffect != LED_EFFECT_NONE) {
+          // Changement depuis un effet animé : éteindre visuellement pour transition propre
+          // MAIS ne pas réinitialiser currentColor à 0, car setColor() peut être appelé après
+          // pour afficher une couleur fixe avec LED_EFFECT_NONE
+          // Note: On ne modifie PAS currentColor ni brightness ici
+          for (int i = 0; i < NUM_LEDS; i++) {
+            strip->setPixelColor(i, 0);
+          }
+          strip->show();
+          Serial.println("[LED] processCommand SET_EFFECT NONE - Transition depuis effet anime, LEDs eteintes temporairement (couleur preservee)");
         }
-        // Forcer l'affichage immédiat pour éviter le flash
-        strip->setBrightness(0);
-        strip->show();
-        Serial.println("[LED] processCommand SET_EFFECT NONE - Couleur reinitialisee a noir, LEDs eteintes immediatement");
+        // Si on est déjà en mode NONE, ne pas réinitialiser la couleur
+        // Cela permet d'afficher une couleur fixe avec LED_EFFECT_NONE
+        // La couleur sera préservée et affichée si elle est définie
       }
       // Si on change vers PULSE, réinitialiser l'effet pour éviter le flash
       if (currentEffect == LED_EFFECT_PULSE) {
@@ -446,12 +515,13 @@ void LEDManager::processCommand(const LEDCommand& cmd) {
       }
       // Les effets seront gérés par updateEffects()
       break;
-      }
+    }
       
     case LED_CMD_CLEAR:
       Serial.println("[LED] processCommand CLEAR");
       currentColor = 0;  // Noir
       currentEffect = LED_EFFECT_NONE;
+      testSequentialActive = false;  // Arrêter le test si en cours
       // IMPORTANT: Éteindre complètement toutes les LEDs
       if (strip != nullptr) {
         for (int i = 0; i < NUM_LEDS; i++) {
@@ -465,6 +535,29 @@ void LEDManager::processCommand(const LEDCommand& cmd) {
       pulseNeedsReset = false;
       // La mise à jour sera faite par strip->show() dans la boucle principale
       // avec needsUpdate = true qui a été défini lors de la réception de la commande
+      break;
+      
+    case LED_CMD_TEST_SEQUENTIAL:
+      Serial.println("[LED] processCommand TEST_SEQUENTIAL");
+      Serial.printf("[LED-TEST] Nombre total de LEDs: %d\n", NUM_LEDS);
+      // Réveiller les LEDs si elles sont en sleep
+      if (isSleeping) {
+        wakeUp();
+      }
+      // Désactiver les effets temporairement
+      currentEffect = LED_EFFECT_NONE;
+      // Initialiser le test séquentiel
+      testSequentialActive = true;
+      testSequentialIndex = 0;
+      testSequentialLastUpdate = millis();
+      // Éteindre toutes les LEDs au début
+      if (strip != nullptr) {
+        for (int i = 0; i < NUM_LEDS; i++) {
+          strip->setPixelColor(i, 0);
+        }
+        strip->show();
+      }
+      Serial.println("[LED-TEST] Test sequentiel demarre");
       break;
   }
   
@@ -483,6 +576,26 @@ void LEDManager::checkSleepMode() {
       if (strip != nullptr) {
         strip->setBrightness(currentBrightness);
       }
+    }
+    return;
+  }
+  
+  // IMPORTANT: Ne pas entrer en sleep mode si le sleep est empêché (bedtime, etc.)
+  if (sleepPrevented) {
+    // Sleep empêché, réveiller si on était en sleep
+    if (isSleeping || isFadingToSleep) {
+      isSleeping = false;
+      isFadingToSleep = false;
+      if (strip != nullptr) {
+        strip->setBrightness(currentBrightness);
+      }
+      // Restaurer l'effet si nécessaire
+      if (savedEffect != LED_EFFECT_NONE) {
+        currentEffect = savedEffect;
+        savedEffect = LED_EFFECT_NONE;
+      }
+      // Réinitialiser le timer d'activité UNIQUEMENT si on réveille depuis le sleep
+      lastActivityTime = millis();
     }
     return;
   }
@@ -595,12 +708,18 @@ void LEDManager::wakeUp() {
         resetPulseEffect();
       }
     } else {
-      // Pas d'effet sauvegardé -> pas de retour lumineux souhaité
-      // Ne pas restaurer la couleur, laisser les LEDs éteintes
-      Serial.println("[LED] wakeUp() - Pas d'effet sauvegarde, LEDs restent eteintes (currentColor reinitialise a 0)");
+      // Pas d'effet sauvegardé -> mettre en vert avec couleur unie
+      Serial.println("[LED] wakeUp() - Pas d'effet sauvegarde, passage en vert (couleur unie)");
       currentEffect = LED_EFFECT_NONE;
-      currentColor = 0;  // Réinitialiser la couleur à noir
-      // Les LEDs sont déjà éteintes (ligne 515-517), on ne fait rien de plus
+      // Couleur verte : RGB(0, 255, 0)
+      currentColor = ((uint32_t)0 << 16) | ((uint32_t)255 << 8) | 0;  // Vert pur
+      // Appliquer la couleur verte sur toutes les LEDs
+      if (strip != nullptr) {
+        for (int i = 0; i < NUM_LEDS; i++) {
+          strip->setPixelColor(i, currentColor);
+        }
+        strip->show();
+      }
     }
     
     // Réinitialiser le timer d'activité UNIQUEMENT si on était vraiment en sleep
@@ -613,6 +732,30 @@ void LEDManager::wakeUp() {
   // NOTE: Ne pas démarrer automatiquement le WiFi retry depuis wakeUp()
   // car cela peut créer un cycle : WiFi retry -> commande LED -> wakeUp() -> WiFi retry
   // Le WiFi retry doit être géré indépendamment par le système d'initialisation
+}
+
+void LEDManager::preventSleep() {
+  sleepPrevented = true;
+  // Réveiller immédiatement si on était en sleep
+  if (isSleeping || isFadingToSleep) {
+    isSleeping = false;
+    isFadingToSleep = false;
+    if (strip != nullptr) {
+      strip->setBrightness(currentBrightness);
+    }
+    // Restaurer l'effet si nécessaire
+    if (savedEffect != LED_EFFECT_NONE) {
+      currentEffect = savedEffect;
+      savedEffect = LED_EFFECT_NONE;
+    }
+    lastActivityTime = millis();
+  }
+  Serial.println("[LED] Sleep mode empeche (bedtime actif)");
+}
+
+void LEDManager::allowSleep() {
+  sleepPrevented = false;
+  Serial.println("[LED] Sleep mode reautorise");
 }
 
 void LEDManager::updateWakeFade() {

@@ -1,42 +1,29 @@
 /**
- * Route API pour modifier la luminosité d'un Kidoo
- * PATCH /api/kidoos/[id]/commands/common/brightness
- * 
- * Body: { "value": 80 }
+ * Route API pour gérer la luminosité générale d'un Kidoo
+ * PATCH /api/kidoos/[id]/brightness - Met à jour la luminosité et envoie via PubNub
  */
 
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, AuthenticatedRequest } from '@/lib/withAuth';
-import { sendCommand, isPubNubConfigured } from '@/lib/pubnub';
-import { brightnessCommandSchema } from '@/shared';
-import { Kidoo } from '@prisma/client';
 import { createErrorResponse, createSuccessResponse } from '@/lib/api-response';
-import { BrightnessErrors } from './errors';
+import { sendCommand, isPubNubConfigured } from '@/lib/pubnub';
+import { z } from 'zod';
+
+const updateBrightnessSchema = z.object({
+  brightness: z.number().min(0).max(100),
+});
 
 /**
- * PATCH/POST /api/kidoos/[id]/commands/common/brightness
- * Modifie la luminosité d'un Kidoo
+ * PATCH /api/kidoos/[id]/brightness
+ * Met à jour la luminosité et envoie la commande via PubNub
  */
 export const PATCH = withAuth(async (
   request: AuthenticatedRequest,
-  { params }: { params: Promise<{ id: Kidoo['id'] }> }
+  { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
     const { userId } = request;
     const { id } = await params;
-
-    // Récupérer et valider le body
-    const body = await request.json();
-    const validation = brightnessCommandSchema.safeParse(body);
-
-    if (!validation.success) {
-      return createErrorResponse(BrightnessErrors.VALIDATION_ERROR, {
-        details: validation.error.issues,
-      });
-    }
-
-    const { value } = validation.data;
 
     // Vérifier que le Kidoo existe et appartient à l'utilisateur
     const kidoo = await prisma.kidoo.findUnique({
@@ -44,58 +31,70 @@ export const PATCH = withAuth(async (
     });
 
     if (!kidoo) {
-      return NextResponse.json(
-        { success: false, error: 'Kidoo non trouvé' },
-        { status: 404 }
-      );
+      return createErrorResponse('NOT_FOUND', 404, {
+        message: 'Kidoo non trouvé',
+      });
     }
 
     if (kidoo.userId !== userId) {
-      return NextResponse.json(
-        { success: false, error: 'Accès non autorisé' },
-        { status: 403 }
-      );
+      return createErrorResponse('FORBIDDEN', 403, {
+        message: 'Accès non autorisé',
+      });
     }
 
-    // Vérifier que le Kidoo a une adresse MAC
+    // Vérifier que le Kidoo a une adresse MAC (nécessaire pour PubNub)
     if (!kidoo.macAddress) {
-      return NextResponse.json(
-        { success: false, error: 'Kidoo non configuré (adresse MAC manquante)' },
-        { status: 400 }
-      );
+      return createErrorResponse('BAD_REQUEST', 400, {
+        message: 'Le Kidoo doit avoir une adresse MAC configurée',
+      });
     }
 
-    // Vérifier PubNub
-    if (!isPubNubConfigured()) {
-      return NextResponse.json(
-        { success: false, error: 'PubNub non configuré sur le serveur' },
-        { status: 503 }
-      );
+    // Parser et valider le body
+    const body = await request.json();
+    const validationResult = updateBrightnessSchema.safeParse(body);
+
+    if (!validationResult.success) {
+      return createErrorResponse('BAD_REQUEST', 400, {
+        message: 'Données invalides',
+        details: validationResult.error.issues,
+      });
     }
 
-    // Envoyer la commande via PubNub
-    const sent = await sendCommand(kidoo.macAddress, 'brightness', { value });
+    const { brightness } = validationResult.data;
 
-    if (!sent) {
-      return NextResponse.json(
-        { success: false, error: 'Échec de l\'envoi de la commande au Kidoo' },
-        { status: 502 }
-      );
-    }
-
-    // Mettre à jour la config en base (si modèle Basic)
+    // Mettre à jour la luminosité dans la base de données
+    // Le champ brightness est dans la table Kidoo (luminosité générale, 0-100%)
     await prisma.kidoo.update({
-      where: { id: kidoo.id },
-      data: { brightness: value },
+      where: { id },
+      data: {
+        brightness,
+      },
     });
 
-    return createSuccessResponse(
-      { brightness: value },
-      { message: `Luminosité définie à ${value}%` }
-    );
+    // Envoyer la commande via PubNub pour mise à jour en temps réel
+    if (isPubNubConfigured() && kidoo.macAddress) {
+      try {
+        const sent = await sendCommand(kidoo.macAddress, 'brightness', { value: brightness });
+        
+        if (!sent) {
+          console.error('[BRIGHTNESS] Échec de l\'envoi PubNub');
+          // Ne pas faire échouer la requête si PubNub échoue, la valeur est déjà en base
+        } else {
+          console.log('[BRIGHTNESS] Commande brightness envoyée avec succès via PubNub');
+        }
+      } catch (error) {
+        console.error('[BRIGHTNESS] Erreur lors de l\'envoi PubNub:', error);
+        // Ne pas faire échouer la requête si PubNub échoue, la valeur est déjà en base
+      }
+    }
+
+    return createSuccessResponse({
+      brightness,
+      message: 'Luminosité mise à jour',
+    });
   } catch (error) {
-    console.error('Erreur lors de la modification de la luminosité:', error);
-    return createErrorResponse(BrightnessErrors.INTERNAL_ERROR, {
+    console.error('Erreur lors de la mise à jour de la luminosité:', error);
+    return createErrorResponse('INTERNAL_ERROR', 500, {
       details: error instanceof Error ? error.message : undefined,
     });
   }

@@ -10,7 +10,8 @@ import { z } from 'zod';
 export const createKidooInputSchema = z.object({
   name: z.string().min(1, 'Le nom est requis').max(100, 'Nom trop long'),
   model: z.string().min(1, 'Le modèle est requis'),
-  macAddress: z.string().optional(),
+  macAddress: z.string().optional(), // Adresse MAC WiFi (renvoyée par l'ESP32 lors du setup)
+  bluetoothMacAddress: z.string().optional(), // Adresse MAC Bluetooth (pour comparer lors des scans automatiques)
   deviceId: z.string().uuid(),
   wifiSSID: z.string().optional(),
   firmwareVersion: z.string().optional(),
@@ -47,6 +48,7 @@ export const updateKidooInputSchema = z.object({
   name: z.string().min(1, 'Le nom est requis').max(100, 'Nom trop long').optional(),
   model: z.string().optional(),
   macAddress: z.string().optional(),
+  bluetoothMacAddress: z.string().optional(),
   wifiSSID: z.string().optional(),
 });
 

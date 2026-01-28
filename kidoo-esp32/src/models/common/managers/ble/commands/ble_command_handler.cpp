@@ -6,16 +6,13 @@
 #include "../../../../model_config.h"
 #include "../../wifi/wifi_manager.h"
 #include "../../../utils/uuid_utils.h"
+#include "../../../utils/mac_utils.h"
 #include "../../led/led_manager.h"
 #include "../../ble_config/ble_config_manager.h"
 #include "../../init/init_manager.h"
 #include "../../sd/sd_manager.h"  // Pour la définition complète de SDConfig
 #include "../../../config/default_config.h"  // Pour FIRMWARE_VERSION
 #include <ESP.h>
-#ifdef HAS_WIFI
-#include <WiFi.h>
-#include <esp_mac.h>  // Pour esp_read_mac() et ESP_MAC_WIFI_STA
-#endif
 
 #ifdef HAS_BLE
 #include <BLEDevice.h>
@@ -234,21 +231,10 @@ bool BLECommandHandler::handleCommand(const String& data) {
         // Sur ESP32-C3, BLE et WiFi ont des adresses MAC différentes
         // IMPORTANT: Utiliser EXACTEMENT la même méthode que PubNub pour garantir la cohérence
         #ifdef HAS_WIFI
-        uint8_t mac[6];
         char macStr[18];
-        
-        // Utiliser la même logique que PubNubManager::init()
-        // Essayer d'abord esp_read_mac(), puis fallback sur WiFi.macAddress()
-        esp_err_t err = esp_read_mac(mac, ESP_MAC_WIFI_STA);
-        if (err != ESP_OK) {
-          // Fallback: utiliser WiFi.macAddress() si esp_read_mac() échoue
-          Serial.print("[BLE-COMMAND] esp_read_mac() échoué (err=");
-          Serial.print(err);
-          Serial.println("), utilisation de WiFi.macAddress()");
-          WiFi.macAddress(mac);
+        if (!getMacAddressString(macStr, sizeof(macStr), ESP_MAC_WIFI_STA)) {
+          strcpy(macStr, "00:00:00:00:00:00"); // Valeur par défaut en cas d'erreur
         }
-        snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
-          mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
         Serial.print("[BLE-COMMAND] Adresse MAC WiFi (pour PubNub): ");
         Serial.println(macStr);
         #else

@@ -15,6 +15,7 @@ export * from './kidoos/config/brightness';
 export * from './kidoos/config/sleep-timeout';
 export * from './kidoos/config/name';
 export * from './kidoos/config/dream-bedtime';
+export * from './kidoos/config/dream-wakeup';
 
 // Kidoos - Commands (temps réel)
 export * from './kidoos/commands/get-info';

@@ -37,6 +37,7 @@ export interface ModelHandler {
     t: (key: string, options?: any) => string,
     callbacks?: {
       onConfigureBedtime?: () => void;
+      onConfigureWakeup?: () => void;
       [key: string]: (() => void) | undefined;
     }
   ): MenuListItem[];

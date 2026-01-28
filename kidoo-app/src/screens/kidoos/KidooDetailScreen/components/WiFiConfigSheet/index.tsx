@@ -178,12 +178,12 @@ export function WiFiConfigSheet({ bottomSheet, kidoo, onClose, onComplete }: WiF
               />
             </View>
           ) : currentStep === 1 ? (
-            // Step 2 : Bouton Retour et Suivant côte à côte
+            // Step 2 : Bouton Annuler et Suivant côte à côte
             <View style={styles.actionsRow}>
               <Button
-                title={t('common.back', { defaultValue: 'Retour' })}
+                title={t('common.cancel')}
                 variant="outline"
-                onPress={handlePrevious}
+                onPress={handleCancel}
                 style={{ flex: 1, marginRight: spacing[2] }}
               />
               <Button

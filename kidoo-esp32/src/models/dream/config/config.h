@@ -1,8 +1,8 @@
-#ifndef MODEL_MINI_CONFIG_H
-#define MODEL_MINI_CONFIG_H
+#ifndef MODEL_DREAM_CONFIG_H
+#define MODEL_DREAM_CONFIG_H
 
 /**
- * Configuration du modèle Kidoo Mini (ESP32-C3)
+ * Configuration du modèle Kidoo Dream (ESP32-S3)
  * 
  * ESP32-C3 : Single-core RISC-V 160MHz, pas de PSRAM
  * 
@@ -22,7 +22,7 @@
 #define LED_DATA_PIN 8
 
 // Nombre de LEDs sur la bande principale (Mini a moins de LEDs)
-#define NUM_LEDS 41
+#define NUM_LEDS 42
 
 // Type de LED (WS2812B, WS2811, etc.)
 // Options: NEOPIXEL, WS2812B, WS2811, SK6812, etc.
@@ -71,9 +71,8 @@
 
 #define HAS_SD_CARD true
 #define HAS_LED true
-#define HAS_WIFI true
 #define HAS_BLE true
 #define HAS_RTC true
 #define HAS_PUBNUB true
 
-#endif // MODEL_MINI_CONFIG_H
+#endif // MODEL_DREAM_CONFIG_H

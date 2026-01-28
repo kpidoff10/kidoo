@@ -169,41 +169,238 @@ export function useDreamBedtimeConfig(kidooId: string) {
 }
 
 /**
+ * Hook pour tester la configuration de l'heure de coucher (Dream)
+ */
+export function useTestDreamBedtime() {
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      action,
+      params,
+    }: {
+      id: string;
+      action: 'start' | 'stop';
+      params?: {
+        hour?: number;
+        minute?: number;
+        color?: string;
+        brightness?: number;
+      };
+    }) => kidoosApi.testDreamBedtime(id, action, params),
+    onError: () => {
+      showToast.error({
+        title: t('toast.error'),
+        message: t('errors.generic'),
+      });
+    },
+  });
+}
+
+/**
+ * Hook pour tester la configuration de l'heure de réveil (Dream)
+ */
+export function useTestDreamWakeup() {
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      action,
+      params,
+    }: {
+      id: string;
+      action: 'start' | 'stop';
+      params?: {
+        hour?: number;
+        minute?: number;
+        color?: string;
+        brightness?: number;
+      };
+    }) => kidoosApi.testDreamWakeup(id, action, params),
+    onError: () => {
+      showToast.error({
+        title: t('toast.error'),
+        message: t('errors.generic'),
+      });
+    },
+  });
+}
+
+/**
  * Hook pour mettre à jour la configuration de l'heure de coucher (Dream)
+ * (avec optimistic update)
  */
 export function useUpdateDreamBedtimeConfig() {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
 
+  // Helper pour convertir la couleur hex en RGB
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
+      : { r: 255, g: 107, b: 107 }; // Couleur par défaut
+  };
+
   return useMutation({
     mutationFn: ({ id, data }: { 
       id: string; 
       data: {
-        hour: number;
-        minute: number;
+        weekdaySchedule?: Record<string, { hour: number; minute: number }>;
         color: string;
         brightness: number;
         nightlightAllNight: boolean;
       }
     }) => kidoosApi.updateDreamBedtimeConfig(id, data),
     
-    onSuccess: (data, variables) => {
-      // Mettre à jour le cache
-      queryClient.setQueryData(
-        [...KIDOOS_KEY, variables.id, 'dream-bedtime-config'],
-        data
-      );
-      showToast.success({
-        title: t('toast.success'),
-        message: t('kidoos.dream.bedtime.saved', { defaultValue: 'Configuration enregistrée' }),
-      });
+    // Optimistic update
+    onMutate: async ({ id, data }) => {
+      const queryKey = [...KIDOOS_KEY, id, 'dream-bedtime-config'];
+      
+      // Annuler les queries en cours
+      await queryClient.cancelQueries({ queryKey });
+      
+      // Snapshot de l'état précédent
+      const previousData = queryClient.getQueryData(queryKey);
+      
+      // Mise à jour optimiste
+      const rgb = hexToRgb(data.color);
+      const optimisticData: any = {
+        colorR: rgb.r,
+        colorG: rgb.g,
+        colorB: rgb.b,
+        brightness: data.brightness,
+        nightlightAllNight: data.nightlightAllNight,
+      };
+      
+      // Ajouter weekdaySchedule si présent
+      if (data.weekdaySchedule) {
+        optimisticData.weekdaySchedule = data.weekdaySchedule;
+      }
+      
+      queryClient.setQueryData(queryKey, optimisticData);
+      
+      return { previousData };
     },
     
-    onError: () => {
+    // Pas de toast de succès - l'écran se ferme immédiatement grâce à l'optimistic update
+    
+    // Rollback en cas d'erreur
+    onError: (error, variables, context) => {
+      const queryKey = [...KIDOOS_KEY, variables.id, 'dream-bedtime-config'];
+      if (context?.previousData !== undefined) {
+        queryClient.setQueryData(queryKey, context.previousData);
+      }
+      
       showToast.error({
         title: t('toast.error'),
         message: t('errors.generic'),
       });
+    },
+    
+    // Toujours refetch après pour synchroniser avec le serveur
+    onSettled: (data, error, variables) => {
+      const queryKey = [...KIDOOS_KEY, variables.id, 'dream-bedtime-config'];
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+}
+
+/**
+ * Hook pour récupérer la configuration de l'heure de réveil (Dream)
+ */
+export function useDreamWakeupConfig(kidooId: string) {
+  return useQuery({
+    queryKey: [...KIDOOS_KEY, kidooId, 'dream-wakeup-config'],
+    queryFn: () => kidoosApi.getDreamWakeupConfig(kidooId),
+    enabled: !!kidooId,
+  });
+}
+
+/**
+ * Hook pour mettre à jour la configuration de l'heure de réveil (Dream)
+ * (avec optimistic update)
+ */
+export function useUpdateDreamWakeupConfig() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  // Helper pour convertir la couleur hex en RGB
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
+      : { r: 255, g: 200, b: 100 }; // Couleur par défaut (jaune doux)
+  };
+
+  return useMutation({
+    mutationFn: ({ id, data }: { 
+      id: string; 
+      data: {
+        weekdaySchedule?: Record<string, { hour: number; minute: number }>;
+        color: string;
+        brightness: number;
+      }
+    }) => kidoosApi.updateDreamWakeupConfig(id, data),
+    
+    // Optimistic update
+    onMutate: async ({ id, data }) => {
+      const queryKey = [...KIDOOS_KEY, id, 'dream-wakeup-config'];
+      
+      // Annuler les queries en cours
+      await queryClient.cancelQueries({ queryKey });
+      
+      // Snapshot de l'état précédent
+      const previousData = queryClient.getQueryData(queryKey);
+      
+      // Mise à jour optimiste
+      const rgb = hexToRgb(data.color);
+      const optimisticData: any = {
+        colorR: rgb.r,
+        colorG: rgb.g,
+        colorB: rgb.b,
+        brightness: data.brightness,
+      };
+      
+      // Ajouter weekdaySchedule si présent
+      if (data.weekdaySchedule) {
+        optimisticData.weekdaySchedule = data.weekdaySchedule;
+      }
+      
+      queryClient.setQueryData(queryKey, optimisticData);
+      
+      return { previousData };
+    },
+    
+    // Pas de toast de succès - l'écran se ferme immédiatement grâce à l'optimistic update
+    
+    // Rollback en cas d'erreur
+    onError: (error, variables, context) => {
+      const queryKey = [...KIDOOS_KEY, variables.id, 'dream-wakeup-config'];
+      if (context?.previousData !== undefined) {
+        queryClient.setQueryData(queryKey, context.previousData);
+      }
+      
+      showToast.error({
+        title: t('toast.error'),
+        message: t('errors.generic'),
+      });
+    },
+    
+    // Toujours refetch après pour synchroniser avec le serveur
+    onSettled: (data, error, variables) => {
+      const queryKey = [...KIDOOS_KEY, variables.id, 'dream-wakeup-config'];
+      queryClient.invalidateQueries({ queryKey });
     },
   });
 }
@@ -262,6 +459,29 @@ export function useKidooCheckOnline() {
     // Toujours refetch après pour avoir les données à jour
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: KIDOOS_KEY });
+    },
+  });
+}
+
+/**
+ * Hook pour mettre à jour la luminosité générale d'un Kidoo (avec optimistic update)
+ */
+export function useUpdateBrightness() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: ({ id, brightness }: { id: string; brightness: number }) =>
+      kidoosApi.updateBrightness(id, brightness),
+    
+    // Pas d'optimistic update car la luminosité est envoyée en temps réel via PubNub
+    // On laisse le serveur gérer la mise à jour
+    
+    onError: () => {
+      showToast.error({
+        title: t('toast.error'),
+        message: t('errors.generic'),
+      });
     },
   });
 }

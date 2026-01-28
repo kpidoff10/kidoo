@@ -5,8 +5,10 @@
 #include "../../common/managers/pubnub/pubnub_manager.h"
 #include "../../common/managers/sd/sd_manager.h"
 #include "../../common/managers/nfc/nfc_manager.h"
-#include <WiFi.h>
-#include <esp_mac.h>  // Pour esp_read_mac() et ESP_MAC_WIFI_STA
+#include "../../common/utils/mac_utils.h"
+#include "../managers/bedtime/bedtime_manager.h"
+#include "../managers/wakeup/wakeup_manager.h"
+#include <limits.h>   // Pour ULONG_MAX
 
 /**
  * Routes PubNub spécifiques au modèle Kidoo Dream
@@ -44,6 +46,24 @@ bool ModelDreamPubNubRoutes::processMessage(const JsonObject& json) {
   else if (strcmp(action, "led") == 0) {
     return handleLed(json);
   }
+  else if (strcmp(action, "start-test-bedtime") == 0) {
+    return handleStartTestBedtime(json);
+  }
+  else if (strcmp(action, "stop-test-bedtime") == 0) {
+    return handleStopTestBedtime(json);
+  }
+  else if (strcmp(action, "set-bedtime-config") == 0) {
+    return handleSetBedtimeConfig(json);
+  }
+  else if (strcmp(action, "start-test-wakeup") == 0) {
+    return handleStartTestWakeup(json);
+  }
+  else if (strcmp(action, "stop-test-wakeup") == 0) {
+    return handleStopTestWakeup(json);
+  }
+  else if (strcmp(action, "set-wakeup-config") == 0) {
+    return handleSetWakeupConfig(json);
+  }
   
   Serial.print("[PUBNUB-ROUTE] Action inconnue: ");
   Serial.println(action);
@@ -71,11 +91,10 @@ bool ModelDreamPubNubRoutes::handleGetInfo(const JsonObject& json) {
   
   // Récupérer l'adresse MAC WiFi (utilisée pour PubNub)
   // Sur ESP32-C3, BLE et WiFi ont des adresses MAC différentes
-  uint8_t mac[6];
-  esp_read_mac(mac, ESP_MAC_WIFI_STA);
   char macStr[18];
-  snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
-    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  if (!getMacAddressString(macStr, sizeof(macStr), ESP_MAC_WIFI_STA)) {
+    strcpy(macStr, "00:00:00:00:00:00"); // Valeur par défaut en cas d'erreur
+  }
   
   // Construire le JSON de réponse
   // Note: On utilise un buffer assez grand pour toutes les infos
@@ -151,11 +170,13 @@ bool ModelDreamPubNubRoutes::handleBrightness(const JsonObject& json) {
     return false;
   }
   
-  // Valider la plage (1-100%)
-  if (value < 1) value = 1;
+  // Valider la plage (0-100%)
+  if (value < 0) value = 0;
   if (value > 100) value = 100;
   
   // Convertir en 0-255 avec arrondi correct
+  // Formule: (value * 255 + 50) / 100 pour arrondir correctement
+  // 0% → 0, 50% → 127, 100% → 255
   uint8_t brightness = (value * 255 + 50) / 100;
   
   if (LEDManager::setBrightness(brightness)) {
@@ -326,6 +347,562 @@ bool ModelDreamPubNubRoutes::handleLed(const JsonObject& json) {
   return handled;
 }
 
+// Variables statiques pour gérer l'état du test de bedtime
+static bool testBedtimeActive = false;
+static unsigned long testBedtimeStartTime = 0;
+static bool testWakeupActive = false;
+static unsigned long testWakeupStartTime = 0;
+static const unsigned long TEST_BEDTIME_TIMEOUT_MS = 15000; // 15 secondes
+
+bool ModelDreamPubNubRoutes::handleStartTestBedtime(const JsonObject& json) {
+  // Format: { "action": "start-test-bedtime", "params": { "colorR": 255, "colorG": 107, "colorB": 107, "brightness": 50 } }
+  // Démarre le test de la couleur et luminosité avec les paramètres fournis
+  
+  Serial.println("[PUBNUB-ROUTE] start-test-bedtime: Démarrage/mise à jour du test...");
+  
+  // Sauvegarder l'état actif pour savoir si c'est une mise à jour ou un nouveau test
+  bool wasAlreadyActive = testBedtimeActive;
+  
+  // Récupérer les paramètres
+  int colorR = -1;
+  int colorG = -1;
+  int colorB = -1;
+  int brightness = -1;
+  
+  Serial.print("[PUBNUB-ROUTE] start-test-bedtime: Message JSON reçu - ");
+  serializeJson(json, Serial);
+  Serial.println();
+  
+  // Nouvelle syntaxe avec params
+  if (json["params"].is<JsonObject>()) {
+    JsonObject params = json["params"].as<JsonObject>();
+    Serial.println("[PUBNUB-ROUTE] start-test-bedtime: Utilisation de la syntaxe avec params");
+    if (params["colorR"].is<int>()) colorR = params["colorR"].as<int>();
+    if (params["colorG"].is<int>()) colorG = params["colorG"].as<int>();
+    if (params["colorB"].is<int>()) colorB = params["colorB"].as<int>();
+    if (params["brightness"].is<int>()) brightness = params["brightness"].as<int>();
+    
+    Serial.print("[PUBNUB-ROUTE] start-test-bedtime: Paramètres extraits - RGB(");
+    Serial.print(colorR);
+    Serial.print(",");
+    Serial.print(colorG);
+    Serial.print(",");
+    Serial.print(colorB);
+    Serial.print("), Brightness: ");
+    Serial.println(brightness);
+  }
+  // Syntaxe directe (legacy)
+  else {
+    Serial.println("[PUBNUB-ROUTE] start-test-bedtime: Utilisation de la syntaxe directe (legacy)");
+    if (json["colorR"].is<int>()) colorR = json["colorR"].as<int>();
+    if (json["colorG"].is<int>()) colorG = json["colorG"].as<int>();
+    if (json["colorB"].is<int>()) colorB = json["colorB"].as<int>();
+    if (json["brightness"].is<int>()) brightness = json["brightness"].as<int>();
+  }
+  
+  // Valider les paramètres
+  if (colorR < 0 || colorR > 255 || colorG < 0 || colorG > 255 || colorB < 0 || colorB > 255) {
+    Serial.println("[PUBNUB-ROUTE] start-test-bedtime: Couleur invalide");
+    return false;
+  }
+  
+  if (brightness < 0 || brightness > 100) {
+    Serial.println("[PUBNUB-ROUTE] start-test-bedtime: Brightness invalide");
+    return false;
+  }
+  
+  // Convertir brightness de 0-100 vers 0-255
+  uint8_t brightnessValue = (brightness * 255 + 50) / 100;
+  
+  // Sortir du mode sommeil avant d'appliquer le test
+  // (setColor et setBrightness appellent déjà wakeUp(), mais on le fait explicitement pour être sûr)
+  LEDManager::wakeUp();
+  
+  // Appliquer les paramètres du test
+  // Ordre : d'abord s'assurer qu'on est en mode NONE (pour désactiver les effets animés),
+  // puis appliquer la couleur et la brightness
+  // Note: setEffect(LED_EFFECT_NONE) réinitialise la couleur à noir si on change d'effet,
+  // donc on doit réappliquer la couleur après
+  LEDManager::setEffect(LED_EFFECT_NONE); // Désactiver les effets animés (peut réinitialiser la couleur)
+  LEDManager::setColor(colorR, colorG, colorB); // Appliquer la couleur (après setEffect pour qu'elle soit préservée)
+  LEDManager::setBrightness(brightnessValue); // Appliquer la brightness
+  
+  // Activer le test (ou le maintenir actif si déjà actif)
+  testBedtimeActive = true;
+  
+  // TOUJOURS réinitialiser le timer après avoir validé et appliqué les paramètres
+  // Cela permet de réinitialiser le timeout de 15s à chaque mise à jour (changement de couleur/brightness)
+  testBedtimeStartTime = millis();
+  if (wasAlreadyActive) {
+    Serial.println("[PUBNUB-ROUTE] start-test-bedtime: Test déjà actif, timeout de 15 secondes réinitialisé");
+  } else {
+    Serial.println("[PUBNUB-ROUTE] start-test-bedtime: Nouveau test démarré, timeout de 15 secondes initialisé");
+  }
+  
+  Serial.print("[PUBNUB-ROUTE] start-test-bedtime: Test démarré - Couleur RGB(");
+  Serial.print(colorR);
+  Serial.print(",");
+  Serial.print(colorG);
+  Serial.print(",");
+  Serial.print(colorB);
+  Serial.print("), Brightness: ");
+  Serial.print(brightness);
+  Serial.println("%");
+  
+  return true;
+}
+
+bool ModelDreamPubNubRoutes::handleStopTestBedtime(const JsonObject& json) {
+  // Format: { "action": "stop-test-bedtime" }
+  // Arrête le test de l'heure de coucher
+  
+  if (!testBedtimeActive) {
+    Serial.println("[PUBNUB-ROUTE] stop-test-bedtime: Aucun test actif");
+    return false;
+  }
+  
+  Serial.println("[PUBNUB-ROUTE] stop-test-bedtime: Arrêt du test");
+  
+  // Éteindre les LEDs
+  LEDManager::clear();
+  
+  // Désactiver le test
+  testBedtimeActive = false;
+  testBedtimeStartTime = 0;
+  
+  return true;
+}
+
+void ModelDreamPubNubRoutes::checkTestBedtimeTimeout() {
+  // Vérifier si le timeout est dépassé
+  // Utiliser une comparaison sécurisée pour gérer le wrap-around de millis()
+  if (testBedtimeActive) {
+    unsigned long currentTime = millis();
+    unsigned long elapsedTime;
+    
+    // Gérer le wrap-around de millis() (se produit après ~49 jours)
+    if (currentTime >= testBedtimeStartTime) {
+      elapsedTime = currentTime - testBedtimeStartTime;
+    } else {
+      // Wrap-around détecté
+      elapsedTime = (ULONG_MAX - testBedtimeStartTime) + currentTime;
+    }
+    
+    if (elapsedTime >= TEST_BEDTIME_TIMEOUT_MS) {
+      Serial.println("[PUBNUB-ROUTE] Test bedtime: Timeout de 15 secondes atteint, arrêt automatique");
+      
+      // Créer un JsonObject vide pour appeler handleStopTestBedtime
+      #pragma GCC diagnostic push
+      #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+      StaticJsonDocument<1> doc;
+      #pragma GCC diagnostic pop
+      JsonObject emptyJson = doc.to<JsonObject>();
+      handleStopTestBedtime(emptyJson);
+    }
+  }
+}
+
+void ModelDreamPubNubRoutes::checkTestWakeupTimeout() {
+  // Vérifier si le timeout est dépassé
+  // Utiliser une comparaison sécurisée pour gérer le wrap-around de millis()
+  if (testWakeupActive) {
+    unsigned long currentTime = millis();
+    unsigned long elapsedTime;
+    
+    // Gérer le wrap-around de millis() (se produit après ~49 jours)
+    if (currentTime >= testWakeupStartTime) {
+      elapsedTime = currentTime - testWakeupStartTime;
+    } else {
+      // Wrap-around détecté
+      elapsedTime = (ULONG_MAX - testWakeupStartTime) + currentTime;
+    }
+    
+    if (elapsedTime >= 15000) { // 15 secondes
+      // Timeout dépassé, arrêter le test
+      Serial.println("[PUBNUB-ROUTE] checkTestWakeupTimeout: Timeout de 15 secondes dépassé, arrêt du test");
+      
+      // Créer un JsonObject vide pour appeler handleStopTestWakeup
+      #pragma GCC diagnostic push
+      #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+      StaticJsonDocument<16> emptyDoc;
+      #pragma GCC diagnostic pop
+      JsonObject emptyJson = emptyDoc.to<JsonObject>();
+      
+      handleStopTestWakeup(emptyJson);
+    }
+  }
+}
+
+bool ModelDreamPubNubRoutes::isTestWakeupActive() {
+  return testWakeupActive;
+}
+
+bool ModelDreamPubNubRoutes::isTestBedtimeActive() {
+  return testBedtimeActive;
+}
+
+bool ModelDreamPubNubRoutes::handleSetBedtimeConfig(const JsonObject& json) {
+  // Format: { "action": "set-bedtime-config", "params": { "colorR": 255, "colorG": 107, "colorB": 107, "brightness": 50, "allNight": false, "weekdaySchedule": {...} } }
+  // Sauvegarde la configuration de l'heure de coucher sur la carte SD
+  
+  Serial.println("[PUBNUB-ROUTE] set-bedtime-config: Sauvegarde de la configuration...");
+  
+  if (!SDManager::isAvailable()) {
+    Serial.println("[PUBNUB-ROUTE] set-bedtime-config: Carte SD non disponible");
+    return false;
+  }
+  
+  // Récupérer les paramètres
+  int colorR = -1;
+  int colorG = -1;
+  int colorB = -1;
+  int brightness = -1;
+  bool allNight = false;
+  JsonObject weekdayScheduleObj;
+  bool hasWeekdaySchedule = false;
+  
+  // Nouvelle syntaxe avec params
+  if (json["params"].is<JsonObject>()) {
+    JsonObject params = json["params"].as<JsonObject>();
+    Serial.println("[PUBNUB-ROUTE] set-bedtime-config: Utilisation de la syntaxe avec params");
+    
+    if (params["colorR"].is<int>()) colorR = params["colorR"].as<int>();
+    if (params["colorG"].is<int>()) colorG = params["colorG"].as<int>();
+    if (params["colorB"].is<int>()) colorB = params["colorB"].as<int>();
+    if (params["brightness"].is<int>()) brightness = params["brightness"].as<int>();
+    if (params["allNight"].is<bool>()) allNight = params["allNight"].as<bool>();
+    
+    // Récupérer weekdaySchedule si présent
+    if (params["weekdaySchedule"].is<JsonObject>()) {
+      weekdayScheduleObj = params["weekdaySchedule"].as<JsonObject>();
+      hasWeekdaySchedule = true;
+    }
+  }
+  // Syntaxe directe (legacy)
+  else {
+    Serial.println("[PUBNUB-ROUTE] set-bedtime-config: Utilisation de la syntaxe directe (legacy)");
+    if (json["colorR"].is<int>()) colorR = json["colorR"].as<int>();
+    if (json["colorG"].is<int>()) colorG = json["colorG"].as<int>();
+    if (json["colorB"].is<int>()) colorB = json["colorB"].as<int>();
+    if (json["brightness"].is<int>()) brightness = json["brightness"].as<int>();
+    if (json["allNight"].is<bool>()) allNight = json["allNight"].as<bool>();
+    
+    // Récupérer weekdaySchedule si présent
+    if (json["weekdaySchedule"].is<JsonObject>()) {
+      weekdayScheduleObj = json["weekdaySchedule"].as<JsonObject>();
+      hasWeekdaySchedule = true;
+    }
+  }
+  
+  // Valider les paramètres
+  if (colorR < 0 || colorR > 255 || colorG < 0 || colorG > 255 || colorB < 0 || colorB > 255) {
+    Serial.println("[PUBNUB-ROUTE] set-bedtime-config: Couleur invalide");
+    return false;
+  }
+  
+  if (brightness < 0 || brightness > 100) {
+    Serial.println("[PUBNUB-ROUTE] set-bedtime-config: Brightness invalide");
+    return false;
+  }
+  
+  // Charger la configuration actuelle depuis la SD
+  SDConfig config = SDManager::getConfig();
+  
+  // Mettre à jour les champs bedtime
+  config.bedtime_colorR = (uint8_t)colorR;
+  config.bedtime_colorG = (uint8_t)colorG;
+  config.bedtime_colorB = (uint8_t)colorB;
+  config.bedtime_brightness = (uint8_t)brightness;
+  config.bedtime_allNight = allNight;
+  
+  // Sauvegarder weekdaySchedule si présent
+  if (hasWeekdaySchedule) {
+    // Sérialiser le weekdaySchedule en JSON string
+    String scheduleStr;
+    serializeJson(weekdayScheduleObj, scheduleStr);
+    
+    // Vérifier que la taille ne dépasse pas la limite
+    if (scheduleStr.length() < sizeof(config.bedtime_weekdaySchedule)) {
+      strncpy(config.bedtime_weekdaySchedule, scheduleStr.c_str(), sizeof(config.bedtime_weekdaySchedule) - 1);
+      config.bedtime_weekdaySchedule[sizeof(config.bedtime_weekdaySchedule) - 1] = '\0';
+      Serial.print("[PUBNUB-ROUTE] set-bedtime-config: weekdaySchedule sauvegardé: ");
+      Serial.println(scheduleStr);
+    } else {
+      Serial.println("[PUBNUB-ROUTE] set-bedtime-config: weekdaySchedule trop grand, tronqué");
+      strncpy(config.bedtime_weekdaySchedule, scheduleStr.c_str(), sizeof(config.bedtime_weekdaySchedule) - 1);
+      config.bedtime_weekdaySchedule[sizeof(config.bedtime_weekdaySchedule) - 1] = '\0';
+    }
+  } else {
+    // Pas de weekdaySchedule, garder la valeur existante ou mettre un objet vide
+    if (strlen(config.bedtime_weekdaySchedule) == 0) {
+      strcpy(config.bedtime_weekdaySchedule, "{}");
+    }
+  }
+  
+  // Sauvegarder sur la SD
+  if (SDManager::saveConfig(config)) {
+    Serial.print("[PUBNUB-ROUTE] set-bedtime-config: Configuration sauvegardée - RGB(");
+    Serial.print(colorR);
+    Serial.print(",");
+    Serial.print(colorG);
+    Serial.print(",");
+    Serial.print(colorB);
+    Serial.print("), Brightness: ");
+    Serial.print(brightness);
+    Serial.print("%, AllNight: ");
+    Serial.print(allNight ? "true" : "false");
+    if (hasWeekdaySchedule) {
+      Serial.print(", weekdaySchedule: ");
+      Serial.println(config.bedtime_weekdaySchedule);
+    } else {
+      Serial.println();
+    }
+    
+    // Recharger la configuration dans le BedtimeManager
+    BedtimeManager::reloadConfig();
+    
+    return true;
+  } else {
+    Serial.println("[PUBNUB-ROUTE] set-bedtime-config: Erreur lors de la sauvegarde");
+    return false;
+  }
+}
+
+bool ModelDreamPubNubRoutes::handleStartTestWakeup(const JsonObject& json) {
+  // Format: { "action": "start-test-wakeup", "params": { "colorR": 255, "colorG": 200, "colorB": 100, "brightness": 50 } }
+  // Démarre le test de la couleur et luminosité avec les paramètres fournis
+  
+  Serial.println("[PUBNUB-ROUTE] start-test-wakeup: Démarrage/mise à jour du test...");
+  
+  // Sauvegarder l'état actif pour savoir si c'est une mise à jour ou un nouveau test
+  bool wasAlreadyActive = testWakeupActive;
+  
+  // Récupérer les paramètres
+  int colorR = -1;
+  int colorG = -1;
+  int colorB = -1;
+  int brightness = -1;
+  
+  Serial.print("[PUBNUB-ROUTE] start-test-wakeup: Message JSON reçu - ");
+  serializeJson(json, Serial);
+  Serial.println();
+  
+  // Nouvelle syntaxe avec params
+  if (json["params"].is<JsonObject>()) {
+    JsonObject params = json["params"].as<JsonObject>();
+    Serial.println("[PUBNUB-ROUTE] start-test-wakeup: Utilisation de la syntaxe avec params");
+    if (params["colorR"].is<int>()) colorR = params["colorR"].as<int>();
+    if (params["colorG"].is<int>()) colorG = params["colorG"].as<int>();
+    if (params["colorB"].is<int>()) colorB = params["colorB"].as<int>();
+    if (params["brightness"].is<int>()) brightness = params["brightness"].as<int>();
+    
+    Serial.print("[PUBNUB-ROUTE] start-test-wakeup: Paramètres extraits - RGB(");
+    Serial.print(colorR);
+    Serial.print(",");
+    Serial.print(colorG);
+    Serial.print(",");
+    Serial.print(colorB);
+    Serial.print("), Brightness: ");
+    Serial.println(brightness);
+  }
+  // Syntaxe directe (legacy)
+  else {
+    Serial.println("[PUBNUB-ROUTE] start-test-wakeup: Utilisation de la syntaxe directe (legacy)");
+    if (json["colorR"].is<int>()) colorR = json["colorR"].as<int>();
+    if (json["colorG"].is<int>()) colorG = json["colorG"].as<int>();
+    if (json["colorB"].is<int>()) colorB = json["colorB"].as<int>();
+    if (json["brightness"].is<int>()) brightness = json["brightness"].as<int>();
+  }
+  
+  // Valider les paramètres
+  if (colorR < 0 || colorR > 255 || colorG < 0 || colorG > 255 || colorB < 0 || colorB > 255) {
+    Serial.println("[PUBNUB-ROUTE] start-test-wakeup: Couleur invalide");
+    return false;
+  }
+  
+  if (brightness < 0 || brightness > 100) {
+    Serial.println("[PUBNUB-ROUTE] start-test-wakeup: Brightness invalide");
+    return false;
+  }
+  
+  // Convertir brightness de 0-100 vers 0-255
+  uint8_t brightnessValue = (brightness * 255 + 50) / 100;
+  
+  // Sortir du mode sommeil avant d'appliquer le test
+  LEDManager::wakeUp();
+  
+  // Appliquer les paramètres du test
+  LEDManager::setEffect(LED_EFFECT_NONE);
+  LEDManager::setColor(colorR, colorG, colorB);
+  LEDManager::setBrightness(brightnessValue);
+  
+  // Activer le test (ou le maintenir actif si déjà actif)
+  testWakeupActive = true;
+  
+  // TOUJOURS réinitialiser le timer après avoir validé et appliqué les paramètres
+  testWakeupStartTime = millis();
+  if (wasAlreadyActive) {
+    Serial.println("[PUBNUB-ROUTE] start-test-wakeup: Test déjà actif, timeout de 15 secondes réinitialisé");
+  } else {
+    Serial.println("[PUBNUB-ROUTE] start-test-wakeup: Nouveau test démarré, timeout de 15 secondes initialisé");
+  }
+  
+  Serial.print("[PUBNUB-ROUTE] start-test-wakeup: Test démarré - Couleur RGB(");
+  Serial.print(colorR);
+  Serial.print(",");
+  Serial.print(colorG);
+  Serial.print(",");
+  Serial.print(colorB);
+  Serial.print("), Brightness: ");
+  Serial.print(brightness);
+  Serial.println("%");
+  
+  return true;
+}
+
+bool ModelDreamPubNubRoutes::handleStopTestWakeup(const JsonObject& json) {
+  // Format: { "action": "stop-test-wakeup" }
+  // Arrête le test de l'heure de réveil
+  
+  if (!testWakeupActive) {
+    Serial.println("[PUBNUB-ROUTE] stop-test-wakeup: Aucun test actif");
+    return false;
+  }
+  
+  Serial.println("[PUBNUB-ROUTE] stop-test-wakeup: Arrêt du test");
+  
+  // Éteindre les LEDs
+  LEDManager::clear();
+  
+  // Désactiver le test
+  testWakeupActive = false;
+  testWakeupStartTime = 0;
+  
+  return true;
+}
+
+bool ModelDreamPubNubRoutes::handleSetWakeupConfig(const JsonObject& json) {
+  // Format: { "action": "set-wakeup-config", "params": { "colorR": 255, "colorG": 200, "colorB": 100, "brightness": 50, "weekdaySchedule": {...} } }
+  // Sauvegarde la configuration de l'heure de réveil sur la carte SD
+  
+  Serial.println("[PUBNUB-ROUTE] set-wakeup-config: Sauvegarde de la configuration...");
+  
+  if (!SDManager::isAvailable()) {
+    Serial.println("[PUBNUB-ROUTE] set-wakeup-config: Carte SD non disponible");
+    return false;
+  }
+  
+  // Récupérer les paramètres
+  int colorR = -1;
+  int colorG = -1;
+  int colorB = -1;
+  int brightness = -1;
+  JsonObject weekdayScheduleObj;
+  bool hasWeekdaySchedule = false;
+  
+  // Nouvelle syntaxe avec params
+  if (json["params"].is<JsonObject>()) {
+    JsonObject params = json["params"].as<JsonObject>();
+    Serial.println("[PUBNUB-ROUTE] set-wakeup-config: Utilisation de la syntaxe avec params");
+    
+    if (params["colorR"].is<int>()) colorR = params["colorR"].as<int>();
+    if (params["colorG"].is<int>()) colorG = params["colorG"].as<int>();
+    if (params["colorB"].is<int>()) colorB = params["colorB"].as<int>();
+    if (params["brightness"].is<int>()) brightness = params["brightness"].as<int>();
+    
+    // Récupérer weekdaySchedule si présent
+    if (params["weekdaySchedule"].is<JsonObject>()) {
+      weekdayScheduleObj = params["weekdaySchedule"].as<JsonObject>();
+      hasWeekdaySchedule = true;
+    }
+  }
+  // Syntaxe directe (legacy)
+  else {
+    Serial.println("[PUBNUB-ROUTE] set-wakeup-config: Utilisation de la syntaxe directe (legacy)");
+    if (json["colorR"].is<int>()) colorR = json["colorR"].as<int>();
+    if (json["colorG"].is<int>()) colorG = json["colorG"].as<int>();
+    if (json["colorB"].is<int>()) colorB = json["colorB"].as<int>();
+    if (json["brightness"].is<int>()) brightness = json["brightness"].as<int>();
+    
+    // Récupérer weekdaySchedule si présent
+    if (json["weekdaySchedule"].is<JsonObject>()) {
+      weekdayScheduleObj = json["weekdaySchedule"].as<JsonObject>();
+      hasWeekdaySchedule = true;
+    }
+  }
+  
+  // Valider les paramètres
+  if (colorR < 0 || colorR > 255 || colorG < 0 || colorG > 255 || colorB < 0 || colorB > 255) {
+    Serial.println("[PUBNUB-ROUTE] set-wakeup-config: Couleur invalide");
+    return false;
+  }
+  
+  if (brightness < 0 || brightness > 100) {
+    Serial.println("[PUBNUB-ROUTE] set-wakeup-config: Brightness invalide");
+    return false;
+  }
+  
+  // Charger la configuration actuelle depuis la SD
+  SDConfig config = SDManager::getConfig();
+  
+  // Mettre à jour les champs wakeup
+  config.wakeup_colorR = (uint8_t)colorR;
+  config.wakeup_colorG = (uint8_t)colorG;
+  config.wakeup_colorB = (uint8_t)colorB;
+  config.wakeup_brightness = (uint8_t)brightness;
+  
+  // Sauvegarder weekdaySchedule si présent
+  if (hasWeekdaySchedule) {
+    // Sérialiser le weekdaySchedule en JSON string
+    String scheduleStr;
+    serializeJson(weekdayScheduleObj, scheduleStr);
+    
+    // Vérifier que la taille ne dépasse pas la limite
+    if (scheduleStr.length() < sizeof(config.wakeup_weekdaySchedule)) {
+      strncpy(config.wakeup_weekdaySchedule, scheduleStr.c_str(), sizeof(config.wakeup_weekdaySchedule) - 1);
+      config.wakeup_weekdaySchedule[sizeof(config.wakeup_weekdaySchedule) - 1] = '\0';
+      Serial.print("[PUBNUB-ROUTE] set-wakeup-config: weekdaySchedule sauvegardé: ");
+      Serial.println(scheduleStr);
+    } else {
+      Serial.println("[PUBNUB-ROUTE] set-wakeup-config: weekdaySchedule trop grand, tronqué");
+      strncpy(config.wakeup_weekdaySchedule, scheduleStr.c_str(), sizeof(config.wakeup_weekdaySchedule) - 1);
+      config.wakeup_weekdaySchedule[sizeof(config.wakeup_weekdaySchedule) - 1] = '\0';
+    }
+  } else {
+    // Pas de weekdaySchedule, garder la valeur existante ou mettre un objet vide
+    if (strlen(config.wakeup_weekdaySchedule) == 0) {
+      strcpy(config.wakeup_weekdaySchedule, "{}");
+    }
+  }
+  
+  // Sauvegarder sur la SD
+  if (SDManager::saveConfig(config)) {
+    Serial.print("[PUBNUB-ROUTE] set-wakeup-config: Configuration sauvegardée - RGB(");
+    Serial.print(colorR);
+    Serial.print(",");
+    Serial.print(colorG);
+    Serial.print(",");
+    Serial.print(colorB);
+    Serial.print("), Brightness: ");
+    Serial.print(brightness);
+    Serial.print("%");
+    if (hasWeekdaySchedule) {
+      Serial.print(", weekdaySchedule: ");
+      Serial.println(config.wakeup_weekdaySchedule);
+    } else {
+      Serial.println();
+    }
+    
+    // Recharger la configuration dans le WakeupManager
+    WakeupManager::reloadConfig();
+    
+    return true;
+  } else {
+    Serial.println("[PUBNUB-ROUTE] set-wakeup-config: Erreur lors de la sauvegarde");
+    return false;
+  }
+}
+
 void ModelDreamPubNubRoutes::printRoutes() {
   Serial.println("");
   Serial.println("========== Routes PubNub Dream ==========");
@@ -335,5 +912,11 @@ void ModelDreamPubNubRoutes::printRoutes() {
   Serial.println("{ \"action\": \"reboot\", \"params\": { \"delay\": ms } }");
   Serial.println("{ \"action\": \"led\", \"color\": \"#RRGGBB\" }");
   Serial.println("{ \"action\": \"led\", \"effect\": \"none|pulse|rotate|rainbow|glossy|off\" }");
+  Serial.println("{ \"action\": \"start-test-bedtime\", \"params\": { \"colorR\": 0-255, \"colorG\": 0-255, \"colorB\": 0-255, \"brightness\": 0-100 } }");
+  Serial.println("{ \"action\": \"stop-test-bedtime\" }");
+  Serial.println("{ \"action\": \"set-bedtime-config\", \"params\": { \"colorR\": 0-255, \"colorG\": 0-255, \"colorB\": 0-255, \"brightness\": 0-100, \"allNight\": true|false, \"weekdaySchedule\": {...} } }");
+  Serial.println("{ \"action\": \"start-test-wakeup\", \"params\": { \"colorR\": 0-255, \"colorG\": 0-255, \"colorB\": 0-255, \"brightness\": 0-100 } }");
+  Serial.println("{ \"action\": \"stop-test-wakeup\" }");
+  Serial.println("{ \"action\": \"set-wakeup-config\", \"params\": { \"colorR\": 0-255, \"colorG\": 0-255, \"colorB\": 0-255, \"brightness\": 0-100, \"weekdaySchedule\": {...} } }");
   Serial.println("==========================================");
 }

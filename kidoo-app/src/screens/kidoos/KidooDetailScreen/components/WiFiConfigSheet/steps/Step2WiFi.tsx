@@ -3,7 +3,7 @@
  * Deuxième étape : saisie du SSID et mot de passe WiFi
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { TextInput, PasswordInput } from '@/components/ui';
@@ -21,10 +21,13 @@ export function Step2WiFi({ wifiSSID, wifiPassword, onSSIDChange, onPasswordChan
   const { t } = useTranslation();
   const { spacing } = useTheme();
   const { ssid: currentSSID } = useCurrentWiFiSSID();
+  const hasInitializedSSID = useRef(false); // Flag pour savoir si on a déjà initialisé le SSID une fois
 
   // Préremplir le SSID avec le réseau WiFi actuel si disponible et si le champ est vide
+  // Ne le faire qu'une seule fois au montage du composant
   useEffect(() => {
-    if (currentSSID && (!wifiSSID || wifiSSID.trim().length === 0)) {
+    if (currentSSID && !hasInitializedSSID.current && (!wifiSSID || wifiSSID.trim().length === 0)) {
+      hasInitializedSSID.current = true;
       onSSIDChange(currentSSID);
     }
   }, [currentSSID, wifiSSID, onSSIDChange]);

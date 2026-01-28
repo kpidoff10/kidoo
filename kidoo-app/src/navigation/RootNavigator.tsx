@@ -11,7 +11,7 @@ import { useTheme } from '@/theme';
 import { useAuth, BluetoothProvider, KidooProvider } from '@/contexts';
 import { BluetoothSheets } from '@/contexts/bluetooth/BluetoothSheets';
 import { ScreenLoader } from '@/components/ui';
-import { LoginScreen, RegisterScreen, EditProfileScreen, KidooDetailScreen, BedtimeConfigScreen } from '@/screens';
+import { LoginScreen, RegisterScreen, EditProfileScreen, KidooDetailScreen, BedtimeConfigScreen, WakeupConfigScreen } from '@/screens';
 import { AppNavigator } from './AppNavigator';
 import { RootStackParamList } from './types';
 
@@ -42,83 +42,98 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer theme={navigationTheme}>
-      <BluetoothProvider>
-        <KidooProvider>
-          <Stack.Navigator
-            screenOptions={{
-              headerShown: false,
+      {isAuthenticated ? (
+        // User connecté → App avec providers
+        <BluetoothProvider>
+          <KidooProvider>
+            <Stack.Navigator
+              screenOptions={{
+                headerShown: false,
+              }}
+            >
+              <Stack.Screen name="MainTabs" component={AppNavigator} />
+              <Stack.Screen
+                name="EditProfile"
+                component={EditProfileScreen}
+                options={({ navigation }) => ({
+                  headerShown: true,
+                  title: '',
+                  headerBackTitle: '',
+                  headerTintColor: colors.text,
+                  headerStyle: {
+                    backgroundColor: colors.background,
+                  },
+                })}
+              />
+              <Stack.Screen
+                name="KidooDetail"
+                component={KidooDetailScreen}
+                options={({ route, navigation }) => {
+                  // Récupérer le kidooId depuis les params
+                  const { kidooId } = (route.params as { kidooId?: string }) || {};
+                  // Le titre sera géré dans le composant via useLayoutEffect
+                  return {
+                    headerShown: true,
+                    title: '',
+                    headerBackTitle: '',
+                    headerTintColor: colors.text,
+                    headerStyle: {
+                      backgroundColor: colors.background,
+                    },
+                  };
+                }}
+              />
+              <Stack.Screen
+                name="BedtimeConfig"
+                component={BedtimeConfigScreen}
+                options={({ navigation }) => ({
+                  headerShown: true,
+                  title: '',
+                  headerBackTitle: '',
+                  headerTintColor: colors.text,
+                  headerStyle: {
+                    backgroundColor: colors.background,
+                  },
+                })}
+              />
+              <Stack.Screen
+                name="WakeupConfig"
+                component={WakeupConfigScreen}
+                options={({ navigation }) => ({
+                  headerShown: true,
+                  title: '',
+                  headerBackTitle: '',
+                  headerTintColor: colors.text,
+                  headerStyle: {
+                    backgroundColor: colors.background,
+                  },
+                })}
+              />
+            </Stack.Navigator>
+            <BluetoothSheets />
+          </KidooProvider>
+        </BluetoothProvider>
+      ) : (
+        // User non connecté → Auth
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+          }}
+        >
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen
+            name="Register"
+            component={RegisterScreen}
+            options={{
+              headerShown: true,
+              headerTitle: '',
+              headerBackTitle: '',
+              headerTransparent: true,
+              headerTintColor: colors.text,
             }}
-          >
-            {isAuthenticated ? (
-              // User connecté → App
-              <>
-                <Stack.Screen name="MainTabs" component={AppNavigator} />
-                <Stack.Screen
-                  name="EditProfile"
-                  component={EditProfileScreen}
-                  options={({ navigation }) => ({
-                    headerShown: true,
-                    title: '',
-                    headerBackTitle: '',
-                    headerTintColor: colors.text,
-                    headerStyle: {
-                      backgroundColor: colors.background,
-                    },
-                  })}
-                />
-                <Stack.Screen
-                  name="KidooDetail"
-                  component={KidooDetailScreen}
-                  options={({ route, navigation }) => {
-                    // Récupérer le kidooId depuis les params
-                    const { kidooId } = (route.params as { kidooId?: string }) || {};
-                    // Le titre sera géré dans le composant via useLayoutEffect
-                    return {
-                      headerShown: true,
-                      title: '',
-                      headerBackTitle: '',
-                      headerTintColor: colors.text,
-                      headerStyle: {
-                        backgroundColor: colors.background,
-                      },
-                    };
-                  }}
-                />
-                <Stack.Screen
-                  name="BedtimeConfig"
-                  component={BedtimeConfigScreen}
-                  options={({ navigation }) => ({
-                    headerShown: true,
-                    title: '',
-                    headerBackTitle: '',
-                    headerTintColor: colors.text,
-                    headerStyle: {
-                      backgroundColor: colors.background,
-                    },
-                  })}
-                />
-              </>
-            ) : (
-              // User non connecté → Auth
-              <>
-                <Stack.Screen name="Login" component={LoginScreen} />
-                <Stack.Screen
-                  name="Register"
-                  component={RegisterScreen}
-                  options={{
-                    headerShown: true,
-                    headerTitle: '',
-                    headerBackTitle: '',
-                    headerTransparent: true,
-                    headerTintColor: colors.text,
-                  }}
-                />
-              </>
-            )}
-          </Stack.Navigator>
-          <BluetoothSheets />
-        </KidooProvider>
-      </BluetoothProvider>
+          />
+        </Stack.Navigator>
+      )}
     </NavigationContainer>
   );
 }

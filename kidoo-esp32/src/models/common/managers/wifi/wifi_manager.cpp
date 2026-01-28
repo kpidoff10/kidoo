@@ -14,6 +14,13 @@
 #include "../pubnub/pubnub_manager.h"
 #endif
 
+#ifdef HAS_RTC
+#include "../rtc/rtc_manager.h"
+#endif
+
+// Routes de synchronisation de configuration (spécifiques au modèle)
+#include "../../../model_config_sync_routes.h"
+
 // Variables statiques
 bool WiFiManager::initialized = false;
 bool WiFiManager::available = false;
@@ -162,6 +169,9 @@ bool WiFiManager::connect(const char* ssid, const char* password, uint32_t timeo
     PubNubManager::connect();
   }
   #endif
+  
+  // Synchroniser la configuration via les routes spécifiques au modèle
+  ModelConfigSyncRoutes::onWiFiConnected();
   
   return true;
 #endif
@@ -373,6 +383,11 @@ void WiFiManager::retryThreadFunction(void* parameter) {
     if (WiFiManager::isConnected()) {
       Serial.println("[WIFI-RETRY] WiFi connecte, arret du retry");
       
+      // Synchroniser l'heure RTC via NTP
+      #ifdef HAS_RTC
+      RTCManager::autoSyncIfNeeded();
+      #endif
+      
       // Déclencher la connexion PubNub si disponible
       #ifdef HAS_PUBNUB
       if (PubNubManager::isInitialized() && !PubNubManager::isConnected()) {
@@ -380,6 +395,9 @@ void WiFiManager::retryThreadFunction(void* parameter) {
         PubNubManager::connect();
       }
       #endif
+      
+      // Synchroniser la configuration via les routes spécifiques au modèle
+      ModelConfigSyncRoutes::onWiFiConnected();
       
       retryThreadRunning = false;
       break;
@@ -398,6 +416,11 @@ void WiFiManager::retryThreadFunction(void* parameter) {
     if (WiFiManager::connect(config.wifi_ssid, config.wifi_password, DEFAULT_CONNECT_TIMEOUT_MS)) {
       Serial.println("[WIFI-RETRY] Connexion reussie !");
       
+      // Synchroniser l'heure RTC via NTP
+      #ifdef HAS_RTC
+      RTCManager::autoSyncIfNeeded();
+      #endif
+      
       // Déclencher la connexion PubNub si disponible
       #ifdef HAS_PUBNUB
       if (PubNubManager::isInitialized() && !PubNubManager::isConnected()) {
@@ -405,6 +428,9 @@ void WiFiManager::retryThreadFunction(void* parameter) {
         PubNubManager::connect();
       }
       #endif
+      
+      // Synchroniser la configuration via les routes spécifiques au modèle
+      ModelConfigSyncRoutes::onWiFiConnected();
       
       retryThreadRunning = false;
       break;

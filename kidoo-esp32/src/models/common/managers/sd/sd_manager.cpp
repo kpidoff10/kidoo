@@ -20,6 +20,19 @@ void SDManager::initDefaultConfig(SDConfig* config) {
   strcpy(config->wifi_password, DEFAULT_WIFI_PASSWORD);
   config->led_brightness = DEFAULT_LED_BRIGHTNESS;
   config->sleep_timeout_ms = DEFAULT_SLEEP_TIMEOUT_MS;
+  // Valeurs par défaut pour bedtime (modèle Dream)
+  config->bedtime_colorR = 255;
+  config->bedtime_colorG = 107;
+  config->bedtime_colorB = 107;
+  config->bedtime_brightness = 50;
+  config->bedtime_allNight = false;
+  strcpy(config->bedtime_weekdaySchedule, "{}"); // JSON vide par défaut
+  // Valeurs par défaut pour wakeup (modèle Dream)
+  config->wakeup_colorR = 255;
+  config->wakeup_colorG = 200;
+  config->wakeup_colorB = 100;
+  config->wakeup_brightness = 50;
+  strcpy(config->wakeup_weekdaySchedule, "{}"); // JSON vide par défaut
 }
 
 bool SDManager::init() {
@@ -178,7 +191,8 @@ SDConfig SDManager::getConfig() {
   }
   
   // Allouer un buffer pour lire le fichier
-  const size_t maxSize = 1024;
+  // Taille augmentée pour inclure weekdaySchedule (peut être volumineux avec 7 jours)
+  const size_t maxSize = 1536;
   if (fileSize > maxSize) {
     fileSize = maxSize;
   }
@@ -200,11 +214,11 @@ SDConfig SDManager::getConfig() {
   }
   
   // Parser le JSON
-  // Utiliser StaticJsonDocument avec allocation statique (1024 octets)
+  // Utiliser StaticJsonDocument avec allocation statique (1536 octets pour inclure weekdaySchedule)
   // Note: StaticJsonDocument est déprécié mais toujours fonctionnel dans ArduinoJson v7
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-  StaticJsonDocument<1024> doc;
+  StaticJsonDocument<1536> doc;
   #pragma GCC diagnostic pop
   DeserializationError error = deserializeJson(doc, jsonBuffer);
   
@@ -248,6 +262,91 @@ SDConfig SDManager::getConfig() {
     config.sleep_timeout_ms = (uint32_t)timeout;
   }
   
+  // Configuration bedtime (modèle Dream)
+  if (doc["bedtime_colorR"].is<int>()) {
+    int colorR = doc["bedtime_colorR"] | 255;
+    if (colorR < 0) colorR = 0;
+    if (colorR > 255) colorR = 255;
+    config.bedtime_colorR = (uint8_t)colorR;
+  }
+  
+  if (doc["bedtime_colorG"].is<int>()) {
+    int colorG = doc["bedtime_colorG"] | 107;
+    if (colorG < 0) colorG = 0;
+    if (colorG > 255) colorG = 255;
+    config.bedtime_colorG = (uint8_t)colorG;
+  }
+  
+  if (doc["bedtime_colorB"].is<int>()) {
+    int colorB = doc["bedtime_colorB"] | 107;
+    if (colorB < 0) colorB = 0;
+    if (colorB > 255) colorB = 255;
+    config.bedtime_colorB = (uint8_t)colorB;
+  }
+  
+  if (doc["bedtime_brightness"].is<int>()) {
+    int brightness = doc["bedtime_brightness"] | 50;
+    if (brightness < 0) brightness = 0;
+    if (brightness > 100) brightness = 100;
+    config.bedtime_brightness = (uint8_t)brightness;
+  }
+  
+  if (doc["bedtime_allNight"].is<bool>()) {
+    config.bedtime_allNight = doc["bedtime_allNight"] | false;
+  }
+  
+  // Lire weekdaySchedule (JSON sérialisé)
+  if (doc["bedtime_weekdaySchedule"].is<String>()) {
+    String scheduleStr = doc["bedtime_weekdaySchedule"] | "{}";
+    strncpy(config.bedtime_weekdaySchedule, scheduleStr.c_str(), sizeof(config.bedtime_weekdaySchedule) - 1);
+    config.bedtime_weekdaySchedule[sizeof(config.bedtime_weekdaySchedule) - 1] = '\0';
+  } else if (doc["bedtime_weekdaySchedule"].is<JsonObject>()) {
+    // Si c'est un objet JSON, le sérialiser en string
+    String scheduleStr;
+    serializeJson(doc["bedtime_weekdaySchedule"], scheduleStr);
+    strncpy(config.bedtime_weekdaySchedule, scheduleStr.c_str(), sizeof(config.bedtime_weekdaySchedule) - 1);
+    config.bedtime_weekdaySchedule[sizeof(config.bedtime_weekdaySchedule) - 1] = '\0';
+  }
+  
+  // Configuration wakeup (modèle Dream)
+  if (doc["wakeup_colorR"].is<int>()) {
+    int colorR = doc["wakeup_colorR"] | 255;
+    if (colorR >= 0 && colorR <= 255) {
+      config.wakeup_colorR = (uint8_t)colorR;
+    }
+  }
+  if (doc["wakeup_colorG"].is<int>()) {
+    int colorG = doc["wakeup_colorG"] | 200;
+    if (colorG >= 0 && colorG <= 255) {
+      config.wakeup_colorG = (uint8_t)colorG;
+    }
+  }
+  if (doc["wakeup_colorB"].is<int>()) {
+    int colorB = doc["wakeup_colorB"] | 100;
+    if (colorB >= 0 && colorB <= 255) {
+      config.wakeup_colorB = (uint8_t)colorB;
+    }
+  }
+  if (doc["wakeup_brightness"].is<int>()) {
+    int brightness = doc["wakeup_brightness"] | 50;
+    if (brightness >= 0 && brightness <= 100) {
+      config.wakeup_brightness = (uint8_t)brightness;
+    }
+  }
+  
+  // Lire weekdaySchedule wakeup (JSON sérialisé)
+  if (doc["wakeup_weekdaySchedule"].is<String>()) {
+    String scheduleStr = doc["wakeup_weekdaySchedule"] | "{}";
+    strncpy(config.wakeup_weekdaySchedule, scheduleStr.c_str(), sizeof(config.wakeup_weekdaySchedule) - 1);
+    config.wakeup_weekdaySchedule[sizeof(config.wakeup_weekdaySchedule) - 1] = '\0';
+  } else if (doc["wakeup_weekdaySchedule"].is<JsonObject>()) {
+    // Si c'est un objet JSON, le sérialiser en string
+    String scheduleStr;
+    serializeJson(doc["wakeup_weekdaySchedule"], scheduleStr);
+    strncpy(config.wakeup_weekdaySchedule, scheduleStr.c_str(), sizeof(config.wakeup_weekdaySchedule) - 1);
+    config.wakeup_weekdaySchedule[sizeof(config.wakeup_weekdaySchedule) - 1] = '\0';
+  }
+  
   config.valid = true;
   return config;
 }
@@ -259,9 +358,10 @@ bool SDManager::saveConfig(const SDConfig& config) {
   
   // Créer un document JSON
   // Note: StaticJsonDocument est déprécié mais toujours fonctionnel dans ArduinoJson v7
+  // Taille augmentée pour inclure weekdaySchedule (peut être volumineux avec 7 jours)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-  StaticJsonDocument<1024> doc;
+  StaticJsonDocument<1536> doc;
   #pragma GCC diagnostic pop
   
   // Ajouter les valeurs (seulement si elles sont valides/modifiées)
@@ -279,6 +379,60 @@ bool SDManager::saveConfig(const SDConfig& config) {
   
   doc["led_brightness"] = config.led_brightness;
   doc["sleep_timeout_ms"] = config.sleep_timeout_ms;
+  
+  // Configuration bedtime (modèle Dream)
+  doc["bedtime_colorR"] = config.bedtime_colorR;
+  doc["bedtime_colorG"] = config.bedtime_colorG;
+  doc["bedtime_colorB"] = config.bedtime_colorB;
+  doc["bedtime_brightness"] = config.bedtime_brightness;
+  doc["bedtime_allNight"] = config.bedtime_allNight;
+  
+  // Sauvegarder weekdaySchedule (JSON sérialisé)
+  // Essayer de parser le JSON pour valider qu'il est valide avant de le sauvegarder
+  if (strlen(config.bedtime_weekdaySchedule) > 0) {
+    // Parser le JSON pour valider qu'il est valide
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    StaticJsonDocument<512> scheduleDoc;
+    #pragma GCC diagnostic pop
+    DeserializationError error = deserializeJson(scheduleDoc, config.bedtime_weekdaySchedule);
+    if (!error) {
+      // JSON valide, le sauvegarder comme objet JSON dans le document
+      doc["bedtime_weekdaySchedule"] = scheduleDoc;
+    } else {
+      // JSON invalide, sauvegarder comme string brute
+      doc["bedtime_weekdaySchedule"] = config.bedtime_weekdaySchedule;
+    }
+  } else {
+    // Vide, sauvegarder un objet vide
+    doc["bedtime_weekdaySchedule"] = "{}";
+  }
+  
+  // Configuration wakeup (modèle Dream)
+  doc["wakeup_colorR"] = config.wakeup_colorR;
+  doc["wakeup_colorG"] = config.wakeup_colorG;
+  doc["wakeup_colorB"] = config.wakeup_colorB;
+  doc["wakeup_brightness"] = config.wakeup_brightness;
+  
+  // Sauvegarder weekdaySchedule wakeup (JSON sérialisé)
+  if (strlen(config.wakeup_weekdaySchedule) > 0) {
+    // Parser le JSON pour valider qu'il est valide
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    StaticJsonDocument<512> scheduleDoc;
+    #pragma GCC diagnostic pop
+    DeserializationError error = deserializeJson(scheduleDoc, config.wakeup_weekdaySchedule);
+    if (!error) {
+      // JSON valide, le sauvegarder comme objet JSON dans le document
+      doc["wakeup_weekdaySchedule"] = scheduleDoc;
+    } else {
+      // JSON invalide, sauvegarder comme string brute
+      doc["wakeup_weekdaySchedule"] = config.wakeup_weekdaySchedule;
+    }
+  } else {
+    // Vide, sauvegarder un objet vide
+    doc["wakeup_weekdaySchedule"] = "{}";
+  }
   
   // Ouvrir le fichier en mode écriture (crée le fichier s'il n'existe pas)
   File configFile = SD.open(CONFIG_FILE_PATH, FILE_WRITE);

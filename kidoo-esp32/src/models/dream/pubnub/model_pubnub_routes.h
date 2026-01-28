@@ -13,6 +13,12 @@
  * - sleep-timeout: Gérer le délai de mise en veille
  * - reboot: Redémarrer l'appareil
  * - led: Contrôler les LEDs (couleur, effet)
+ * - start-test-bedtime: Démarrer le test de l'heure de coucher
+ * - stop-test-bedtime: Arrêter le test de l'heure de coucher
+ * - set-bedtime-config: Sauvegarder la configuration de l'heure de coucher sur la SD
+ * - start-test-wakeup: Démarrer le test de l'heure de réveil
+ * - stop-test-wakeup: Arrêter le test de l'heure de réveil
+ * - set-wakeup-config: Sauvegarder la configuration de l'heure de réveil sur la SD
  * 
  * Format des messages:
  * { "action": "get-info" }
@@ -20,6 +26,12 @@
  * { "action": "sleep-timeout", "params": { "value": 30000 } }
  * { "action": "reboot", "params": { "delay": 1000 } }
  * { "action": "led", "color": "#FF0000", "effect": "solid" }
+ * { "action": "start-test-bedtime", "params": { "colorR": 255, "colorG": 107, "colorB": 107, "brightness": 50 } }
+ * { "action": "stop-test-bedtime" }
+ * { "action": "set-bedtime-config", "params": { "colorR": 255, "colorG": 107, "colorB": 107, "brightness": 50, "allNight": false, "weekdaySchedule": {...} } }
+ * { "action": "start-test-wakeup", "params": { "colorR": 255, "colorG": 200, "colorB": 100, "brightness": 50 } }
+ * { "action": "stop-test-wakeup" }
+ * { "action": "set-wakeup-config", "params": { "colorR": 255, "colorG": 200, "colorB": 100, "brightness": 50, "weekdaySchedule": {...} } }
  */
 
 class ModelDreamPubNubRoutes {
@@ -35,6 +47,26 @@ public:
    * Afficher les routes disponibles
    */
   static void printRoutes();
+  
+  /**
+   * Vérifier le timeout du test de bedtime (à appeler périodiquement)
+   */
+  static void checkTestBedtimeTimeout();
+  
+  /**
+   * Vérifier si le test de bedtime est actif
+   */
+  static bool isTestBedtimeActive();
+  
+  /**
+   * Vérifier le timeout du test de wakeup (à appeler périodiquement)
+   */
+  static void checkTestWakeupTimeout();
+  
+  /**
+   * Vérifier si le test de wakeup est actif
+   */
+  static bool isTestWakeupActive();
 
 private:
   // Handlers pour chaque action
@@ -43,6 +75,12 @@ private:
   static bool handleSleepTimeout(const JsonObject& json);
   static bool handleReboot(const JsonObject& json);
   static bool handleLed(const JsonObject& json);
+  static bool handleStartTestBedtime(const JsonObject& json);
+  static bool handleStopTestBedtime(const JsonObject& json);
+  static bool handleSetBedtimeConfig(const JsonObject& json);
+  static bool handleStartTestWakeup(const JsonObject& json);
+  static bool handleStopTestWakeup(const JsonObject& json);
+  static bool handleSetWakeupConfig(const JsonObject& json);
 };
 
 #endif // MODEL_DREAM_PUBNUB_ROUTES_H

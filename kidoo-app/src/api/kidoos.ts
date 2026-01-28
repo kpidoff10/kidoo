@@ -8,7 +8,8 @@ import { apiClient } from './client';
 export interface Kidoo {
   id: string;
   name: string;
-  macAddress: string | null;
+  macAddress: string | null; // Adresse MAC WiFi (renvoyée par l'ESP32 lors du setup)
+  bluetoothMacAddress: string | null; // Adresse MAC Bluetooth (pour comparer lors des scans automatiques)
   deviceId: string;
   model: string;
   isConnected: boolean;
@@ -16,6 +17,7 @@ export interface Kidoo {
   userId: string | null;
   createdAt: string;
   updatedAt: string;
+  brightness?: number; // Luminosité générale (0-100%)
 }
 
 // Response wrapper du serveur
@@ -27,7 +29,8 @@ interface ApiResponse<T> {
 
 export interface CreateKidooRequest {
   name: string;
-  macAddress?: string;
+  macAddress?: string; // Adresse MAC WiFi (renvoyée par l'ESP32 lors du setup)
+  bluetoothMacAddress?: string; // Adresse MAC Bluetooth (pour comparer lors des scans automatiques)
   model: 'BASIC' | 'DREAM';
   deviceId: string; // UUID requis par le serveur
   wifiSSID?: string;
@@ -85,8 +88,7 @@ export const kidoosApi = {
    * Récupérer la configuration de l'heure de coucher (Dream)
    */
   async getDreamBedtimeConfig(id: string): Promise<{
-    hour: number;
-    minute: number;
+    weekdaySchedule?: Record<string, { hour: number; minute: number; activated: boolean }>;
     colorR: number;
     colorG: number;
     colorB: number;
@@ -94,8 +96,7 @@ export const kidoosApi = {
     nightlightAllNight: boolean;
   }> {
     const response = await apiClient.get<ApiResponse<{
-      hour: number;
-      minute: number;
+      weekdaySchedule?: Record<string, { hour: number; minute: number; activated: boolean }>;
       colorR: number;
       colorG: number;
       colorB: number;
@@ -111,15 +112,13 @@ export const kidoosApi = {
   async updateDreamBedtimeConfig(
     id: string,
     data: {
-      hour: number;
-      minute: number;
+      weekdaySchedule?: Record<string, { hour: number; minute: number; activated?: boolean }>;
       color: string; // Hex color
       brightness: number;
       nightlightAllNight: boolean;
     }
   ): Promise<{
-    hour: number;
-    minute: number;
+    weekdaySchedule?: Record<string, { hour: number; minute: number; activated: boolean }>;
     colorR: number;
     colorG: number;
     colorB: number;
@@ -127,14 +126,60 @@ export const kidoosApi = {
     nightlightAllNight: boolean;
   }> {
     const response = await apiClient.patch<ApiResponse<{
-      hour: number;
-      minute: number;
+      weekdaySchedule?: Record<string, { hour: number; minute: number; activated: boolean }>;
       colorR: number;
       colorG: number;
       colorB: number;
       brightness: number;
       nightlightAllNight: boolean;
     }>>(`/api/kidoos/${id}/dream-bedtime`, data);
+    return response.data.data;
+  },
+
+  /**
+   * Récupérer la configuration de l'heure de réveil (Dream)
+   */
+  async getDreamWakeupConfig(id: string): Promise<{
+    weekdaySchedule?: Record<string, { hour: number; minute: number; activated: boolean }>;
+    colorR: number;
+    colorG: number;
+    colorB: number;
+    brightness: number;
+  }> {
+    const response = await apiClient.get<ApiResponse<{
+      weekdaySchedule?: Record<string, { hour: number; minute: number; activated: boolean }>;
+      colorR: number;
+      colorG: number;
+      colorB: number;
+      brightness: number;
+    }>>(`/api/kidoos/${id}/dream-wakeup`);
+    return response.data.data;
+  },
+
+  /**
+   * Mettre à jour la configuration de l'heure de réveil (Dream)
+   */
+  async updateDreamWakeupConfig(
+    id: string,
+    data: {
+      weekdaySchedule?: Record<string, { hour: number; minute: number; activated?: boolean }>;
+      color: string; // Hex color
+      brightness: number;
+    }
+  ): Promise<{
+    weekdaySchedule?: Record<string, { hour: number; minute: number; activated: boolean }>;
+    colorR: number;
+    colorG: number;
+    colorB: number;
+    brightness: number;
+  }> {
+    const response = await apiClient.patch<ApiResponse<{
+      weekdaySchedule?: Record<string, { hour: number; minute: number; activated: boolean }>;
+      colorR: number;
+      colorG: number;
+      colorB: number;
+      brightness: number;
+    }>>(`/api/kidoos/${id}/dream-wakeup`, data);
     return response.data.data;
   },
 
@@ -158,5 +203,86 @@ export const kidoosApi = {
    */
   async sendCommand(id: string, command: string, params?: Record<string, unknown>): Promise<void> {
     await apiClient.post(`/api/kidoos/${id}/command`, { command, params });
+  },
+
+  /**
+   * Tester la configuration de l'heure de coucher (Dream)
+   * Teste uniquement la couleur et la luminosité
+   */
+  async testDreamBedtime(
+    id: string,
+    action: 'start' | 'stop',
+    params?: {
+      color?: string; // Hex color
+      brightness?: number;
+    }
+  ): Promise<{
+    action: 'start' | 'stop';
+    colorR?: number;
+    colorG?: number;
+    colorB?: number;
+    brightness?: number;
+  }> {
+    const response = await apiClient.post<ApiResponse<{
+      action: 'start' | 'stop';
+      colorR?: number;
+      colorG?: number;
+      colorB?: number;
+      brightness?: number;
+    }>>(`/api/kidoos/${id}/dream-bedtime-test`, {
+      action,
+      ...params,
+    });
+    return response.data.data;
+  },
+
+  /**
+   * Tester la configuration de l'heure de réveil (Dream)
+   * Teste uniquement la couleur et la luminosité
+   */
+  async testDreamWakeup(
+    id: string,
+    action: 'start' | 'stop',
+    params?: {
+      color?: string; // Hex color
+      brightness?: number;
+    }
+  ): Promise<{
+    action: 'start' | 'stop';
+    colorR?: number;
+    colorG?: number;
+    colorB?: number;
+    brightness?: number;
+  }> {
+    const response = await apiClient.post<ApiResponse<{
+      action: 'start' | 'stop';
+      colorR?: number;
+      colorG?: number;
+      colorB?: number;
+      brightness?: number;
+    }>>(`/api/kidoos/${id}/dream-wakeup-test`, {
+      action,
+      ...params,
+    });
+    return response.data.data;
+  },
+
+  /**
+   * Mettre à jour la luminosité générale d'un Kidoo
+   */
+  async updateBrightness(
+    id: string,
+    brightness: number
+  ): Promise<{
+    brightness: number;
+    message: string;
+  }> {
+    const response = await apiClient.patch<ApiResponse<{
+      brightness: number;
+      message: string;
+    }>>(`/api/kidoos/${id}/brightness`, {
+      brightness,
+    });
+    return response.data.data;
   },
 };

@@ -22,4 +22,9 @@
 // Version du firmware Kidoo
 #define FIRMWARE_VERSION "1.0.0"
 
+// URL de base de l'API serveur (pour récupération de configuration)
+// En développement: utiliser l'IP locale du serveur (ex: http://192.168.1.217:3000)
+// En production: utiliser l'URL du serveur (ex: https://api.kidoo.com)
+#define API_BASE_URL "http://192.168.1.217:3000"
+
 #endif // COMMON_DEFAULT_CONFIG_H

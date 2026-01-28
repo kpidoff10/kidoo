@@ -14,6 +14,7 @@ export type RootStackParamList = {
   KidooDetail: { kidooId: string };
   EditProfile: undefined;
   BedtimeConfig: { kidooId: string };
+  WakeupConfig: { kidooId: string };
 };
 
 export type MainTabsParamList = {

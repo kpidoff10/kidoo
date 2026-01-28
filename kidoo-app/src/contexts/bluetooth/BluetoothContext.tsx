@@ -745,8 +745,9 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
     }
     
     // Vérifier si le Kidoo est déjà lié avant d'ouvrir le sheet
+    // Comparer avec deviceId, macAddress (WiFi) ou bluetoothMacAddress
     const isAlreadyLinked = kidoos.some(
-      (kidoo) => kidoo.deviceId === deviceId || kidoo.macAddress === deviceId
+      (kidoo) => kidoo.deviceId === deviceId || kidoo.macAddress === deviceId || kidoo.bluetoothMacAddress === deviceId
     );
     
     // Si déjà lié, nettoyer le pending
@@ -788,6 +789,7 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
     wifiPassword?: string; 
     deviceId?: string;
     macAddress?: string;
+    bluetoothMacAddress?: string;
     brightness?: number;
     sleepTimeout?: number;
     firmwareVersion?: string;
@@ -810,7 +812,8 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
       
       await createKidoo.mutateAsync({
         name: formData.name || device.name || `Kidoo ${detectedModel}`,
-        macAddress: formData.macAddress || device.id, // Utiliser l'adresse MAC WiFi renvoyée par l'ESP32, ou l'ID BLE en fallback
+        macAddress: formData.macAddress || undefined, // Adresse MAC WiFi renvoyée par l'ESP32
+        bluetoothMacAddress: formData.bluetoothMacAddress || device.id, // Adresse MAC Bluetooth (device.id est l'ID BLE qui correspond à l'adresse MAC)
         model: apiModel,
         deviceId: formData.deviceId, // UUID renvoyé par l'ESP32
         wifiSSID: formData.wifiSSID || undefined,

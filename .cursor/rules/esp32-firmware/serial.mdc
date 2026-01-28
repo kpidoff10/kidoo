@@ -8,6 +8,15 @@ globs:
 
 # Règles des Commandes Série ESP32
 
+## ⚠️ IMPORTANT : Serial est optionnel
+
+**Le système fonctionne sans USB connecté**. Sur ESP32-S3 et ESP32-C3 avec USB CDC :
+- Si USB non connecté : Serial n'est pas disponible, mais le système démarre normalement
+- Si USB connecté : Serial disponible, commandes série fonctionnelles
+- **Toujours vérifier** `if (Serial)` avant d'utiliser Serial
+
+Voir `init.mdc` pour les détails sur le démarrage sans USB.
+
 ## Architecture des commandes
 
 Les commandes série sont organisées en **2 niveaux** :
@@ -43,8 +52,14 @@ Les commandes série sont organisées en **2 niveaux** :
 
 ### Format des commandes communes
 
+**⚠️ Toujours vérifier Serial avant utilisation** :
+
 ```cpp
 void SerialCommands::cmdBrightness(const String& args) {
+  if (!Serial) {
+    return;  // Serial non disponible, ne rien faire
+  }
+  
   if (args.length() == 0) {
     // Consulter
     uint8_t percent = (LEDManager::getCurrentBrightness() * 100) / 255;
@@ -109,10 +124,24 @@ bool ModelBasicSerialCommands::processCommand(const String& command) {
 
 ```
 SerialCommands::update() (dans loop())
+  → Vérifie si Serial est disponible
   → SerialCommands::processCommand()
     → Commandes communes (brightness, sleep, etc.)
     → ModelSerialCommands::processCommand() (si pas commune)
       → Commandes spécifiques au modèle (nfc-test, etc.)
+```
+
+**⚠️ Protection Serial dans `update()`** :
+
+```cpp
+void SerialCommands::update() {
+  // Vérifier que Serial est disponible avant d'essayer de lire
+  if (!Serial || !Serial.available()) {
+    return;
+  }
+  
+  // ... traitement des commandes ...
+}
 ```
 
 ### Format
@@ -195,3 +224,5 @@ void ModelBasicSerialCommands::printHelp() {
 4. **Luminosité en %** - Toujours afficher/définir en pourcentage
 5. **Validation des arguments** - Vérifier les valeurs avant application
 6. **Messages clairs** - Indiquer si sauvegarde réussie ou échouée
+7. **Serial optionnel** - Toujours vérifier `if (Serial)` avant utilisation
+8. **Fonctionnel sans USB** - Le système doit fonctionner même sans Serial disponible

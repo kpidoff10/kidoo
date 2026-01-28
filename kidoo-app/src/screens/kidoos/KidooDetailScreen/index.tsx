@@ -14,7 +14,7 @@ import { useTheme } from '@/theme';
 import { useKidooContext } from '@/contexts';
 import { useBottomSheet } from '@/hooks/useBottomSheet';
 import { RootStackParamList } from '@/navigation/types';
-import { KidooNotFound, DeleteKidooButton, EditKidooNameSheet, WiFiConfigSheet, useKidooMenuItems } from './components';
+import { KidooNotFound, DeleteKidooButton, EditKidooNameSheet, WiFiConfigSheet, BrightnessConfigSheet, useKidooMenuItems } from './components';
 
 type RouteParams = {
   kidooId: string;
@@ -31,6 +31,7 @@ export function KidooDetailScreen() {
   const { getKidooById, deleteKidoo, getKidooModelHandler, checkOnline } = useKidooContext();
   const editNameSheet = useBottomSheet();
   const wifiConfigSheet = useBottomSheet();
+  const brightnessConfigSheet = useBottomSheet();
 
   const kidoo = getKidooById(kidooId);
   const modelHandler = kidoo ? getKidooModelHandler(kidooId) : undefined;
@@ -78,8 +79,16 @@ export function KidooDetailScreen() {
     wifiConfigSheet.open();
   }, [wifiConfigSheet]);
 
+  const handleConfigureBrightness = useCallback(() => {
+    brightnessConfigSheet.open();
+  }, [brightnessConfigSheet]);
+
   const handleConfigureBedtime = useCallback(() => {
     navigation.navigate('BedtimeConfig', { kidooId });
+  }, [navigation, kidooId]);
+
+  const handleConfigureWakeup = useCallback(() => {
+    navigation.navigate('WakeupConfig', { kidooId });
   }, [navigation, kidooId]);
 
   const menuItems = useKidooMenuItems({ 
@@ -87,7 +96,9 @@ export function KidooDetailScreen() {
     modelHandler, 
     onEditName: handleEditName,
     onConfigureWiFi: handleConfigureWiFi,
+    onConfigureBrightness: handleConfigureBrightness,
     onConfigureBedtime: handleConfigureBedtime,
+    onConfigureWakeup: handleConfigureWakeup,
   });
 
   // Mettre à jour le titre de la page avec le nom du Kidoo
@@ -128,6 +139,14 @@ export function KidooDetailScreen() {
             // Rafraîchir les données du Kidoo après configuration
             checkOnline.mutate(kidooId);
           }}
+        />
+      )}
+
+      {/* Bottom Sheet pour configurer la luminosité */}
+      {kidoo && (
+        <BrightnessConfigSheet
+          bottomSheet={brightnessConfigSheet}
+          kidoo={kidoo}
         />
       )}
     </View>

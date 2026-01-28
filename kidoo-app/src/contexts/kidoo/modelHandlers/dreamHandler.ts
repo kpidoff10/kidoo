@@ -23,6 +23,7 @@ export class DreamModelHandler implements ModelHandler {
     t: (key: string, options?: any) => string,
     callbacks?: {
       onConfigureBedtime?: () => void;
+      onConfigureWakeup?: () => void;
       [key: string]: (() => void) | undefined;
     }
   ): MenuListItem[] {
@@ -35,6 +36,16 @@ export class DreamModelHandler implements ModelHandler {
       icon: 'moon-outline',
       onPress: callbacks?.onConfigureBedtime || (() => {
         console.log('Bedtime configuration pressed for Dream');
+      }),
+    });
+
+    // Item pour configurer l'heure de réveil (spécifique au Dream)
+    items.push({
+      label: t('kidoos.dream.wakeup.title', { defaultValue: 'Heure de réveil' }),
+      value: t('kidoos.dream.wakeup.configure', { defaultValue: 'Configurer' }),
+      icon: 'sunny-outline',
+      onPress: callbacks?.onConfigureWakeup || (() => {
+        console.log('Wakeup configuration pressed for Dream');
       }),
     });
 

@@ -38,19 +38,21 @@ export interface ColorPickerProps {
 }
 
 /**
- * Couleurs par défaut pour le coucher (tons chauds et apaisants)
+ * Couleurs par défaut pour le coucher (couleurs saturées à 100% pour des couleurs "profondes")
+ * Chaque couleur est saturée à 100% : rouge = 100% rouge, bleu = 100% bleu, etc.
+ * Couleurs espacées pour éviter les doublons visuels
  */
 const DEFAULT_BEDTIME_COLORS = [
-  '#FF6B6B', // Rouge corail
-  '#FF8E53', // Orange doux
-  '#FFA07A', // Saumon
-  '#FFB347', // Orange pêche
-  '#FFD700', // Or
-  '#FFE4B5', // Mocassin
-  '#FF69B4', // Rose vif
-  '#90EE90', // Vert clair
-  '#32CD32', // Vert lime
-  '#4169E1', // Bleu royal
+  '#FF0000', // Rouge pur (100% rouge) - REQUIS
+  '#FF8C00', // Orange foncé (100% orange)
+  '#FFFF00', // Jaune pur (100% jaune)
+  '#00FF00', // Vert pur (100% vert)
+  '#00FFFF', // Cyan pur (100% cyan)
+  '#0000FF', // Bleu pur (100% bleu) - REQUIS
+  '#8000FF', // Violet pur (100% violet)
+  '#FF00FF', // Magenta pur (100% magenta)
+  '#FF1493', // Rose profond (100% saturé)
+  '#FFFFFF', // Blanc - REQUIS
 ];
 
 export function ColorPicker({ 
@@ -82,7 +84,10 @@ export function ColorPicker({
 
       <View style={styles.colorsContainer}>
         {colors.map((color, index) => {
-          const isSelected = color === selectedColor;
+          // Normaliser les couleurs pour la comparaison (majuscules)
+          const normalizedColor = color.toUpperCase();
+          const normalizedSelected = selectedColor?.toUpperCase() || '';
+          const isSelected = normalizedColor === normalizedSelected;
           return (
             <TouchableOpacity
               key={index}

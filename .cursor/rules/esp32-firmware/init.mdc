@@ -21,7 +21,7 @@ globs:
 
 L'initialisation suit une **séquence stricte** dans `InitManager::init()` :
 
-1. **Serial** (CRITIQUE) - Doit être en premier pour les logs
+1. **Serial** (OPTIONNEL) - Initialisation non-bloquante, système fonctionne sans USB
 2. **SD** (CRITIQUE) - Charge la configuration, arrête si échec
 3. **LED** - Affiche le statut visuel (orange = en cours, vert = OK, rouge = erreur)
 4. **NFC** (OPTIONNEL) - Affiche un WARNING si non opérationnel, n'empêche pas l'init
@@ -31,10 +31,9 @@ L'initialisation suit une **séquence stricte** dans `InitManager::init()` :
 
 ```cpp
 bool InitManager::init() {
-  // 1. Serial (CRITIQUE)
-  if (!initSerial()) {
-    return false;
-  }
+  // 1. Serial (OPTIONNEL - ne bloque pas le démarrage)
+  bool serialAvailable = initSerial();
+  // Le système continue même si Serial n'est pas disponible (USB non connecté)
   
   // 2. SD (CRITIQUE - charge la config)
   if (!initSD()) {
@@ -218,11 +217,149 @@ if (!InitModel::init()) {
 [INIT] ========================================
 ```
 
+## Démarrage sans USB (USB CDC)
+
+### Problème initial
+
+Sur ESP32-S3 et ESP32-C3 avec USB CDC, si l'USB n'est pas connecté au démarrage, `Serial` n'est jamais disponible. Le code attendait 3 secondes puis bloquait le démarrage si Serial n'était pas disponible.
+
+### Solution implémentée
+
+**Le système démarre maintenant même sans USB connecté** :
+
+1. **Timeout réduit** : `initSerial()` attend seulement 100ms (au lieu de 3000ms)
+2. **Non-bloquant** : L'échec de Serial ne bloque pas l'initialisation
+3. **Protection des appels Serial** : Tous les appels Serial sont protégés avec `if (Serial)` ou `if (serialAvailable)`
+
+### Code d'initialisation Serial
+
+```cpp
+// init_serial.cpp
+bool InitManager::initSerial() {
+  systemStatus.serial = INIT_IN_PROGRESS;
+  
+  Serial.begin(SERIAL_BAUD_RATE);
+  
+  // Sur ESP32 avec USB CDC, Serial peut ne pas être disponible si USB n'est pas connecté
+  // Ne pas bloquer le démarrage - le système peut fonctionner sans Serial
+  // Attendre seulement un court instant pour que Serial se connecte si USB est présent
+  unsigned long startTime = millis();
+  while (!Serial && (millis() - startTime) < 100) {  // Timeout réduit à 100ms
+    delay(10);
+  }
+  
+  if (Serial) {
+    delay(100); // Petite pause pour stabiliser
+    systemStatus.serial = INIT_SUCCESS;
+    return true;
+  } else {
+    // Serial non disponible (USB non connecté) - ne pas bloquer le démarrage
+    // Le système peut fonctionner sans Serial
+    systemStatus.serial = INIT_FAILED;
+    return false;  // Retourne false mais le système continue
+  }
+}
+```
+
+### Protection des appels Serial dans InitManager
+
+```cpp
+bool InitManager::init() {
+  // 1. Initialiser Serial (non-bloquant)
+  bool serialAvailable = initSerial();
+  
+  // Si Serial est disponible, initialiser les managers qui en dépendent
+  if (serialAvailable) {
+    SerialManager::init();
+    LogManager::init();
+    Serial.println("[INIT] Démarrage...");
+  }
+  // Si Serial n'est pas disponible, continuer quand même
+  
+  // ... reste de l'initialisation ...
+  
+  // Toujours protéger les appels Serial
+  if (serialAvailable) {
+    Serial.println("[INIT] OK");
+  }
+}
+```
+
+### Protection dans SerialCommands
+
+```cpp
+void SerialCommands::init() {
+  if (initialized) {
+    return;
+  }
+  
+  initialized = true;
+  inputBuffer = "";
+  
+  // Initialiser seulement si Serial est disponible (USB connecté)
+  if (Serial) {
+    Serial.println("[SERIAL] Systeme de commandes initialise");
+  }
+}
+
+void SerialCommands::update() {
+  // Vérifier que Serial est disponible avant d'essayer de lire
+  if (!Serial || !Serial.available()) {
+    return;
+  }
+  
+  // ... traitement des commandes ...
+}
+```
+
+### Protection dans main.cpp
+
+```cpp
+void setup() {
+  // Afficher les informations seulement si Serial est disponible
+  if (Serial) {
+    Serial.print("[MAIN] CPU Frequency: ");
+    Serial.println(getCpuFrequencyMhz());
+  }
+  
+  // Initialiser tous les composants
+  if (!InitManager::init()) {
+    if (Serial) {
+      Serial.println("[MAIN] ERREUR: Echec de l'initialisation");
+    }
+    // Le système peut continuer avec des composants partiellement initialisés
+  }
+  
+  // Initialiser le système de commandes Serial seulement si Serial est disponible
+  if (Serial) {
+    SerialCommands::init();
+    InitManager::printStatus();
+  }
+}
+```
+
+### Bonnes pratiques
+
+1. **Toujours vérifier** : `if (Serial)` avant chaque appel `Serial.print()` ou `Serial.println()`
+2. **Variable de disponibilité** : Utiliser `bool serialAvailable = initSerial()` et la réutiliser
+3. **Ne pas bloquer** : L'échec de Serial ne doit jamais empêcher l'initialisation des autres composants
+4. **Timeout court** : Maximum 100ms d'attente pour Serial
+5. **Fonctionnel sans USB** : Le système doit fonctionner normalement même sans USB connecté
+
+### Comportement attendu
+
+- **Avec USB connecté** : Serial disponible, logs visibles, commandes série fonctionnelles
+- **Sans USB connecté** : Système démarre normalement, LEDs fonctionnent, WiFi/BLE fonctionnent, mais pas de logs Serial
+- **USB connecté après démarrage** : Serial devient disponible automatiquement, les logs apparaissent ensuite
+
 ## Règles strictes
 
 1. **Séquence stricte** - Serial → SD → LED → NFC → Model
-2. **SD critique** - Si échec, LEDs rouge et arrêt de l'init
-3. **NFC optionnel** - WARNING si échec, continue l'init
-4. **Statut par composant** - Toujours mettre à jour `systemStatus.{component}`
-5. **Indicateurs visuels** - Orange (en cours), Vert (OK), Rouge (erreur)
-6. **Model init après** - `InitModel::init()` après les init communes
+2. **Serial optionnel** - Ne bloque jamais le démarrage, timeout max 100ms
+3. **SD critique** - Si échec, LEDs rouge et arrêt de l'init
+4. **NFC optionnel** - WARNING si échec, continue l'init
+5. **Statut par composant** - Toujours mettre à jour `systemStatus.{component}`
+6. **Indicateurs visuels** - Orange (en cours), Vert (OK), Rouge (erreur)
+7. **Model init après** - `InitModel::init()` après les init communes
+8. **Protection Serial** - Toujours vérifier `if (Serial)` avant utilisation
+9. **Démarrage autonome** - Le système doit fonctionner sans USB connecté

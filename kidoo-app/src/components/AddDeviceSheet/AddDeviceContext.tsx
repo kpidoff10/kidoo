@@ -4,12 +4,13 @@
  * Context spécifique au composant AddDeviceSheet
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { kidooNameSchema, kidooWiFiSchema } from '@shared';
+import { useCurrentWiFiSSID } from '@/hooks';
 
 // Schéma combiné pour tout le formulaire (toutes les étapes)
 const addDeviceFormSchema = kidooNameSchema.merge(kidooWiFiSchema);
@@ -69,6 +70,26 @@ export function AddDeviceProvider({ children, defaultName = '' }: AddDeviceProvi
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const { ssid: currentSSID } = useCurrentWiFiSSID();
+  const initialSSIDRef = useRef<string | null>(null); // Stocker le SSID initial une seule fois
+
+  // Capturer le SSID initial une seule fois (seulement la première fois qu'il est disponible)
+  const initialSSID = useMemo(() => {
+    if (currentSSID && initialSSIDRef.current === null) {
+      initialSSIDRef.current = currentSSID;
+      return currentSSID;
+    }
+    return initialSSIDRef.current || '';
+  }, [currentSSID]);
+
+  // Calculer les valeurs par défaut avec le SSID WiFi initial (une seule fois à l'initialisation)
+  // useForm utilise ces valeurs uniquement à l'initialisation, donc même si currentSSID change après,
+  // le formulaire ne sera pas réinitialisé
+  const defaultValues = useMemo(() => ({
+    name: defaultName,
+    wifiSSID: initialSSID,
+    wifiPassword: '',
+  }), [defaultName, initialSSID]);
 
   const {
     control,
@@ -80,11 +101,7 @@ export function AddDeviceProvider({ children, defaultName = '' }: AddDeviceProvi
     trigger,
   } = useForm<AddDeviceFormData>({
     resolver: zodResolver(addDeviceFormSchema),
-    defaultValues: {
-      name: defaultName,
-      wifiSSID: '',
-      wifiPassword: '',
-    },
+    defaultValues,
     mode: 'onBlur',
   });
 
@@ -154,6 +171,8 @@ export function AddDeviceProvider({ children, defaultName = '' }: AddDeviceProvi
     setIsConnecting(false);
     setIsSuccess(false);
     setHasError(false);
+    // Réinitialiser le ref pour permettre une nouvelle initialisation à la prochaine ouverture
+    initialSSIDRef.current = null;
     reset({
       name: defaultName || '',
       wifiSSID: '',

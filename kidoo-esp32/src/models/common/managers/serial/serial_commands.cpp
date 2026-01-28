@@ -35,12 +35,16 @@ void SerialCommands::init() {
   initialized = true;
   inputBuffer = "";
   
-  Serial.println("[SERIAL] Systeme de commandes initialise");
-  Serial.println("[SERIAL] Tapez 'help' pour voir les commandes disponibles");
+  // Initialiser seulement si Serial est disponible (USB connecté)
+  if (Serial) {
+    Serial.println("[SERIAL] Systeme de commandes initialise");
+    Serial.println("[SERIAL] Tapez 'help' pour voir les commandes disponibles");
+  }
 }
 
 void SerialCommands::update() {
-  if (!Serial.available()) {
+  // Vérifier que Serial est disponible avant d'essayer de lire
+  if (!Serial || !Serial.available()) {
     return;
   }
   
@@ -145,6 +149,10 @@ void SerialCommands::processCommand(const String& command) {
     cmdConfigSet(args);
   } else if (cmd == "config-list" || cmd == "cfg-list" || cmd == "config") {
     cmdConfigList();
+  #ifdef HAS_LED
+  } else if (cmd == "led-test" || cmd == "test-led" || cmd == "testleds") {
+    cmdLEDTest();
+  #endif
   #ifdef HAS_AUDIO
   } else if (cmd == "audio" || cmd == "audio-status") {
     cmdAudio();
@@ -188,6 +196,7 @@ void SerialCommands::printHelp() {
   if (HAS_LED) {
     Serial.println("  brightness [%]   - Afficher ou definir la luminosite (0-100%)");
     Serial.println("  sleep [timeout]  - Afficher ou definir le timeout sleep mode (ms, min: 5000, 0=desactive)");
+    Serial.println("  led-test         - Tester les LEDs une par une puis toutes en rouge");
   }
   #endif
   
@@ -1277,7 +1286,7 @@ void SerialCommands::cmdConfigGet(const String& args) {
   String key = args;
   key.trim();
   
-  if (!doc.containsKey(key)) {
+  if (doc[key].isNull()) {
     Serial.print("[CONFIG] Cle '");
     Serial.print(key);
     Serial.println("' non trouvee");
@@ -1608,5 +1617,18 @@ void SerialCommands::cmdAudioList(const String& args) {
   Serial.printf("[AUDIO] %d fichiers (%d audio)\n", fileCount, audioCount);
 #else
   Serial.println("[AUDIO] Audio non disponible sur ce modele");
+#endif
+}
+
+void SerialCommands::cmdLEDTest() {
+#ifdef HAS_LED
+  if (!LEDManager::isInitialized()) {
+    Serial.println("[LED-TEST] LED Manager non initialise");
+    return;
+  }
+  
+  LEDManager::testLEDsSequential();
+#else
+  Serial.println("[LED-TEST] LEDs non disponibles sur ce modele");
 #endif
 }

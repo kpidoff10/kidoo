@@ -26,7 +26,8 @@ interface Step3FinalizationProps {
   device?: BLEDevice | null;
   onSuccess?: (data?: {
     deviceId?: string;
-    macAddress?: string;
+    macAddress?: string; // Adresse MAC WiFi (renvoyée par l'ESP32)
+    bluetoothMacAddress?: string; // Adresse MAC Bluetooth (device.id)
     brightness?: number;
     sleepTimeout?: number;
     firmwareVersion?: string;
@@ -359,7 +360,8 @@ export function Step3Finalization({ device, onSuccess }: Step3FinalizationProps)
             onPress={() => {
               onSuccess?.({
                 deviceId,
-                macAddress,
+                macAddress, // Adresse MAC WiFi (renvoyée par l'ESP32)
+                bluetoothMacAddress: device?.id, // Adresse MAC Bluetooth (device.id est l'ID BLE qui correspond à l'adresse MAC)
                 brightness,
                 sleepTimeout,
                 firmwareVersion,

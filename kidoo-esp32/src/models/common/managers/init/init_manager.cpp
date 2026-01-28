@@ -36,34 +36,37 @@ SDConfig* InitManager::globalConfig = nullptr;
 bool InitManager::init() {
   // 1. Initialiser la communication série EN PREMIER (priorité absolue)
   // On ne peut pas utiliser Serial.println avant !
-  if (!initSerial()) {
-    // Si Serial échoue, on ne peut pas afficher de message
-    // Le système continuera mais sans debug série
-    return false;
+  bool serialAvailable = initSerial();
+  
+  // Si Serial est disponible, initialiser les managers qui en dépendent
+  if (serialAvailable) {
+    // Initialiser le SerialManager après que Serial soit prêt
+    SerialManager::init();
+    
+    // Initialiser le LogManager après que Serial et SD soient prêts
+    LogManager::init();
+    
+    Serial.println("");
+    Serial.println("========================================");
+    Serial.print("     KIDOO ESP32 ");
+    Serial.print(KIDOO_MODEL_NAME);
+    Serial.println(" - DEMARRAGE");
+    Serial.println("========================================");
+    Serial.println("");
   }
+  // Si Serial n'est pas disponible (USB non connecté), continuer quand même
+  // Le système peut fonctionner sans Serial
   
-  // Initialiser le SerialManager après que Serial soit prêt
-  SerialManager::init();
-  
-  // Initialiser le LogManager après que Serial et SD soient prêts
-  LogManager::init();
-  
-  // Maintenant on peut utiliser Serial
+  // Vérifier si déjà initialisé
   if (initialized) {
     return true;
   }
   
-  Serial.println("");
-  Serial.println("========================================");
-  Serial.print("     KIDOO ESP32 ");
-  Serial.print(KIDOO_MODEL_NAME);
-  Serial.println(" - DEMARRAGE");
-  Serial.println("========================================");
-  Serial.println("");
-  
   // Configuration spécifique au modèle (avant l'initialisation des composants)
   if (!InitModel::configure()) {
-    Serial.println("[INIT] ERREUR: Configuration modele echouee");
+    if (serialAvailable) {
+      Serial.println("[INIT] ERREUR: Configuration modele echouee");
+    }
     return false;
   }
   
@@ -72,7 +75,9 @@ bool InitManager::init() {
   
   // ÉTAPE 1 : Initialiser la carte SD et récupérer la configuration (CRITIQUE)
   if (!initSD()) {
-    Serial.println("[INIT] ERREUR: Carte SD non disponible");
+    if (serialAvailable) {
+      Serial.println("[INIT] ERREUR: Carte SD non disponible");
+    }
     
     // Initialiser les LEDs en mode d'erreur (respiration rouge) si disponibles
     #ifdef HAS_LED
@@ -91,7 +96,9 @@ bool InitManager::init() {
   #ifdef HAS_LED
   if (HAS_LED) {
     if (!initLED()) {
-      Serial.println("[INIT] ERREUR: Echec LED");
+      if (serialAvailable) {
+        Serial.println("[INIT] ERREUR: Echec LED");
+      }
       allSuccess = false;
     }
     delay(100);
@@ -121,13 +128,17 @@ bool InitManager::init() {
     
     // Attendre un délai pour voir si le WiFi se connecte (le thread de retry peut prendre quelques secondes)
     // Délai de 8 secondes pour laisser le temps au WiFi de se connecter
-    Serial.println("[INIT] Attente de connexion WiFi (8 secondes)...");
+    if (serialAvailable) {
+      Serial.println("[INIT] Attente de connexion WiFi (8 secondes)...");
+    }
     unsigned long wifiWaitStart = millis();
     const unsigned long WIFI_WAIT_TIMEOUT_MS = 8000;  // 8 secondes
     
     while ((millis() - wifiWaitStart) < WIFI_WAIT_TIMEOUT_MS) {
       if (WiFiManager::isConnected()) {
-        Serial.println("[INIT] WiFi connecte - BLE ne sera pas active automatiquement");
+        if (serialAvailable) {
+          Serial.println("[INIT] WiFi connecte - BLE ne sera pas active automatiquement");
+        }
         break;
       }
       delay(500);  // Vérifier toutes les 500ms
@@ -140,16 +151,20 @@ bool InitManager::init() {
     #ifdef HAS_BLE
     if (HAS_BLE && BLEConfigManager::isInitialized()) {
       if (!WiFiManager::isConnected()) {
-        Serial.println("");
-        Serial.println("[INIT] ========================================");
-        Serial.println("[INIT] WiFi non connecte apres attente");
-        Serial.println("[INIT] Activation automatique du BLE pour configuration");
-        Serial.println("[INIT] BLE actif pendant 15 minutes (timeout automatique)");
-        Serial.println("[INIT] ========================================");
+        if (serialAvailable) {
+          Serial.println("");
+          Serial.println("[INIT] ========================================");
+          Serial.println("[INIT] WiFi non connecte apres attente");
+          Serial.println("[INIT] Activation automatique du BLE pour configuration");
+          Serial.println("[INIT] BLE actif pendant 15 minutes (timeout automatique)");
+          Serial.println("[INIT] ========================================");
+        }
         BLEConfigManager::enableBLE(0, false);  // Active avec durée par défaut, SANS feedback lumineux
         bleAutoActivated = true;
       } else {
-        Serial.println("[INIT] WiFi connecte - BLE non active automatiquement");
+        if (serialAvailable) {
+          Serial.println("[INIT] WiFi connecte - BLE non active automatiquement");
+        }
       }
     }
     #endif
@@ -188,9 +203,13 @@ bool InitManager::init() {
   #endif
   
   // ÉTAPE 10 : Initialisation spécifique au modèle (APRÈS tous les composants)
-  Serial.println("[INIT] Appel InitModel::init()...");
+  if (serialAvailable) {
+    Serial.println("[INIT] Appel InitModel::init()...");
+  }
   if (!InitModel::init()) {
-    Serial.println("[INIT] ERREUR: Initialisation modele echouee");
+    if (serialAvailable) {
+      Serial.println("[INIT] ERREUR: Initialisation modele echouee");
+    }
     allSuccess = false;
   }
   delay(100);
@@ -198,7 +217,9 @@ bool InitManager::init() {
   initialized = true;
   
   if (allSuccess) {
-    Serial.println("[INIT] OK");
+    if (serialAvailable) {
+      Serial.println("[INIT] OK");
+    }
     // Mettre les LEDs en vert qui tourne pour indiquer que tout est OK
     // SAUF si BLE auto (pas de WiFi) : pas de retour lumineux, LEDs restent éteintes
     #ifdef HAS_LED
@@ -209,13 +230,17 @@ bool InitManager::init() {
         LEDManager::setColor(COLOR_SUCCESS);
         LEDManager::setEffect(LED_EFFECT_ROTATE);
       } else {
-        Serial.println("[INIT] LEDs en sleep mode - pas d'affichage vert");
+        if (serialAvailable) {
+          Serial.println("[INIT] LEDs en sleep mode - pas d'affichage vert");
+        }
       }
     }
     #endif
   } else {
-    Serial.println("[INIT] ERREUR");
-    printStatus();
+    if (serialAvailable) {
+      Serial.println("[INIT] ERREUR");
+      printStatus();
+    }
   }
   
   return allSuccess;
@@ -260,6 +285,10 @@ InitStatus InitManager::getComponentStatus(const char* componentName) {
 }
 
 void InitManager::printStatus() {
+  if (!Serial) {
+    return;  // Serial non disponible, ne rien afficher
+  }
+  
   Serial.println("[INIT] ========== Statut du systeme ==========");
   
   Serial.print("[INIT] Serial: ");

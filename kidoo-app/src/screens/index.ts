@@ -13,6 +13,7 @@ export { HomeScreen } from './home/HomeScreen';
 export { KidoosListScreen } from './kidoos/KidoosListScreen';
 export { KidooDetailScreen } from './kidoos/KidooDetailScreen';
 export { BedtimeConfigScreen } from './kidoos/BedtimeConfigScreen';
+export { WakeupConfigScreen } from './kidoos/WakeupConfigScreen';
 
 // Profile
 export { ProfileSheet } from './profile/ProfileSheet';

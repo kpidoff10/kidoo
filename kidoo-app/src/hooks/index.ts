@@ -2,7 +2,7 @@
  * Hooks - Export principal
  */
 
-export { useKidoos, useKidoo, useCreateKidoo, useUpdateKidoo, useUpdateKidooName, useKidooCheckOnline, useDeleteKidoo, useDreamBedtimeConfig, useUpdateDreamBedtimeConfig } from './useKidoos';
+export { useKidoos, useKidoo, useCreateKidoo, useUpdateKidoo, useUpdateKidooName, useKidooCheckOnline, useDeleteKidoo, useUpdateBrightness, useDreamBedtimeConfig, useUpdateDreamBedtimeConfig, useTestDreamBedtime, useDreamWakeupConfig, useUpdateDreamWakeupConfig, useTestDreamWakeup } from './useKidoos';
 export { useBottomSheet } from './useBottomSheet';
 export type { UseBottomSheetReturn } from './useBottomSheet';
 export { useProfile, useUpdateProfile, useDeleteAccount } from './useProfile';

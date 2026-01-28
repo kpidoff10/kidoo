@@ -26,7 +26,8 @@ enum LEDCommandType {
   LED_CMD_SET_COLOR,        // Définir une couleur RGB
   LED_CMD_SET_BRIGHTNESS,   // Changer la luminosité
   LED_CMD_SET_EFFECT,       // Activer un effet
-  LED_CMD_CLEAR             // Éteindre toutes les LEDs
+  LED_CMD_CLEAR,            // Éteindre toutes les LEDs
+  LED_CMD_TEST_SEQUENTIAL   // Test séquentiel des LEDs
 };
 
 // Types d'effets disponibles
@@ -72,10 +73,15 @@ public:
   // Gestion du sleep mode
   static void wakeUp();  // Réveiller les LEDs (reset du timer d'inactivité)
   static bool getSleepState();  // Vérifier si les LEDs sont en mode sleep
+  static void preventSleep();  // Empêcher le sleep mode (pour bedtime, etc.)
+  static void allowSleep();  // Réautoriser le sleep mode
   
   // Obtenir l'état actuel
   static bool isInitialized();
   static uint8_t getCurrentBrightness();
+  
+  // Test des LEDs une par une
+  static bool testLEDsSequential();  // Test séquentiel : allume chaque LED une par une puis toutes en rouge
 
 private:
   // Thread principal de gestion des LEDs
@@ -109,8 +115,14 @@ private:
   static unsigned long sleepFadeStartTime;  // Début de l'animation de fade
   static LEDEffect savedEffect;  // Effet sauvegardé avant le sleep
   static uint32_t sleepTimeoutMs;  // Timeout configuré pour le sleep mode
+  static bool sleepPrevented;  // Flag pour empêcher le sleep mode (bedtime, etc.)
   static bool pulseNeedsReset;  // Flag pour réinitialiser l'effet PULSE
   static bool hardwareInitialized;  // Init NeoPixel faite dans la tâche LED
+  
+  // Variables pour le test séquentiel
+  static bool testSequentialActive;  // Test séquentiel en cours
+  static int testSequentialIndex;  // Index de la LED actuelle dans le test
+  static unsigned long testSequentialLastUpdate;  // Dernière mise à jour du test
 
   // Paramètres du thread (centralisés dans core_config.h)
   static const int QUEUE_SIZE = 10;

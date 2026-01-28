@@ -50,7 +50,8 @@ export interface AddDeviceSheetProps {
     wifiSSID: string; 
     wifiPassword?: string; 
     deviceId?: string;
-    macAddress?: string;
+    macAddress?: string; // Adresse MAC WiFi (renvoyée par l'ESP32)
+    bluetoothMacAddress?: string; // Adresse MAC Bluetooth (device.id)
     brightness?: number;
     sleepTimeout?: number;
     firmwareVersion?: string;
@@ -149,6 +150,7 @@ function AddDeviceSheetContent({
               wifiPassword: formValues.wifiPassword,
               deviceId: data?.deviceId, // UUID renvoyé par l'ESP32
               macAddress: data?.macAddress, // Adresse MAC WiFi renvoyée par l'ESP32
+              bluetoothMacAddress: data?.bluetoothMacAddress, // Adresse MAC Bluetooth (device.id)
               brightness: data?.brightness, // Brightness en pourcentage (0-100)
               sleepTimeout: data?.sleepTimeout, // Sleep timeout en millisecondes
               firmwareVersion: data?.firmwareVersion, // Version du firmware ESP32

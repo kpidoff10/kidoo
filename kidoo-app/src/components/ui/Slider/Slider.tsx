@@ -91,16 +91,35 @@ export function Slider({
   
   const panResponder = useRef(
     PanResponder.create({
+      // Capturer le geste AVANT qu'il n'atteigne le BottomSheet
+      // Cela empêche le BottomSheet de réduire quand on glisse sur le Slider
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (evt) => {
         // Mesurer la position et la largeur de la barre
         trackRef.current?.measure((x, y, width, height, pageX, pageY) => {
+          if (width <= 0) return; // Largeur invalide, ne rien faire
+          
           trackWidthRef.current = width;
           trackPageXRef.current = pageX;
-          const relativeX = evt.nativeEvent.locationX;
+          
+          // Utiliser la position absolue du geste plutôt que locationX
+          // car locationX peut être incorrect si on touche le thumb qui dépasse de la barre
+          const absoluteX = evt.nativeEvent.pageX ?? evt.nativeEvent.locationX + pageX;
+          const relativeX = Math.max(0, Math.min(absoluteX - pageX, width));
           const newValue = getValueFromPosition(relativeX);
-          onValueChange(newValue);
+          
+          // Ne mettre à jour que si la valeur est valide, différente de la valeur actuelle,
+          // et pas un saut suspect vers 0 (sauf si la valeur actuelle est déjà proche de 0)
+          const isValidValue = newValue >= minimumValue && newValue <= maximumValue;
+          const isDifferent = newValue !== value;
+          const isNotSuspiciousJump = value <= 5 || Math.abs(newValue - value) < 50;
+          
+          if (isValidValue && isDifferent && isNotSuspiciousJump) {
+            onValueChange(newValue);
+          }
         });
       },
       onPanResponderMove: (evt, gestureState) => {
@@ -123,6 +142,8 @@ export function Slider({
           onValueChange(newValue);
         }
       },
+      // Empêcher le BottomSheet de terminer notre geste
+      onPanResponderTerminationRequest: () => false,
     })
   ).current;
 

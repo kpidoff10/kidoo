@@ -38,8 +38,9 @@ export function ScanKidoosSheet({ bottomSheet, onClose, onSelectDevice }: ScanKi
 
     return kidooDevices.filter((device) => {
       // Vérifier si le device est déjà lié
+      // Comparer avec deviceId, macAddress (WiFi) ou bluetoothMacAddress
       const isAlreadyLinked = kidoos.some(
-        (kidoo) => kidoo.deviceId === device.id || kidoo.macAddress === device.id
+        (kidoo) => kidoo.deviceId === device.id || kidoo.macAddress === device.id || kidoo.bluetoothMacAddress === device.id
       );
       return !isAlreadyLinked;
     });

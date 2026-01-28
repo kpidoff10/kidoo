@@ -3,40 +3,57 @@
  * Page pour configurer l'heure de coucher du modèle Dream
  */
 
-import React, { useLayoutEffect, useCallback, useEffect } from 'react';
-import { View, StyleSheet, Switch } from 'react-native';
+import React, { useLayoutEffect, useCallback, useState, useEffect, useRef } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { TimePicker, ColorPicker, Button, Text, Slider, ContentScrollView } from '@/components/ui';
+import { useForm } from 'react-hook-form';
+import { ContentScrollView, Weekday, ScreenLoader } from '@/components/ui';
 import { useTheme } from '@/theme';
 import { useDreamBedtimeConfig, useUpdateDreamBedtimeConfig } from '@/hooks';
-import { updateDreamBedtimeConfigSchema, UpdateDreamBedtimeConfigInput } from '@shared';
+import {
+  WeekdaySelectorSection,
+  TimePickerSection,
+  ColorPickerSection,
+  BrightnessSection,
+  NightlightSwitch,
+  TestButton,
+} from './components';
 
 type RouteParams = {
   kidooId: string;
 };
 
-type BedtimeConfigFormData = UpdateDreamBedtimeConfigInput;
-
 // Fonction helper pour convertir RGB en hex
 function rgbToHex(r: number, g: number, b: number): string {
-  return `#${[r, g, b].map((x) => {
-    const hex = x.toString(16);
-    return hex.length === 1 ? '0' + hex : hex;
+  const hex = `#${[r, g, b].map((x) => {
+    const hexStr = x.toString(16);
+    return hexStr.length === 1 ? '0' + hexStr : hexStr;
   }).join('')}`;
+  // Normaliser en majuscules pour cohérence avec ColorPicker
+  return hex.toUpperCase();
 }
 
 export function BedtimeConfigScreen() {
   const { t } = useTranslation();
-  const { spacing, colors } = useTheme();
+  const { colors } = useTheme();
   const route = useRoute();
   const navigation = useNavigation();
   const { kidooId } = (route.params as RouteParams) || {};
 
   const { data: config, isLoading } = useDreamBedtimeConfig(kidooId);
   const updateConfig = useUpdateDreamBedtimeConfig();
+
+  // États pour la gestion des jours
+  const [selectedDayForTime, setSelectedDayForTime] = useState<Weekday>('monday');
+  const [weekdayTimes, setWeekdayTimes] = useState<Partial<Record<Weekday, { hour: number; minute: number; activated: boolean }>>>({});
+  const [savedConfiguredDays, setSavedConfiguredDays] = useState<Weekday[]>([]);
+  
+  // Refs pour le debounce de sauvegarde
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitializingRef = useRef(false);
+  const configLoadedRef = useRef(false);
+  const weekdayTimesRef = useRef<Partial<Record<Weekday, { hour: number; minute: number; activated: boolean }>>>({});
 
   // Mettre à jour le titre de la page
   useLayoutEffect(() => {
@@ -45,167 +62,251 @@ export function BedtimeConfigScreen() {
     });
   }, [navigation, t]);
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-    reset,
-    watch,
-    setValue,
-  } = useForm<BedtimeConfigFormData>({
-    resolver: zodResolver(updateDreamBedtimeConfigSchema),
+  // Formulaire simplifié (sans Zod pour éviter les problèmes)
+  const { control, reset, watch, getValues } = useForm({
     defaultValues: {
-      hour: 22,
-      minute: 0,
       color: '#FF6B6B',
       brightness: 50,
       nightlightAllNight: false,
     },
   });
 
-  // Charger la configuration depuis l'API
+  // Charger les données existantes depuis la config
   useEffect(() => {
-    if (config) {
-      const colorHex = rgbToHex(config.colorR, config.colorG, config.colorB);
-      reset({
-        hour: config.hour,
-        minute: config.minute,
-        color: colorHex,
-        brightness: config.brightness,
-        nightlightAllNight: config.nightlightAllNight,
+    // Si on a fini de charger (même si config est undefined/null, c'est OK pour une nouvelle config)
+    if (!isLoading && !configLoadedRef.current) {
+      console.log('[BEDTIME-CONFIG] Initialisation:', { config, isLoading });
+      isInitializingRef.current = true;
+      
+      if (config) {
+        // Initialiser le formulaire avec les valeurs existantes
+        const colorHex = rgbToHex(config.colorR, config.colorG, config.colorB);
+        reset({
+          color: colorHex,
+          brightness: config.brightness,
+          nightlightAllNight: config.nightlightAllNight,
+        });
+
+        // Initialiser weekdayTimes avec les données existantes
+        if (config.weekdaySchedule) {
+          setWeekdayTimes(config.weekdaySchedule);
+          weekdayTimesRef.current = config.weekdaySchedule;
+          // Calculer les jours configurés
+          const configuredDays = Object.entries(config.weekdaySchedule)
+            .filter(([_, time]) => time.activated)
+            .map(([day]) => day as Weekday);
+          setSavedConfiguredDays(configuredDays);
+        } else {
+          // Initialiser avec un objet vide si pas de schedule
+          weekdayTimesRef.current = {};
+        }
+      } else {
+        // Pas de config existante, utiliser les valeurs par défaut du formulaire
+        weekdayTimesRef.current = {};
+      }
+      
+      // Marquer comme chargé APRÈS avoir initialisé toutes les données
+      // Utiliser requestAnimationFrame pour s'assurer que React a fini de mettre à jour
+      requestAnimationFrame(() => {
+        configLoadedRef.current = true;
+        isInitializingRef.current = false;
+        console.log('[BEDTIME-CONFIG] Données chargées, sauvegarde activée');
       });
     }
-  }, [config, reset]);
+  }, [config, isLoading, reset]);
 
-  const handleTest = useCallback(async () => {
-    // TODO: Envoyer une commande de test au Kidoo pour prévisualiser la configuration
-    const formData = watch();
-    console.log('Test de la configuration:', { 
-      kidooId,
-      ...formData
-    });
-  }, [kidooId, watch]);
+  // Fonction pour sauvegarder la configuration
+  const saveConfig = useCallback(() => {
+    // Vérifications de base
+    if (!kidooId) {
+      console.log('[BEDTIME-CONFIG] Sauvegarde ignorée: pas de kidooId');
+      return;
+    }
 
-  const onSubmit = useCallback(
-    async (data: BedtimeConfigFormData) => {
+    if (isInitializingRef.current) {
+      console.log('[BEDTIME-CONFIG] Sauvegarde ignorée: initialisation en cours');
+      return;
+    }
+
+    if (!configLoadedRef.current) {
+      console.log('[BEDTIME-CONFIG] Sauvegarde ignorée: config pas encore chargée');
+      return;
+    }
+
+    // Annuler le timeout précédent s'il existe
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Débouncer la sauvegarde de 500ms
+    saveTimeoutRef.current = setTimeout(() => {
+      const formValues = getValues();
+      const color = formValues.color || '#FF6B6B';
+      const brightness = formValues.brightness ?? 50;
+      const nightlightAllNight = formValues.nightlightAllNight ?? false;
+
+      // Construire weekdaySchedule avec seulement les jours activés
+      const weekdaySchedule: Record<string, { hour: number; minute: number; activated: boolean }> = {};
+      Object.entries(weekdayTimesRef.current).forEach(([day, time]) => {
+        if (time && time.activated) {
+          weekdaySchedule[day] = {
+            hour: time.hour,
+            minute: time.minute,
+            activated: true,
+          };
+        }
+      });
+
+      console.log('[BEDTIME-CONFIG] Sauvegarde en cours:', {
+        kidooId,
+        weekdaySchedule,
+        color,
+        brightness,
+        nightlightAllNight,
+      });
+
       updateConfig.mutate(
-        { id: kidooId, data },
+        {
+          id: kidooId,
+          data: {
+            weekdaySchedule: Object.keys(weekdaySchedule).length > 0 ? weekdaySchedule : undefined,
+            color,
+            brightness,
+            nightlightAllNight,
+          },
+        },
         {
           onSuccess: () => {
-            navigation.goBack();
+            console.log('[BEDTIME-CONFIG] Sauvegarde réussie');
           },
-        }
+          onError: (error) => {
+            console.error('[BEDTIME-CONFIG] Erreur de sauvegarde:', error);
+          },
+        },
       );
-    },
-    [updateConfig, kidooId, navigation]
-  );
+
+      saveTimeoutRef.current = null;
+    }, 500);
+  }, [kidooId, getValues, updateConfig]);
+
+  // Mettre à jour la ref quand weekdayTimes change
+  useEffect(() => {
+    weekdayTimesRef.current = weekdayTimes;
+  }, [weekdayTimes]);
+
+  // Sauvegarder automatiquement lors des changements de weekdayTimes
+  useEffect(() => {
+    if (!isInitializingRef.current && configLoadedRef.current) {
+      console.log('[BEDTIME-CONFIG] Changement de weekdayTimes détecté:', weekdayTimes);
+      saveConfig();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekdayTimes]);
+
+  // Sauvegarder automatiquement lors des changements du formulaire (couleur, brightness, nightlightAllNight)
+  const color = watch('color');
+  const brightness = watch('brightness');
+  const nightlightAllNight = watch('nightlightAllNight');
+  
+  useEffect(() => {
+    if (!isInitializingRef.current && configLoadedRef.current) {
+      console.log('[BEDTIME-CONFIG] Changement de formulaire détecté:', { color, brightness, nightlightAllNight });
+      saveConfig();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [color, brightness, nightlightAllNight]);
+
+  // Nettoyage au démontage
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Gestion du switch pour activer/désactiver un jour
+  const handleSwitchChange = useCallback((day: Weekday, activated: boolean) => {
+    setWeekdayTimes(prev => {
+      const currentTime = prev[day];
+      if (activated) {
+        if (!currentTime) {
+          return {
+            ...prev,
+            [day]: { hour: 22, minute: 0, activated: true },
+          };
+        } else {
+          return {
+            ...prev,
+            [day]: { ...currentTime, activated: true },
+          };
+        }
+      } else {
+        if (currentTime) {
+          return {
+            ...prev,
+            [day]: { ...currentTime, activated: false },
+          };
+        }
+        return prev;
+      }
+    });
+  }, []);
+
+  // Gestion du changement d'heure
+  const handleTimeChange = useCallback((day: Weekday, hour: number, minute: number) => {
+    setWeekdayTimes(prev => ({
+      ...prev,
+      [day]: {
+        hour,
+        minute,
+        activated: prev[day]?.activated ?? true,
+      },
+    }));
+  }, []);
+
+
+  // Calculer les jours actifs
+  const activeDays = Object.entries(weekdayTimes)
+    .filter(([_, time]) => time?.activated === true)
+    .map(([day]) => day as Weekday);
+
+  if (isLoading) {
+    return <ScreenLoader />;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ContentScrollView>
         <View style={styles.content}>
-          {/* TimePicker */}
-          <Controller
-            control={control}
-            name="hour"
-            render={({ field: { value: hour } }) => {
-              const minuteValue = watch('minute');
-              return (
-                <TimePicker
-                  hour={hour}
-                  minute={minuteValue}
-                  onTimeChange={(newHour, newMinute) => {
-                    setValue('hour', newHour, { shouldValidate: true });
-                    setValue('minute', newMinute, { shouldValidate: true });
-                  }}
-                  label={t('kidoos.dream.bedtime.selectTime', { 
-                    defaultValue: 'Sélectionnez l\'heure de coucher' 
-                  })}
-                />
-              );
-            }}
+          <WeekdaySelectorSection
+            selectedDay={selectedDayForTime}
+            activeDays={activeDays}
+            configuredDays={savedConfiguredDays}
+            weekdayTimes={weekdayTimes}
+            onDaySelect={setSelectedDayForTime}
+            onSwitchChange={handleSwitchChange}
           />
-          
-          {/* ColorPicker */}
-          <View style={styles.colorPickerContainer}>
-            <Controller
-              control={control}
-              name="color"
-              render={({ field: { value, onChange } }) => (
-                <ColorPicker
-                  selectedColor={value}
-                  onColorChange={onChange}
-                  label={t('kidoos.dream.bedtime.selectColor', { 
-                    defaultValue: 'Sélectionnez la couleur' 
-                  })}
-                />
-              )}
-            />
-          </View>
 
-          {/* Slider Luminosité */}
-          <View style={styles.brightnessContainer}>
-            <Controller
-              control={control}
-              name="brightness"
-              render={({ field: { value, onChange } }) => (
-                <Slider
-                  value={value}
-                  minimumValue={0}
-                  maximumValue={100}
-                  step={1}
-                  onValueChange={onChange}
-                  label={t('kidoos.dream.bedtime.brightness', { 
-                    defaultValue: 'Luminosité' 
-                  })}
-                  formatValue={(val) => `${Math.round(val)}%`}
-                />
-              )}
+          {weekdayTimes[selectedDayForTime]?.activated && (
+            <TimePickerSection
+              selectedDay={selectedDayForTime}
+              hour={weekdayTimes[selectedDayForTime]?.hour ?? 22}
+              minute={weekdayTimes[selectedDayForTime]?.minute ?? 0}
+              onTimeChange={(hour, minute) => handleTimeChange(selectedDayForTime, hour, minute)}
             />
-          </View>
+          )}
 
-          {/* Switch Veilleuse toute la nuit */}
-          <View style={styles.switchContainer}>
-            <Controller
-              control={control}
-              name="nightlightAllNight"
-              render={({ field: { value, onChange } }) => (
-                <View style={styles.switchRow}>
-                  <Text style={[styles.switchLabel, { color: colors.text }]}>
-                    {t('kidoos.dream.bedtime.nightlightAllNight', { 
-                      defaultValue: 'Veilleuse allumée toute la nuit' 
-                    })}
-                  </Text>
-                  <Switch
-                    value={value}
-                    onValueChange={onChange}
-                    trackColor={{ false: colors.border, true: colors.primary + '80' }}
-                    thumbColor={value ? colors.primary : colors.textTertiary}
-                  />
-                </View>
-              )}
-            />
-          </View>
+          <ColorPickerSection control={control} />
 
-          {/* Boutons Actions */}
-          <View style={styles.actionsContainer}>
-            <View style={styles.actionsRow}>
-              <Button
-                title={t('kidoos.dream.bedtime.test', { defaultValue: 'Tester' })}
-                variant="outline"
-                onPress={handleTest}
-                style={styles.testButton}
-                disabled={isLoading || updateConfig.isPending}
-              />
-              <Button
-                title={t('common.save', { defaultValue: 'Enregistrer' })}
-                variant="primary"
-                onPress={handleSubmit(onSubmit)}
-                style={styles.validateButton}
-                disabled={isLoading || updateConfig.isPending}
-              />
-            </View>
-          </View>
+          <BrightnessSection control={control} />
+
+          <NightlightSwitch control={control} />
+
+          <TestButton
+            kidooId={kidooId}
+            control={control}
+          />
         </View>
       </ContentScrollView>
     </View>
@@ -219,41 +320,5 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingVertical: 10,
-  },
-  colorPickerContainer: {
-    marginTop: 32,
-  },
-  brightnessContainer: {
-    marginTop: 32,
-    width: '100%',
-  },
-  switchContainer: {
-    marginTop: 32,
-    width: '100%',
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 0,
-  },
-  switchLabel: {
-    fontSize: 16,
-    flex: 1,
-  },
-  actionsContainer: {
-    marginTop: 10,
-    paddingVertical: 10,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  testButton: {
-    flex: 1,
-  },
-  validateButton: {
-    flex: 1,
   },
 });

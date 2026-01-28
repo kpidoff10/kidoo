@@ -19,6 +19,18 @@
 #include "models/basic/nfc/nfc_tag_handler.h"
 #endif
 
+// Routes PubNub (modèle Dream uniquement)
+#ifdef KIDOO_MODEL_DREAM
+#include "models/model_pubnub_routes.h"
+#include "models/dream/managers/bedtime/bedtime_manager.h"
+#include "models/dream/managers/wakeup/wakeup_manager.h"
+#endif
+
+// RTC pour synchronisation automatique lors de la connexion WiFi
+#ifdef HAS_RTC
+#include "models/common/managers/rtc/rtc_manager.h"
+#endif
+
 /**
  * Architecture multi-cœurs ESP32 (auto-détectée)
  * ==============================================
@@ -47,27 +59,34 @@ void setup() {
   setCpuFrequencyMhz(240);  // ESP32-S3 max = 240MHz
   #endif
   
-  Serial.print("[MAIN] CPU Frequency: ");
-  Serial.print(getCpuFrequencyMhz());
-  Serial.println(" MHz");
-  
-  // Afficher l'architecture CPU détectée (depuis core_config.h)
-  printCoreArchitecture();
-  
-  // Afficher les statistiques mémoire (depuis core_config.h)
-  printMemoryStats();
+  // Afficher les informations seulement si Serial est disponible
+  if (Serial) {
+    Serial.print("[MAIN] CPU Frequency: ");
+    Serial.print(getCpuFrequencyMhz());
+    Serial.println(" MHz");
+    
+    // Afficher l'architecture CPU détectée (depuis core_config.h)
+    printCoreArchitecture();
+    
+    // Afficher les statistiques mémoire (depuis core_config.h)
+    printMemoryStats();
+  }
   
   // Initialiser tous les composants du système via le gestionnaire d'initialisation
   if (!InitManager::init()) {
-    Serial.println("[MAIN] ERREUR: Echec de l'initialisation du systeme");
+    if (Serial) {
+      Serial.println("[MAIN] ERREUR: Echec de l'initialisation du systeme");
+    }
     // Le système peut continuer avec des composants partiellement initialisés
   }
   
-  // Initialiser le système de commandes Serial
-  SerialCommands::init();
-  
-  // Afficher le statut final
-  InitManager::printStatus();
+  // Initialiser le système de commandes Serial seulement si Serial est disponible
+  if (Serial) {
+    SerialCommands::init();
+    
+    // Afficher le statut final
+    InitManager::printStatus();
+  }
 }
 
 void loop() {
@@ -97,6 +116,22 @@ void loop() {
     }
     #endif
   }
+  #endif
+  
+  // Synchroniser l'heure RTC via NTP quand le WiFi se connecte
+  #ifdef HAS_RTC
+  #ifdef HAS_WIFI
+  static bool lastWiFiState = false;
+  if (WiFiManager::isConnected() && !lastWiFiState) {
+    // WiFi vient de se connecter, synchroniser l'heure
+    Serial.println("[MAIN] WiFi connecte - Synchronisation RTC via NTP");
+    RTCManager::autoSyncIfNeeded();
+    
+    // Note: La synchronisation de configuration est gérée automatiquement
+    // par WiFiManager via ModelConfigSyncRoutes::onWiFiConnected()
+  }
+  lastWiFiState = WiFiManager::isConnected();
+  #endif
   #endif
   
   // Mettre à jour le potentiomètre (détection de changement)
@@ -142,6 +177,18 @@ void loop() {
     #endif
     #endif
   }
+  #endif
+  
+  // Vérifier le timeout du test de bedtime (modèle Dream uniquement)
+  #ifdef KIDOO_MODEL_DREAM
+  ModelPubNubRoutes::checkTestBedtimeTimeout();
+  ModelPubNubRoutes::checkTestWakeupTimeout();
+  
+  // Mettre à jour le gestionnaire bedtime automatique
+  BedtimeManager::update();
+  
+  // Mettre à jour le gestionnaire wake-up automatique
+  WakeupManager::update();
   #endif
   
   // ====================================================================

@@ -21,7 +21,7 @@
 #define LED_DATA_PIN 17
 
 // Nombre de LEDs sur la bande principale
-#define NUM_LEDS 40
+#define NUM_LEDS 42
 
 // Type de LED (WS2812B, WS2811, etc.)
 // Options: NEOPIXEL, WS2812B, WS2811, SK6812, etc.

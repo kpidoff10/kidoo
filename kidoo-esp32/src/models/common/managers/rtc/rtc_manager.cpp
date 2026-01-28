@@ -392,7 +392,16 @@ bool RTCManager::isTimeValid() {
   
   // L'heure est considérée valide si l'année est >= 2026
   // (on est en 2026, donc toute année avant est invalide)
-  return (dt.year >= 2026);
+  if (dt.year < 2026) {
+    return false;
+  }
+  
+  // Vérifier aussi si l'heure semble raisonnable (entre 0h et 23h59)
+  if (dt.hour > 23 || dt.minute > 59 || dt.second > 59) {
+    return false;
+  }
+  
+  return true;
 }
 
 bool RTCManager::hasBeenSynced() {
@@ -400,11 +409,6 @@ bool RTCManager::hasBeenSynced() {
 }
 
 bool RTCManager::autoSyncIfNeeded() {
-  // Si déjà synchronisé dans cette session, ne rien faire
-  if (ntpSynced) {
-    return true;
-  }
-  
   // Si le RTC n'est pas disponible, ne rien faire
   if (!isAvailable()) {
     return false;
@@ -423,19 +427,29 @@ bool RTCManager::autoSyncIfNeeded() {
     Serial.println("[RTC] Auto-sync: RTC a perdu l'alimentation");
     needsSync = true;
   }
-  // Cas 2: L'heure semble invalide (année < 2026)
+  // Cas 2: L'heure semble invalide (année < 2026 ou valeurs hors limites)
   else if (!isTimeValid()) {
     Serial.println("[RTC] Auto-sync: Heure invalide detectee");
+    needsSync = true;
+  }
+  // Cas 3: Pas encore synchronisé dans cette session - synchroniser systématiquement
+  // Cela garantit que l'heure est toujours à jour après une connexion WiFi
+  else if (!ntpSynced) {
+    Serial.println("[RTC] Auto-sync: Premiere synchronisation de la session");
     needsSync = true;
   }
   
   if (needsSync) {
     Serial.println("[RTC] Synchronisation NTP automatique...");
-    return syncWithNTPFrance();
+    bool result = syncWithNTPFrance();
+    if (result) {
+      ntpSynced = true;
+    }
+    return result;
   }
   
   // Pas besoin de sync, marquer comme "synced" pour éviter les vérifications futures
-  // (l'heure est déjà valide)
+  // (l'heure est déjà valide et synchronisée)
   ntpSynced = true;
   return true;
 }

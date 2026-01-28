@@ -36,19 +36,20 @@ model User {
 }
 
 model Kidoo {
-  id              String    @id @default(uuid())
-  name            String
-  model           String    @default("classic") // Modèle du Kidoo (classic, mini, pro, etc.)
-  macAddress      String?
-  deviceId        String    @unique // UUID du device BLE
-  firmwareVersion String?
-  lastConnected   DateTime?
-  isConnected     Boolean   @default(false)
-  wifiSSID        String? // Lecture seule, pour affichage uniquement (modification via Bluetooth uniquement)
-  userId          String?
-  isSynced        Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                  String    @id @default(uuid())
+  name                String
+  model               String    @default("classic") // Modèle du Kidoo (classic, mini, pro, etc.)
+  macAddress          String? // Adresse MAC WiFi (renvoyée par l'ESP32 lors du setup)
+  bluetoothMacAddress String? // Adresse MAC Bluetooth (pour comparer lors des scans automatiques)
+  deviceId            String    @unique // UUID du device BLE
+  firmwareVersion     String?
+  lastConnected       DateTime?
+  isConnected         Boolean   @default(false)
+  wifiSSID            String? // Lecture seule, pour affichage uniquement (modification via Bluetooth uniquement)
+  userId              String?
+  isSynced            Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   brightness   Int @default(100) // Luminosité (10-100)
   sleepTimeout Int @default(30000) // Timeout de sommeil en ms (5000-300000)
@@ -181,27 +182,74 @@ model KidooConfigDream {
   id      String @id @default(uuid())
   kidooId String @unique // Relation 1:1 avec Kidoo
 
-  // Configuration du rituel de sommeil
+  // Configuration du rituel de sommeil (bedtime)
   // Couleur RGB (0-255)
-  colorR Int? // Composante rouge de la couleur (0-255, null si non configuré)
-  colorG Int? // Composante verte de la couleur (0-255, null si non configuré)
-  colorB Int? // Composante bleue de la couleur (0-255, null si non configuré)
-
-  // Heure de coucher
-  bedtimeHour   Int? // Heure de coucher (0-23, null si non configuré)
-  bedtimeMinute Int? // Minute de coucher (0-59, null si non configuré)
+  colorR Int? // Composante rouge de la couleur de coucher (0-255, null si non configuré)
+  colorG Int? // Composante verte de la couleur de coucher (0-255, null si non configuré)
+  colorB Int? // Composante bleue de la couleur de coucher (0-255, null si non configuré)
 
   // Luminosité
-  brightness Int? // Luminosité des LEDs (0-255, null si non configuré)
+  brightness Int? // Luminosité des LEDs pour le coucher (0-255, null si non configuré)
 
   // Mode d'allumage
   allNight Boolean @default(false) // Si true, la veilleuse reste allumée toute la nuit, sinon elle s'éteint après une durée définie
 
+  // Configuration du réveil (wake-up)
+  // Couleur RGB pour le réveil (0-255)
+  wakeupColorR Int? // Composante rouge de la couleur de réveil (0-255, null si non configuré)
+  wakeupColorG Int? // Composante verte de la couleur de réveil (0-255, null si non configuré)
+  wakeupColorB Int? // Composante bleue de la couleur de réveil (0-255, null si non configuré)
+
+  // Luminosité pour le réveil
+  wakeupBrightness Int? // Luminosité des LEDs pour le réveil (0-255, null si non configuré)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  kidoo Kidoo @relation(fields: [kidooId], references: [id], onDelete: Cascade)
+  kidoo            Kidoo                             @relation(fields: [kidooId], references: [id], onDelete: Cascade)
+  bedtimeSchedules KidooConfigDreamBedtimeSchedule[]
+  wakeupSchedules  KidooConfigDreamWakeupSchedule[]
 
   @@index([kidooId])
   @@map("kidoo_config_dream")
+}
+
+// Horaires de coucher par jour de la semaine pour le modèle Dream
+model KidooConfigDreamBedtimeSchedule {
+  id                 String @id @default(uuid())
+  kidooConfigDreamId String // Relation N:1 avec KidooConfigDream
+
+  weekday   String // Jour de la semaine: monday, tuesday, wednesday, thursday, friday, saturday, sunday
+  hour      Int // Heure de coucher (0-23)
+  minute    Int // Minute de coucher (0-59)
+  activated Boolean @default(false) // Si true, le jour est activé pour l'heure de coucher
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  kidooConfigDream KidooConfigDream @relation(fields: [kidooConfigDreamId], references: [id], onDelete: Cascade)
+
+  @@unique([kidooConfigDreamId, weekday])
+  @@index([kidooConfigDreamId])
+  @@map("kidoo_config_dream_bedtime_schedule")
+}
+
+// Horaires de réveil par jour de la semaine pour le modèle Dream
+model KidooConfigDreamWakeupSchedule {
+  id                 String @id @default(uuid())
+  kidooConfigDreamId String // Relation N:1 avec KidooConfigDream
+
+  weekday   String // Jour de la semaine: monday, tuesday, wednesday, thursday, friday, saturday, sunday
+  hour      Int // Heure de réveil (0-23)
+  minute    Int // Minute de réveil (0-59)
+  activated Boolean @default(false) // Si true, le jour est activé pour l'heure de réveil
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  kidooConfigDream KidooConfigDream @relation(fields: [kidooConfigDreamId], references: [id], onDelete: Cascade)
+
+  @@unique([kidooConfigDreamId, weekday])
+  @@index([kidooConfigDreamId])
+  @@map("kidoo_config_dream_wakeup_schedule")
 }

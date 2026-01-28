@@ -17,6 +17,19 @@ struct SDConfig {
   char device_name[32];    // Nom du dispositif
   uint8_t led_brightness;   // Luminosité LED (0-255)
   uint32_t sleep_timeout_ms; // Timeout pour le sleep mode (0 = désactivé)
+  // Configuration bedtime (modèle Dream uniquement)
+  uint8_t bedtime_colorR;    // Couleur R pour bedtime (0-255)
+  uint8_t bedtime_colorG;   // Couleur G pour bedtime (0-255)
+  uint8_t bedtime_colorB;   // Couleur B pour bedtime (0-255)
+  uint8_t bedtime_brightness; // Luminosité pour bedtime (0-100)
+  bool bedtime_allNight;    // Veilleuse toute la nuit
+  char bedtime_weekdaySchedule[512]; // Schedule par jour (JSON sérialisé: {"monday":{"hour":20,"minute":0,"activated":true},...})
+  // Configuration wakeup (modèle Dream uniquement)
+  uint8_t wakeup_colorR;    // Couleur R pour wakeup (0-255)
+  uint8_t wakeup_colorG;   // Couleur G pour wakeup (0-255)
+  uint8_t wakeup_colorB;   // Couleur B pour wakeup (0-255)
+  uint8_t wakeup_brightness; // Luminosité pour wakeup (0-100)
+  char wakeup_weekdaySchedule[512]; // Schedule par jour (JSON sérialisé: {"monday":{"hour":7,"minute":30,"activated":true},...})
   // Note: MQTT est configuré dans default_config.h (pas sur SD)
 };
 
