@@ -124,7 +124,9 @@ void loop() {
   static bool lastWiFiState = false;
   if (WiFiManager::isConnected() && !lastWiFiState) {
     // WiFi vient de se connecter, synchroniser l'heure
-    Serial.println("[MAIN] WiFi connecte - Synchronisation RTC via NTP");
+    if (Serial) {
+      Serial.println("[MAIN] WiFi connecte - Synchronisation RTC via NTP");
+    }
     RTCManager::autoSyncIfNeeded();
     
     // Note: La synchronisation de configuration est gérée automatiquement
@@ -168,7 +170,9 @@ void loop() {
         } else if (wasWifiDisconnected && WiFiManager::isConnected()) {
           // Le WiFi s'est connecté alors qu'il était déconnecté
           // Désactiver le BLE automatiquement car il n'est plus nécessaire
-          Serial.println("[MAIN] WiFi connecte - Desactivation automatique du BLE");
+          if (Serial) {
+            Serial.println("[MAIN] WiFi connecte - Desactivation automatique du BLE");
+          }
           BLEConfigManager::disableBLE();
           wasWifiDisconnected = false;
         }

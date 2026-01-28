@@ -16,6 +16,7 @@ bool BLEConfigManager::bleEnabled = false;
 bool BLEConfigManager::feedbackActive = false;
 bool BLEConfigManager::feedbackEnabled = false;  // Indique si le feedback était activé au départ
 unsigned long BLEConfigManager::lastFeedbackTime = 0;
+unsigned long BLEConfigManager::buttonCooldownUntil = 0;
 
 bool BLEConfigManager::init(uint8_t buttonPin) {
   if (initialized) {
@@ -30,6 +31,7 @@ bool BLEConfigManager::init(uint8_t buttonPin) {
   initialized = true;
   bleEnabled = false;
   buttonState = BUTTON_IDLE;
+  buttonCooldownUntil = 0;
   
   Serial.println("[BLE-CONFIG] Gestionnaire d'activation BLE initialise");
   Serial.print("[BLE-CONFIG] Pin bouton: GPIO ");
@@ -297,6 +299,9 @@ void BLEConfigManager::handleButtonPress() {
       if (!pressed) {
         // Bouton relâché avant le seuil
         buttonState = BUTTON_IDLE;
+        // Activer une période de refroidissement pour éviter les détections multiples
+        unsigned long currentTime = millis();
+        buttonCooldownUntil = currentTime + COOLDOWN_DELAY;
         Serial.println("[BLE-CONFIG] Appui annule (trop court)");
       } else {
         // Vérifier si on a atteint le seuil d'appui long
@@ -400,25 +405,48 @@ void BLEConfigManager::updateFeedback() {
 
 bool BLEConfigManager::isButtonPressed() {
   // Bouton en INPUT_PULLUP : LOW = pressé, HIGH = relâché
-  // Anti-rebond simple
+  // Anti-rebond amélioré avec période de refroidissement
   static unsigned long lastDebounceTime = 0;
   static bool lastButtonState = HIGH;
-  static bool buttonState = HIGH;
+  static bool debouncedState = HIGH;
   
+  unsigned long currentTime = millis();
   bool reading = digitalRead(buttonPin);
   
-  if (reading != lastButtonState) {
-    lastDebounceTime = millis();
+  // Vérifier si on est en période de refroidissement
+  if (buttonCooldownUntil > 0) {
+    unsigned long cooldownElapsed;
+    if (currentTime >= buttonCooldownUntil) {
+      // Période de refroidissement terminée
+      buttonCooldownUntil = 0;
+    } else {
+      // Encore en période de refroidissement, ignorer les changements
+      return false;
+    }
   }
   
-  if ((millis() - lastDebounceTime) > DEBOUNCE_DELAY) {
-    if (reading != buttonState) {
-      buttonState = reading;
+  // Gérer le wrap-around de millis()
+  unsigned long debounceElapsed;
+  if (currentTime >= lastDebounceTime) {
+    debounceElapsed = currentTime - lastDebounceTime;
+  } else {
+    debounceElapsed = (ULONG_MAX - lastDebounceTime) + currentTime + 1;
+  }
+  
+  // Si l'état a changé, réinitialiser le timer de debounce
+  if (reading != lastButtonState) {
+    lastDebounceTime = currentTime;
+  }
+  
+  // Si le délai de debounce est écoulé, mettre à jour l'état débouncé
+  if (debounceElapsed > DEBOUNCE_DELAY) {
+    if (reading != debouncedState) {
+      debouncedState = reading;
     }
   }
   
   lastButtonState = reading;
   
-  // Retourner true si le bouton est pressé (LOW)
-  return (buttonState == LOW);
+  // Retourner true si le bouton est pressé (LOW) et stable
+  return (debouncedState == LOW);
 }

@@ -61,7 +61,7 @@
 // Pin GPIO pour le bouton d'activation BLE (INPUT_PULLUP)
 // Appui long (3 secondes) pour activer le BLE
 // Note: GPIO 0 peut être un strapping pin, vérifier selon votre hardware
-#define BLE_CONFIG_BUTTON_PIN 0   // GPIO 1 (ESP32-C3)
+#define BLE_CONFIG_BUTTON_PIN 1   // GPIO 1 (ESP32-C3)
 
 // ============================================
 // Composants disponibles sur ce modèle

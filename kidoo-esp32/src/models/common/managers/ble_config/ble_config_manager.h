@@ -103,12 +103,14 @@ private:
   static bool feedbackActive;
   static bool feedbackEnabled;  // Indique si le feedback était activé au départ
   static unsigned long lastFeedbackTime;
+  static unsigned long buttonCooldownUntil;  // Période de refroidissement après appui annulé
   
   // Constantes
   static const uint32_t DEFAULT_BLE_DURATION = 900000;  // 15 minutes
   static const uint32_t DEFAULT_LONG_PRESS = 3000;      // 3 secondes
   static const uint32_t FEEDBACK_INTERVAL = 500;        // 500ms pour clignotement
   static const uint32_t DEBOUNCE_DELAY = 50;            // 50ms anti-rebond
+  static const uint32_t COOLDOWN_DELAY = 200;           // 200ms période de refroidissement après appui annulé
   
   // Méthodes privées
   static void handleButtonPress();
