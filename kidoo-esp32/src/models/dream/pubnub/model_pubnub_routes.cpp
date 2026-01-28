@@ -643,6 +643,8 @@ bool ModelDreamPubNubRoutes::handleSetBedtimeConfig(const JsonObject& json) {
   int colorB = -1;
   int brightness = -1;
   bool allNight = false;
+  const char* effectStr = nullptr;
+  bool hasEffect = false;
   JsonObject weekdayScheduleObj;
   bool hasWeekdaySchedule = false;
   
@@ -656,6 +658,12 @@ bool ModelDreamPubNubRoutes::handleSetBedtimeConfig(const JsonObject& json) {
     if (params["colorB"].is<int>()) colorB = params["colorB"].as<int>();
     if (params["brightness"].is<int>()) brightness = params["brightness"].as<int>();
     if (params["allNight"].is<bool>()) allNight = params["allNight"].as<bool>();
+    
+    // Récupérer l'effet si présent
+    if (params["effect"].is<const char*>()) {
+      effectStr = params["effect"].as<const char*>();
+      hasEffect = true;
+    }
     
     // Récupérer weekdaySchedule si présent
     if (params["weekdaySchedule"].is<JsonObject>()) {
@@ -672,6 +680,12 @@ bool ModelDreamPubNubRoutes::handleSetBedtimeConfig(const JsonObject& json) {
     if (json["brightness"].is<int>()) brightness = json["brightness"].as<int>();
     if (json["allNight"].is<bool>()) allNight = json["allNight"].as<bool>();
     
+    // Récupérer l'effet si présent
+    if (json["effect"].is<const char*>()) {
+      effectStr = json["effect"].as<const char*>();
+      hasEffect = true;
+    }
+    
     // Récupérer weekdaySchedule si présent
     if (json["weekdaySchedule"].is<JsonObject>()) {
       weekdayScheduleObj = json["weekdaySchedule"].as<JsonObject>();
@@ -680,8 +694,9 @@ bool ModelDreamPubNubRoutes::handleSetBedtimeConfig(const JsonObject& json) {
   }
   
   // Valider les paramètres
-  if (colorR < 0 || colorR > 255 || colorG < 0 || colorG > 255 || colorB < 0 || colorB > 255) {
-    Serial.println("[PUBNUB-ROUTE] set-bedtime-config: Couleur invalide");
+  // Si un effet est fourni, la couleur n'est pas obligatoire (mais peut être fournie pour l'effet ROTATE)
+  if (!hasEffect && (colorR < 0 || colorR > 255 || colorG < 0 || colorG > 255 || colorB < 0 || colorB > 255)) {
+    Serial.println("[PUBNUB-ROUTE] set-bedtime-config: Couleur invalide (requise si pas d'effet)");
     return false;
   }
   
@@ -694,11 +709,25 @@ bool ModelDreamPubNubRoutes::handleSetBedtimeConfig(const JsonObject& json) {
   SDConfig config = SDManager::getConfig();
   
   // Mettre à jour les champs bedtime
-  config.bedtime_colorR = (uint8_t)colorR;
-  config.bedtime_colorG = (uint8_t)colorG;
-  config.bedtime_colorB = (uint8_t)colorB;
+  // Si une couleur est fournie, l'utiliser (même si un effet est aussi fourni, pour l'effet ROTATE)
+  if (colorR >= 0 && colorR <= 255 && colorG >= 0 && colorG <= 255 && colorB >= 0 && colorB <= 255) {
+    config.bedtime_colorR = (uint8_t)colorR;
+    config.bedtime_colorG = (uint8_t)colorG;
+    config.bedtime_colorB = (uint8_t)colorB;
+  }
   config.bedtime_brightness = (uint8_t)brightness;
   config.bedtime_allNight = allNight;
+  
+  // Sauvegarder l'effet si présent
+  if (hasEffect && effectStr != nullptr) {
+    strncpy(config.bedtime_effect, effectStr, sizeof(config.bedtime_effect) - 1);
+    config.bedtime_effect[sizeof(config.bedtime_effect) - 1] = '\0';
+    Serial.print("[PUBNUB-ROUTE] set-bedtime-config: Effet sauvegardé: ");
+    Serial.println(config.bedtime_effect);
+  } else {
+    // Pas d'effet fourni, utiliser "none" pour couleur fixe
+    strcpy(config.bedtime_effect, "none");
+  }
   
   // Sauvegarder weekdaySchedule si présent
   if (hasWeekdaySchedule) {
@@ -727,15 +756,17 @@ bool ModelDreamPubNubRoutes::handleSetBedtimeConfig(const JsonObject& json) {
   // Sauvegarder sur la SD
   if (SDManager::saveConfig(config)) {
     Serial.print("[PUBNUB-ROUTE] set-bedtime-config: Configuration sauvegardée - RGB(");
-    Serial.print(colorR);
+    Serial.print(config.bedtime_colorR);
     Serial.print(",");
-    Serial.print(colorG);
+    Serial.print(config.bedtime_colorG);
     Serial.print(",");
-    Serial.print(colorB);
+    Serial.print(config.bedtime_colorB);
     Serial.print("), Brightness: ");
     Serial.print(brightness);
     Serial.print("%, AllNight: ");
     Serial.print(allNight ? "true" : "false");
+    Serial.print(", Effect: ");
+    Serial.print(config.bedtime_effect);
     if (hasWeekdaySchedule) {
       Serial.print(", weekdaySchedule: ");
       Serial.println(config.bedtime_weekdaySchedule);

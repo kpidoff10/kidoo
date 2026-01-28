@@ -94,6 +94,7 @@ export const kidoosApi = {
     colorB: number;
     brightness: number;
     nightlightAllNight: boolean;
+    effect: string | null;
   }> {
     const response = await apiClient.get<ApiResponse<{
       weekdaySchedule?: Record<string, { hour: number; minute: number; activated: boolean }>;
@@ -102,6 +103,7 @@ export const kidoosApi = {
       colorB: number;
       brightness: number;
       nightlightAllNight: boolean;
+      effect: string | null;
     }>>(`/api/kidoos/${id}/dream-bedtime`);
     return response.data.data;
   },
@@ -113,7 +115,8 @@ export const kidoosApi = {
     id: string,
     data: {
       weekdaySchedule?: Record<string, { hour: number; minute: number; activated?: boolean }>;
-      color: string; // Hex color
+      color?: string; // Hex color (si mode couleur)
+      effect?: string; // Effet LED (si mode effet)
       brightness: number;
       nightlightAllNight: boolean;
     }
@@ -124,6 +127,7 @@ export const kidoosApi = {
     colorB: number;
     brightness: number;
     nightlightAllNight: boolean;
+    effect: string | null;
   }> {
     const response = await apiClient.patch<ApiResponse<{
       weekdaySchedule?: Record<string, { hour: number; minute: number; activated: boolean }>;
@@ -132,6 +136,7 @@ export const kidoosApi = {
       colorB: number;
       brightness: number;
       nightlightAllNight: boolean;
+      effect: string | null;
     }>>(`/api/kidoos/${id}/dream-bedtime`, data);
     return response.data.data;
   },

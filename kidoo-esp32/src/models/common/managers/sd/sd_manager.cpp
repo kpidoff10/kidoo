@@ -26,6 +26,7 @@ void SDManager::initDefaultConfig(SDConfig* config) {
   config->bedtime_colorB = 107;
   config->bedtime_brightness = 50;
   config->bedtime_allNight = false;
+  strcpy(config->bedtime_effect, "none"); // Par défaut, couleur fixe
   strcpy(config->bedtime_weekdaySchedule, "{}"); // JSON vide par défaut
   // Valeurs par défaut pour wakeup (modèle Dream)
   config->wakeup_colorR = 255;
@@ -295,6 +296,16 @@ SDConfig SDManager::getConfig() {
     config.bedtime_allNight = doc["bedtime_allNight"] | false;
   }
   
+  // Lire l'effet bedtime
+  if (doc["bedtime_effect"].is<String>()) {
+    String effectStr = doc["bedtime_effect"] | "none";
+    strncpy(config.bedtime_effect, effectStr.c_str(), sizeof(config.bedtime_effect) - 1);
+    config.bedtime_effect[sizeof(config.bedtime_effect) - 1] = '\0';
+  } else {
+    // Par défaut, couleur fixe
+    strcpy(config.bedtime_effect, "none");
+  }
+  
   // Lire weekdaySchedule (JSON sérialisé)
   if (doc["bedtime_weekdaySchedule"].is<String>()) {
     String scheduleStr = doc["bedtime_weekdaySchedule"] | "{}";
@@ -386,6 +397,7 @@ bool SDManager::saveConfig(const SDConfig& config) {
   doc["bedtime_colorB"] = config.bedtime_colorB;
   doc["bedtime_brightness"] = config.bedtime_brightness;
   doc["bedtime_allNight"] = config.bedtime_allNight;
+  doc["bedtime_effect"] = config.bedtime_effect;
   
   // Sauvegarder weekdaySchedule (JSON sérialisé)
   // Essayer de parser le JSON pour valider qu'il est valide avant de le sauvegarder

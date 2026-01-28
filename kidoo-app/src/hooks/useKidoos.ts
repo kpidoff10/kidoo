@@ -306,8 +306,9 @@ export function useUpdateDreamBedtimeConfig() {
     mutationFn: ({ id, data }: { 
       id: string; 
       data: {
-        weekdaySchedule?: Record<string, { hour: number; minute: number }>;
-        color: string;
+        weekdaySchedule?: Record<string, { hour: number; minute: number; activated: boolean }>;
+        color?: string;
+        effect?: string;
         brightness: number;
         nightlightAllNight: boolean;
       }
@@ -324,14 +325,23 @@ export function useUpdateDreamBedtimeConfig() {
       const previousData = queryClient.getQueryData(queryKey);
       
       // Mise à jour optimiste
-      const rgb = hexToRgb(data.color);
       const optimisticData: any = {
-        colorR: rgb.r,
-        colorG: rgb.g,
-        colorB: rgb.b,
         brightness: data.brightness,
         nightlightAllNight: data.nightlightAllNight,
       };
+      
+      // Si une couleur est fournie, l'utiliser
+      if (data.color) {
+        const rgb = hexToRgb(data.color);
+        optimisticData.colorR = rgb.r;
+        optimisticData.colorG = rgb.g;
+        optimisticData.colorB = rgb.b;
+      }
+      
+      // Si un effet est fourni, l'utiliser
+      if (data.effect) {
+        optimisticData.effect = data.effect === 'none' ? null : data.effect;
+      }
       
       // Ajouter weekdaySchedule si présent
       if (data.weekdaySchedule) {

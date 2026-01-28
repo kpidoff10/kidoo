@@ -195,6 +195,9 @@ model KidooConfigDream {
   // Mode d'allumage
   allNight          Boolean   @default(false) // Si true, la veilleuse reste allumée toute la nuit, sinon elle s'éteint après une durée définie
 
+  // Effet LED pour le coucher (null = couleur fixe, sinon nom de l'effet)
+  effect            String?   // Effet LED: "none" (couleur fixe), "pulse", "rainbow-soft", "breathe", "nightlight", etc.
+
   // Configuration du réveil (wake-up)
   // Couleur RGB pour le réveil (0-255)
   wakeupColorR      Int?      // Composante rouge de la couleur de réveil (0-255, null si non configuré)

@@ -15,6 +15,7 @@ import {
   WeekdaySelectorSection,
   TimePickerSection,
   ColorPickerSection,
+  ColorOrEffectSection,
   BrightnessSection,
   NightlightSwitch,
   TestButton,
@@ -66,6 +67,7 @@ export function BedtimeConfigScreen() {
   const { control, reset, watch, getValues } = useForm({
     defaultValues: {
       color: '#FF6B6B',
+      effect: null as string | null,
       brightness: 50,
       nightlightAllNight: false,
     },
@@ -83,6 +85,7 @@ export function BedtimeConfigScreen() {
         const colorHex = rgbToHex(config.colorR, config.colorG, config.colorB);
         reset({
           color: colorHex,
+          effect: config.effect || null,
           brightness: config.brightness,
           nightlightAllNight: config.nightlightAllNight,
         });
@@ -142,6 +145,7 @@ export function BedtimeConfigScreen() {
     saveTimeoutRef.current = setTimeout(() => {
       const formValues = getValues();
       const color = formValues.color || '#FF6B6B';
+      const effect = formValues.effect;
       const brightness = formValues.brightness ?? 50;
       const nightlightAllNight = formValues.nightlightAllNight ?? false;
 
@@ -161,19 +165,39 @@ export function BedtimeConfigScreen() {
         kidooId,
         weekdaySchedule,
         color,
+        effect,
         brightness,
         nightlightAllNight,
       });
 
+      // Préparer les données : soit color soit effect
+      const updateData: {
+        weekdaySchedule?: Record<string, { hour: number; minute: number; activated: boolean }>;
+        color?: string;
+        effect?: string;
+        brightness: number;
+        nightlightAllNight: boolean;
+      } = {
+        brightness,
+        nightlightAllNight,
+      };
+
+      if (effect && effect !== 'none') {
+        // Mode effet
+        updateData.effect = effect;
+      } else {
+        // Mode couleur fixe
+        updateData.color = color;
+      }
+
+      if (Object.keys(weekdaySchedule).length > 0) {
+        updateData.weekdaySchedule = weekdaySchedule;
+      }
+
       updateConfig.mutate(
         {
           id: kidooId,
-          data: {
-            weekdaySchedule: Object.keys(weekdaySchedule).length > 0 ? weekdaySchedule : undefined,
-            color,
-            brightness,
-            nightlightAllNight,
-          },
+          data: updateData,
         },
         {
           onSuccess: () => {
@@ -203,18 +227,19 @@ export function BedtimeConfigScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekdayTimes]);
 
-  // Sauvegarder automatiquement lors des changements du formulaire (couleur, brightness, nightlightAllNight)
+  // Sauvegarder automatiquement lors des changements du formulaire (couleur, effect, brightness, nightlightAllNight)
   const color = watch('color');
+  const effect = watch('effect');
   const brightness = watch('brightness');
   const nightlightAllNight = watch('nightlightAllNight');
   
   useEffect(() => {
     if (!isInitializingRef.current && configLoadedRef.current) {
-      console.log('[BEDTIME-CONFIG] Changement de formulaire détecté:', { color, brightness, nightlightAllNight });
+      console.log('[BEDTIME-CONFIG] Changement de formulaire détecté:', { color, effect, brightness, nightlightAllNight });
       saveConfig();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [color, brightness, nightlightAllNight]);
+  }, [color, effect, brightness, nightlightAllNight]);
 
   // Nettoyage au démontage
   useEffect(() => {
@@ -297,7 +322,7 @@ export function BedtimeConfigScreen() {
             />
           )}
 
-          <ColorPickerSection control={control} />
+          <ColorOrEffectSection control={control} />
 
           <BrightnessSection control={control} />
 

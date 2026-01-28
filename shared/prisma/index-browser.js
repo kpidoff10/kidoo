@@ -227,6 +227,7 @@ exports.Prisma.KidooConfigDreamScalarFieldEnum = {
   colorB: 'colorB',
   brightness: 'brightness',
   allNight: 'allNight',
+  effect: 'effect',
   wakeupColorR: 'wakeupColorR',
   wakeupColorG: 'wakeupColorG',
   wakeupColorB: 'wakeupColorB',

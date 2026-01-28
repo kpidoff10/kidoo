@@ -65,6 +65,10 @@ const timeSchema = z.object({
   activated: z.boolean(),
 });
 
+// Effets disponibles pour le mode bedtime
+export const BEDTIME_EFFECTS = ['none', 'pulse', 'rainbow-soft', 'breathe', 'nightlight'] as const;
+export type BedtimeEffect = typeof BEDTIME_EFFECTS[number];
+
 // Schéma simplifié pour la mise à jour de la configuration
 export const updateDreamBedtimeConfigSchema = z.preprocess((data: any) => {
   // Nettoyer weekdaySchedule en filtrant les valeurs undefined
@@ -93,10 +97,18 @@ export const updateDreamBedtimeConfigSchema = z.preprocess((data: any) => {
       { message: 'Les jours de la semaine doivent être valides' }
     )
     .optional(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'La couleur doit être au format hexadécimal (#RRGGBB)'),
+  // Soit color (pour couleur fixe), soit effect (pour effet animé)
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'La couleur doit être au format hexadécimal (#RRGGBB)').optional(),
+  effect: z.enum(BEDTIME_EFFECTS as [string, ...string[]]).optional(),
   brightness: z.number().int().min(0).max(100),
   nightlightAllNight: z.boolean(),
-}));
+}).refine(
+  (data) => {
+    // Au moins color ou effect doit être présent
+    return !!(data.color || data.effect);
+  },
+  { message: 'Vous devez spécifier soit une couleur (color) soit un effet (effect)' }
+));
 
 // Type inféré pour la mise à jour
 export type UpdateDreamBedtimeConfigInput = z.infer<typeof updateDreamBedtimeConfigSchema>;
@@ -111,6 +123,7 @@ export const dreamBedtimeConfigResponseSchema = z.object({
   colorB: z.number().int().min(0).max(255),
   brightness: z.number().int().min(0).max(100),
   nightlightAllNight: z.boolean(),
+  effect: z.enum(BEDTIME_EFFECTS as [string, ...string[]]).nullable().optional(),
 });
 
 // Type inféré pour la réponse

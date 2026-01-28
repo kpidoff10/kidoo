@@ -11281,6 +11281,7 @@ export namespace Prisma {
     colorB: number | null
     brightness: number | null
     allNight: boolean | null
+    effect: string | null
     wakeupColorR: number | null
     wakeupColorG: number | null
     wakeupColorB: number | null
@@ -11297,6 +11298,7 @@ export namespace Prisma {
     colorB: number | null
     brightness: number | null
     allNight: boolean | null
+    effect: string | null
     wakeupColorR: number | null
     wakeupColorG: number | null
     wakeupColorB: number | null
@@ -11313,6 +11315,7 @@ export namespace Prisma {
     colorB: number
     brightness: number
     allNight: number
+    effect: number
     wakeupColorR: number
     wakeupColorG: number
     wakeupColorB: number
@@ -11353,6 +11356,7 @@ export namespace Prisma {
     colorB?: true
     brightness?: true
     allNight?: true
+    effect?: true
     wakeupColorR?: true
     wakeupColorG?: true
     wakeupColorB?: true
@@ -11369,6 +11373,7 @@ export namespace Prisma {
     colorB?: true
     brightness?: true
     allNight?: true
+    effect?: true
     wakeupColorR?: true
     wakeupColorG?: true
     wakeupColorB?: true
@@ -11385,6 +11390,7 @@ export namespace Prisma {
     colorB?: true
     brightness?: true
     allNight?: true
+    effect?: true
     wakeupColorR?: true
     wakeupColorG?: true
     wakeupColorB?: true
@@ -11488,6 +11494,7 @@ export namespace Prisma {
     colorB: number | null
     brightness: number | null
     allNight: boolean
+    effect: string | null
     wakeupColorR: number | null
     wakeupColorG: number | null
     wakeupColorB: number | null
@@ -11523,6 +11530,7 @@ export namespace Prisma {
     colorB?: boolean
     brightness?: boolean
     allNight?: boolean
+    effect?: boolean
     wakeupColorR?: boolean
     wakeupColorG?: boolean
     wakeupColorB?: boolean
@@ -11543,6 +11551,7 @@ export namespace Prisma {
     colorB?: boolean
     brightness?: boolean
     allNight?: boolean
+    effect?: boolean
     wakeupColorR?: boolean
     wakeupColorG?: boolean
     wakeupColorB?: boolean
@@ -11560,6 +11569,7 @@ export namespace Prisma {
     colorB?: boolean
     brightness?: boolean
     allNight?: boolean
+    effect?: boolean
     wakeupColorR?: boolean
     wakeupColorG?: boolean
     wakeupColorB?: boolean
@@ -11577,6 +11587,7 @@ export namespace Prisma {
     colorB?: boolean
     brightness?: boolean
     allNight?: boolean
+    effect?: boolean
     wakeupColorR?: boolean
     wakeupColorG?: boolean
     wakeupColorB?: boolean
@@ -11585,7 +11596,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type KidooConfigDreamOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "kidooId" | "colorR" | "colorG" | "colorB" | "brightness" | "allNight" | "wakeupColorR" | "wakeupColorG" | "wakeupColorB" | "wakeupBrightness" | "createdAt" | "updatedAt", ExtArgs["result"]["kidooConfigDream"]>
+  export type KidooConfigDreamOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "kidooId" | "colorR" | "colorG" | "colorB" | "brightness" | "allNight" | "effect" | "wakeupColorR" | "wakeupColorG" | "wakeupColorB" | "wakeupBrightness" | "createdAt" | "updatedAt", ExtArgs["result"]["kidooConfigDream"]>
   export type KidooConfigDreamInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     kidoo?: boolean | KidooDefaultArgs<ExtArgs>
     bedtimeSchedules?: boolean | KidooConfigDream$bedtimeSchedulesArgs<ExtArgs>
@@ -11614,6 +11625,7 @@ export namespace Prisma {
       colorB: number | null
       brightness: number | null
       allNight: boolean
+      effect: string | null
       wakeupColorR: number | null
       wakeupColorG: number | null
       wakeupColorB: number | null
@@ -12053,6 +12065,7 @@ export namespace Prisma {
     readonly colorB: FieldRef<"KidooConfigDream", 'Int'>
     readonly brightness: FieldRef<"KidooConfigDream", 'Int'>
     readonly allNight: FieldRef<"KidooConfigDream", 'Boolean'>
+    readonly effect: FieldRef<"KidooConfigDream", 'String'>
     readonly wakeupColorR: FieldRef<"KidooConfigDream", 'Int'>
     readonly wakeupColorG: FieldRef<"KidooConfigDream", 'Int'>
     readonly wakeupColorB: FieldRef<"KidooConfigDream", 'Int'>
@@ -14936,6 +14949,7 @@ export namespace Prisma {
     colorB: 'colorB',
     brightness: 'brightness',
     allNight: 'allNight',
+    effect: 'effect',
     wakeupColorR: 'wakeupColorR',
     wakeupColorG: 'wakeupColorG',
     wakeupColorB: 'wakeupColorB',
@@ -15761,6 +15775,7 @@ export namespace Prisma {
     colorB?: IntNullableFilter<"KidooConfigDream"> | number | null
     brightness?: IntNullableFilter<"KidooConfigDream"> | number | null
     allNight?: BoolFilter<"KidooConfigDream"> | boolean
+    effect?: StringNullableFilter<"KidooConfigDream"> | string | null
     wakeupColorR?: IntNullableFilter<"KidooConfigDream"> | number | null
     wakeupColorG?: IntNullableFilter<"KidooConfigDream"> | number | null
     wakeupColorB?: IntNullableFilter<"KidooConfigDream"> | number | null
@@ -15780,6 +15795,7 @@ export namespace Prisma {
     colorB?: SortOrderInput | SortOrder
     brightness?: SortOrderInput | SortOrder
     allNight?: SortOrder
+    effect?: SortOrderInput | SortOrder
     wakeupColorR?: SortOrderInput | SortOrder
     wakeupColorG?: SortOrderInput | SortOrder
     wakeupColorB?: SortOrderInput | SortOrder
@@ -15802,6 +15818,7 @@ export namespace Prisma {
     colorB?: IntNullableFilter<"KidooConfigDream"> | number | null
     brightness?: IntNullableFilter<"KidooConfigDream"> | number | null
     allNight?: BoolFilter<"KidooConfigDream"> | boolean
+    effect?: StringNullableFilter<"KidooConfigDream"> | string | null
     wakeupColorR?: IntNullableFilter<"KidooConfigDream"> | number | null
     wakeupColorG?: IntNullableFilter<"KidooConfigDream"> | number | null
     wakeupColorB?: IntNullableFilter<"KidooConfigDream"> | number | null
@@ -15821,6 +15838,7 @@ export namespace Prisma {
     colorB?: SortOrderInput | SortOrder
     brightness?: SortOrderInput | SortOrder
     allNight?: SortOrder
+    effect?: SortOrderInput | SortOrder
     wakeupColorR?: SortOrderInput | SortOrder
     wakeupColorG?: SortOrderInput | SortOrder
     wakeupColorB?: SortOrderInput | SortOrder
@@ -15845,6 +15863,7 @@ export namespace Prisma {
     colorB?: IntNullableWithAggregatesFilter<"KidooConfigDream"> | number | null
     brightness?: IntNullableWithAggregatesFilter<"KidooConfigDream"> | number | null
     allNight?: BoolWithAggregatesFilter<"KidooConfigDream"> | boolean
+    effect?: StringNullableWithAggregatesFilter<"KidooConfigDream"> | string | null
     wakeupColorR?: IntNullableWithAggregatesFilter<"KidooConfigDream"> | number | null
     wakeupColorG?: IntNullableWithAggregatesFilter<"KidooConfigDream"> | number | null
     wakeupColorB?: IntNullableWithAggregatesFilter<"KidooConfigDream"> | number | null
@@ -16727,6 +16746,7 @@ export namespace Prisma {
     colorB?: number | null
     brightness?: number | null
     allNight?: boolean
+    effect?: string | null
     wakeupColorR?: number | null
     wakeupColorG?: number | null
     wakeupColorB?: number | null
@@ -16746,6 +16766,7 @@ export namespace Prisma {
     colorB?: number | null
     brightness?: number | null
     allNight?: boolean
+    effect?: string | null
     wakeupColorR?: number | null
     wakeupColorG?: number | null
     wakeupColorB?: number | null
@@ -16763,6 +16784,7 @@ export namespace Prisma {
     colorB?: NullableIntFieldUpdateOperationsInput | number | null
     brightness?: NullableIntFieldUpdateOperationsInput | number | null
     allNight?: BoolFieldUpdateOperationsInput | boolean
+    effect?: NullableStringFieldUpdateOperationsInput | string | null
     wakeupColorR?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorG?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorB?: NullableIntFieldUpdateOperationsInput | number | null
@@ -16782,6 +16804,7 @@ export namespace Prisma {
     colorB?: NullableIntFieldUpdateOperationsInput | number | null
     brightness?: NullableIntFieldUpdateOperationsInput | number | null
     allNight?: BoolFieldUpdateOperationsInput | boolean
+    effect?: NullableStringFieldUpdateOperationsInput | string | null
     wakeupColorR?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorG?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorB?: NullableIntFieldUpdateOperationsInput | number | null
@@ -16800,6 +16823,7 @@ export namespace Prisma {
     colorB?: number | null
     brightness?: number | null
     allNight?: boolean
+    effect?: string | null
     wakeupColorR?: number | null
     wakeupColorG?: number | null
     wakeupColorB?: number | null
@@ -16815,6 +16839,7 @@ export namespace Prisma {
     colorB?: NullableIntFieldUpdateOperationsInput | number | null
     brightness?: NullableIntFieldUpdateOperationsInput | number | null
     allNight?: BoolFieldUpdateOperationsInput | boolean
+    effect?: NullableStringFieldUpdateOperationsInput | string | null
     wakeupColorR?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorG?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorB?: NullableIntFieldUpdateOperationsInput | number | null
@@ -16831,6 +16856,7 @@ export namespace Prisma {
     colorB?: NullableIntFieldUpdateOperationsInput | number | null
     brightness?: NullableIntFieldUpdateOperationsInput | number | null
     allNight?: BoolFieldUpdateOperationsInput | boolean
+    effect?: NullableStringFieldUpdateOperationsInput | string | null
     wakeupColorR?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorG?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorB?: NullableIntFieldUpdateOperationsInput | number | null
@@ -17682,6 +17708,7 @@ export namespace Prisma {
     colorB?: SortOrder
     brightness?: SortOrder
     allNight?: SortOrder
+    effect?: SortOrder
     wakeupColorR?: SortOrder
     wakeupColorG?: SortOrder
     wakeupColorB?: SortOrder
@@ -17709,6 +17736,7 @@ export namespace Prisma {
     colorB?: SortOrder
     brightness?: SortOrder
     allNight?: SortOrder
+    effect?: SortOrder
     wakeupColorR?: SortOrder
     wakeupColorG?: SortOrder
     wakeupColorB?: SortOrder
@@ -17725,6 +17753,7 @@ export namespace Prisma {
     colorB?: SortOrder
     brightness?: SortOrder
     allNight?: SortOrder
+    effect?: SortOrder
     wakeupColorR?: SortOrder
     wakeupColorG?: SortOrder
     wakeupColorB?: SortOrder
@@ -19191,6 +19220,7 @@ export namespace Prisma {
     colorB?: number | null
     brightness?: number | null
     allNight?: boolean
+    effect?: string | null
     wakeupColorR?: number | null
     wakeupColorG?: number | null
     wakeupColorB?: number | null
@@ -19208,6 +19238,7 @@ export namespace Prisma {
     colorB?: number | null
     brightness?: number | null
     allNight?: boolean
+    effect?: string | null
     wakeupColorR?: number | null
     wakeupColorG?: number | null
     wakeupColorB?: number | null
@@ -19333,6 +19364,7 @@ export namespace Prisma {
     colorB?: NullableIntFieldUpdateOperationsInput | number | null
     brightness?: NullableIntFieldUpdateOperationsInput | number | null
     allNight?: BoolFieldUpdateOperationsInput | boolean
+    effect?: NullableStringFieldUpdateOperationsInput | string | null
     wakeupColorR?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorG?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorB?: NullableIntFieldUpdateOperationsInput | number | null
@@ -19350,6 +19382,7 @@ export namespace Prisma {
     colorB?: NullableIntFieldUpdateOperationsInput | number | null
     brightness?: NullableIntFieldUpdateOperationsInput | number | null
     allNight?: BoolFieldUpdateOperationsInput | boolean
+    effect?: NullableStringFieldUpdateOperationsInput | string | null
     wakeupColorR?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorG?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorB?: NullableIntFieldUpdateOperationsInput | number | null
@@ -20211,6 +20244,7 @@ export namespace Prisma {
     colorB?: number | null
     brightness?: number | null
     allNight?: boolean
+    effect?: string | null
     wakeupColorR?: number | null
     wakeupColorG?: number | null
     wakeupColorB?: number | null
@@ -20229,6 +20263,7 @@ export namespace Prisma {
     colorB?: number | null
     brightness?: number | null
     allNight?: boolean
+    effect?: string | null
     wakeupColorR?: number | null
     wakeupColorG?: number | null
     wakeupColorB?: number | null
@@ -20261,6 +20296,7 @@ export namespace Prisma {
     colorB?: NullableIntFieldUpdateOperationsInput | number | null
     brightness?: NullableIntFieldUpdateOperationsInput | number | null
     allNight?: BoolFieldUpdateOperationsInput | boolean
+    effect?: NullableStringFieldUpdateOperationsInput | string | null
     wakeupColorR?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorG?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorB?: NullableIntFieldUpdateOperationsInput | number | null
@@ -20279,6 +20315,7 @@ export namespace Prisma {
     colorB?: NullableIntFieldUpdateOperationsInput | number | null
     brightness?: NullableIntFieldUpdateOperationsInput | number | null
     allNight?: BoolFieldUpdateOperationsInput | boolean
+    effect?: NullableStringFieldUpdateOperationsInput | string | null
     wakeupColorR?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorG?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorB?: NullableIntFieldUpdateOperationsInput | number | null
@@ -20295,6 +20332,7 @@ export namespace Prisma {
     colorB?: number | null
     brightness?: number | null
     allNight?: boolean
+    effect?: string | null
     wakeupColorR?: number | null
     wakeupColorG?: number | null
     wakeupColorB?: number | null
@@ -20313,6 +20351,7 @@ export namespace Prisma {
     colorB?: number | null
     brightness?: number | null
     allNight?: boolean
+    effect?: string | null
     wakeupColorR?: number | null
     wakeupColorG?: number | null
     wakeupColorB?: number | null
@@ -20345,6 +20384,7 @@ export namespace Prisma {
     colorB?: NullableIntFieldUpdateOperationsInput | number | null
     brightness?: NullableIntFieldUpdateOperationsInput | number | null
     allNight?: BoolFieldUpdateOperationsInput | boolean
+    effect?: NullableStringFieldUpdateOperationsInput | string | null
     wakeupColorR?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorG?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorB?: NullableIntFieldUpdateOperationsInput | number | null
@@ -20363,6 +20403,7 @@ export namespace Prisma {
     colorB?: NullableIntFieldUpdateOperationsInput | number | null
     brightness?: NullableIntFieldUpdateOperationsInput | number | null
     allNight?: BoolFieldUpdateOperationsInput | boolean
+    effect?: NullableStringFieldUpdateOperationsInput | string | null
     wakeupColorR?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorG?: NullableIntFieldUpdateOperationsInput | number | null
     wakeupColorB?: NullableIntFieldUpdateOperationsInput | number | null

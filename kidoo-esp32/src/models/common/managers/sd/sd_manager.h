@@ -23,6 +23,7 @@ struct SDConfig {
   uint8_t bedtime_colorB;   // Couleur B pour bedtime (0-255)
   uint8_t bedtime_brightness; // Luminosité pour bedtime (0-100)
   bool bedtime_allNight;    // Veilleuse toute la nuit
+  char bedtime_effect[32];  // Effet LED pour bedtime ("none", "pulse", "rainbow-soft", "breathe", "nightlight", etc.)
   char bedtime_weekdaySchedule[512]; // Schedule par jour (JSON sérialisé: {"monday":{"hour":20,"minute":0,"activated":true},...})
   // Configuration wakeup (modèle Dream uniquement)
   uint8_t wakeup_colorR;    // Couleur R pour wakeup (0-255)

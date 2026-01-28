@@ -12,6 +12,7 @@ import { Controller, Control } from 'react-hook-form';
 interface BrightnessSectionProps {
   control: Control<{
     color: string;
+    effect: string | null;
     brightness: number;
     nightlightAllNight: boolean;
   }>;

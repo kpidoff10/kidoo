@@ -57,6 +57,14 @@ bool BedtimeManager::loadConfig() {
   config.brightness = sdConfig.bedtime_brightness;
   config.allNight = sdConfig.bedtime_allNight;
   
+  // Copier l'effet (ou "none" si vide)
+  if (strlen(sdConfig.bedtime_effect) > 0) {
+    strncpy(config.effect, sdConfig.bedtime_effect, sizeof(config.effect) - 1);
+    config.effect[sizeof(config.effect) - 1] = '\0';
+  } else {
+    strcpy(config.effect, "none");
+  }
+  
   // Initialiser tous les schedules à désactivés par défaut
   for (int i = 0; i < 7; i++) {
     config.schedules[i].hour = 20;
@@ -70,9 +78,9 @@ bool BedtimeManager::loadConfig() {
   }
   
   Serial.println("[BEDTIME] Configuration chargee depuis la SD");
-  Serial.printf("[BEDTIME] Couleur RGB(%d, %d, %d), Brightness: %d%%, AllNight: %s\n",
+  Serial.printf("[BEDTIME] Couleur RGB(%d, %d, %d), Brightness: %d%%, AllNight: %s, Effect: %s\n",
                 config.colorR, config.colorG, config.colorB, config.brightness,
-                config.allNight ? "true" : "false");
+                config.allNight ? "true" : "false", config.effect);
   
   return true;
 }
@@ -305,14 +313,45 @@ void BedtimeManager::startBedtime() {
   // Réveiller les LEDs
   LEDManager::wakeUp();
   
-  // Désactiver les effets animés
-  LEDManager::setEffect(LED_EFFECT_NONE);
+  // Déterminer l'effet à utiliser
+  LEDEffect effect = LED_EFFECT_NONE;
+  bool useEffect = false;
   
-  // Définir la couleur (brightness sera gérée par le fade-in)
-  LEDManager::setColor(config.colorR, config.colorG, config.colorB);
+  // Vérifier si un effet est configuré (et n'est pas "none")
+  if (strlen(config.effect) > 0 && strcmp(config.effect, "none") != 0) {
+    useEffect = true;
+    
+    // Convertir le nom de l'effet en enum
+    if (strcmp(config.effect, "pulse") == 0) {
+      effect = LED_EFFECT_PULSE;
+    } else if (strcmp(config.effect, "rainbow-soft") == 0) {
+      effect = LED_EFFECT_RAINBOW_SOFT;
+    } else if (strcmp(config.effect, "breathe") == 0) {
+      effect = LED_EFFECT_BREATHE;
+    } else if (strcmp(config.effect, "nightlight") == 0) {
+      effect = LED_EFFECT_NIGHTLIGHT;
+    } else {
+      // Effet inconnu, utiliser couleur fixe
+      useEffect = false;
+      effect = LED_EFFECT_NONE;
+      Serial.printf("[BEDTIME] Effet inconnu: %s, utilisation de la couleur fixe\n", config.effect);
+    }
+  }
   
-  Serial.printf("[BEDTIME] Couleur RGB(%d, %d, %d), Brightness cible: %d%%\n",
-                config.colorR, config.colorG, config.colorB, config.brightness);
+  if (useEffect) {
+    // Mode effet animé
+    LEDManager::setEffect(effect);
+    // Définir aussi la couleur pour les effets qui l'utilisent (comme ROTATE)
+    LEDManager::setColor(config.colorR, config.colorG, config.colorB);
+    Serial.printf("[BEDTIME] Effet: %s, Couleur RGB(%d, %d, %d), Brightness cible: %d%%\n",
+                  config.effect, config.colorR, config.colorG, config.colorB, config.brightness);
+  } else {
+    // Mode couleur fixe
+    LEDManager::setEffect(LED_EFFECT_NONE);
+    LEDManager::setColor(config.colorR, config.colorG, config.colorB);
+    Serial.printf("[BEDTIME] Couleur RGB(%d, %d, %d), Brightness cible: %d%%\n",
+                  config.colorR, config.colorG, config.colorB, config.brightness);
+  }
 }
 
 void BedtimeManager::updateFadeIn() {

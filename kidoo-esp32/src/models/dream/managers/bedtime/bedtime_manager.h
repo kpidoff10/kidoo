@@ -36,6 +36,7 @@ struct BedtimeConfig {
   uint8_t colorB;
   uint8_t brightness;  // 0-100
   bool allNight;       // Si true, reste allumé toute la nuit
+  char effect[32];     // Effet LED ("none", "pulse", "rainbow-soft", "breathe", "nightlight", etc.) - vide ou "none" = couleur fixe
   BedtimeSchedule schedules[7]; // Un schedule par jour (0=monday, 6=sunday)
 };
 
