@@ -24,3 +24,9 @@ export interface ApiSuccess<T = unknown> {
  * Réponse API générique
  */
 export type ApiResponse<T = unknown> = ApiSuccess<T> | ApiError;
+
+/**
+ * Type pour les jours de la semaine
+ * Utilisé par bedtime et wakeup configs
+ */
+export type Weekday = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';

@@ -25,6 +25,12 @@
 // URL de base de l'API serveur (pour récupération de configuration)
 // En développement: utiliser l'IP locale du serveur (ex: http://192.168.1.217:3000)
 // En production: utiliser l'URL du serveur (ex: https://api.kidoo.com)
-#define API_BASE_URL "http://192.168.1.217:3000"
+// 
+// Cette valeur peut être surchargée via build_flags dans platformio.ini :
+// -DAPI_BASE_URL=\"http://192.168.1.217:3000\" pour dev
+// -DAPI_BASE_URL=\"https://api.kidoo.com\" pour prod
+#ifndef API_BASE_URL
+#define API_BASE_URL "http://192.168.1.217:3000"  // Valeur par défaut (dev)
+#endif
 
 #endif // COMMON_DEFAULT_CONFIG_H

@@ -2,7 +2,8 @@
  * Types pour la configuration de l'heure de réveil du modèle Dream
  */
 
-export type Weekday = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+import type { Weekday } from '../../../types/common';
+export type { Weekday };
 
 export interface WakeupTime {
   hour: number;

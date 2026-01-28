@@ -238,23 +238,22 @@ export const PATCH = withAuth(async (
     if (kidoo.macAddress && isPubNubConfigured()) {
       try {
         // Construire le message PubNub avec la configuration
-        const pubnubMessage: Record<string, unknown> = {
-          action: 'set-wakeup-config',
-          params: {
-            colorR: updatedConfig.wakeupColorR,
-            colorG: updatedConfig.wakeupColorG,
-            colorB: updatedConfig.wakeupColorB,
-            brightness: updatedConfig.wakeupBrightness,
-          },
+        const pubnubParams: Record<string, unknown> = {
+          colorR: updatedConfig.wakeupColorR,
+          colorG: updatedConfig.wakeupColorG,
+          colorB: updatedConfig.wakeupColorB,
+          brightness: updatedConfig.wakeupBrightness,
         };
 
         // Ajouter weekdaySchedule si présent
         if (responseWeekdaySchedule && Object.keys(responseWeekdaySchedule).length > 0) {
-          pubnubMessage.params = {
-            ...pubnubMessage.params,
-            weekdaySchedule: responseWeekdaySchedule,
-          };
+          pubnubParams.weekdaySchedule = responseWeekdaySchedule;
         }
+
+        const pubnubMessage: Record<string, unknown> = {
+          action: 'set-wakeup-config',
+          params: pubnubParams,
+        };
 
         console.log('[DREAM-WAKEUP] Envoi configuration via PubNub:', JSON.stringify(pubnubMessage, null, 2));
         await sendCommand(kidoo.macAddress, 'set-wakeup-config', pubnubMessage.params as Record<string, unknown>);

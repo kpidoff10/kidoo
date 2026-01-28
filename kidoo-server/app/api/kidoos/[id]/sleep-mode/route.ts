@@ -39,8 +39,16 @@ export const GET = withAuth(async (
       });
     }
 
+    // Note: Cast nécessaire car le client Prisma doit être régénéré après l'ajout des champs sleepColor* et sleepEffect
+    const kidooWithSleepMode = kidoo as typeof kidoo & {
+      sleepColorR: number | null;
+      sleepColorG: number | null;
+      sleepColorB: number | null;
+      sleepEffect: number | null;
+    };
+
     // Si pas de configuration, retourner les valeurs par défaut (couleur noire)
-    if (kidoo.sleepColorR === null || kidoo.sleepColorG === null || kidoo.sleepColorB === null) {
+    if (kidooWithSleepMode.sleepColorR === null || kidooWithSleepMode.sleepColorG === null || kidooWithSleepMode.sleepColorB === null) {
       return createSuccessResponse({
         type: 'color',
         color: {
@@ -52,10 +60,10 @@ export const GET = withAuth(async (
     }
 
     // Si un effet est configuré (sleepEffect !== null && !== 0)
-    if (kidoo.sleepEffect !== null && kidoo.sleepEffect > 0) {
+    if (kidooWithSleepMode.sleepEffect !== null && kidooWithSleepMode.sleepEffect > 0) {
       return createSuccessResponse({
         type: 'effect',
-        effect: kidoo.sleepEffect,
+        effect: kidooWithSleepMode.sleepEffect,
       });
     }
 
@@ -63,9 +71,9 @@ export const GET = withAuth(async (
     return createSuccessResponse({
       type: 'color',
       color: {
-        r: kidoo.sleepColorR ?? 0,
-        g: kidoo.sleepColorG ?? 0,
-        b: kidoo.sleepColorB ?? 0,
+        r: kidooWithSleepMode.sleepColorR ?? 0,
+        g: kidooWithSleepMode.sleepColorG ?? 0,
+        b: kidooWithSleepMode.sleepColorB ?? 0,
       },
     });
   } catch (error) {
@@ -143,33 +151,33 @@ export const PATCH = withAuth(async (
     }
 
     // Mettre à jour le Kidoo
-    const updatedKidoo = await prisma.kidoo.update({
+    // Note: Cast nécessaire car le client Prisma doit être régénéré après l'ajout des champs sleepColor* et sleepEffect
+    await prisma.kidoo.update({
       where: { id },
-      data: updateData,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: updateData as any,
     });
 
     // Envoyer la commande via PubNub si configuré
     if (isPubNubConfigured() && kidoo.macAddress) {
       try {
-        // Construire la commande pour l'ESP32
-        const command: any = {
-          type: 'sleep-mode-config',
-        };
+        // Construire les paramètres de la commande pour l'ESP32
+        const params: Record<string, unknown> = {};
 
         if (type === 'color' && color) {
-          command.colorR = color.r;
-          command.colorG = color.g;
-          command.colorB = color.b;
-          command.effect = 0; // LED_EFFECT_NONE
+          params.colorR = color.r;
+          params.colorG = color.g;
+          params.colorB = color.b;
+          params.effect = 0; // LED_EFFECT_NONE
         } else if (type === 'effect' && effect !== undefined) {
-          command.colorR = 0;
-          command.colorG = 0;
-          command.colorB = 0;
-          command.effect = effect;
+          params.colorR = 0;
+          params.colorG = 0;
+          params.colorB = 0;
+          params.effect = effect;
         }
 
-        await sendCommand(kidoo.macAddress, command);
-        console.log('[SLEEP-MODE] Commande envoyée via PubNub:', JSON.stringify(command, null, 2));
+        await sendCommand(kidoo.macAddress, 'sleep-mode-config', params);
+        console.log('[SLEEP-MODE] Commande envoyée via PubNub:', JSON.stringify({ action: 'sleep-mode-config', ...params }, null, 2));
       } catch (pubnubError) {
         console.error('[SLEEP-MODE] Erreur lors de l\'envoi de la commande PubNub:', pubnubError);
         // Ne pas échouer la requête si PubNub échoue, la config est quand même sauvegardée

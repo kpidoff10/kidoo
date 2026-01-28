@@ -1,7 +1,8 @@
 /**
  * Types pour la modification du nom d'un Kidoo
+ * 
+ * Note: UpdateKidooNameInput est exporté depuis schema.ts (type inféré depuis Zod)
  */
 
-export type UpdateKidooNameInput = {
-  name: string;
-};
+// Réexporter le type depuis schema.ts pour compatibilité
+export type { UpdateKidooNameInput } from './schema';

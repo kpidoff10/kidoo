@@ -87,7 +87,7 @@ export const GET = withAuth(async (
     // Note: Si l'adresse MAC en base est incorrecte (BLE au lieu de WiFi), 
     // on essaie aussi avec l'adresse MAC de la réponse si elle est différente
     console.log(`[CHECK-ONLINE] Attente de la réponse pour ${kidoo.macAddress}...`);
-    let response = await waitForMessage(kidoo.macAddress, 'info', RESPONSE_TIMEOUT_MS);
+    const response = await waitForMessage(kidoo.macAddress, 'info', RESPONSE_TIMEOUT_MS);
     
     // Si pas de réponse et que l'adresse MAC pourrait être incorrecte, 
     // on essaie de chercher sur tous les channels récents (fallback)

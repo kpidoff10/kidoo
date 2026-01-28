@@ -1,0 +1,11 @@
+{
+  "buildCommand": "cd kidoo-server && npm run build",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": "kidoo-server/.next",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  }
+}
