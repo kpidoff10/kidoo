@@ -15,6 +15,15 @@ import type { NextRequest } from 'next/server';
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const hostname = request.headers.get('host') || '';
+
+  // Redirection pour le sous-domaine API : api.kidoo-box.com
+  // Si la requête vient de api.kidoo-box.com et que le chemin ne commence pas par /api
+  if (hostname === 'api.kidoo-box.com' && !pathname.startsWith('/api')) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/api${pathname}`;
+    return NextResponse.rewrite(url);
+  }
 
   // Gérer les requêtes preflight OPTIONS (CORS)
   if (request.method === 'OPTIONS') {
