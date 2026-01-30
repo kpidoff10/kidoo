@@ -18,7 +18,6 @@ import {
   ColorOrEffectSection,
   BrightnessSection,
   NightlightSwitch,
-  TestButton,
 } from './components';
 
 type RouteParams = {
@@ -327,11 +326,6 @@ export function BedtimeConfigScreen() {
           <BrightnessSection control={control} />
 
           <NightlightSwitch control={control} />
-
-          <TestButton
-            kidooId={kidooId}
-            control={control}
-          />
         </View>
       </ContentScrollView>
     </View>

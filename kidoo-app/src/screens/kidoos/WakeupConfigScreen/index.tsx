@@ -16,7 +16,6 @@ import {
   TimePickerSection,
   ColorPickerSection,
   BrightnessSection,
-  TestButton,
 } from './components';
 
 type RouteParams = {
@@ -293,11 +292,6 @@ export function WakeupConfigScreen() {
           <ColorPickerSection control={control} />
 
           <BrightnessSection control={control} />
-
-          <TestButton
-            kidooId={kidooId}
-            control={control}
-          />
         </View>
       </ContentScrollView>
     </View>
