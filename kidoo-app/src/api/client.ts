@@ -4,6 +4,7 @@
  */
 
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import * as Sentry from '@sentry/react-native';
 import { tokenStorage } from '@/utils/storage';
 
 // URL de l'API depuis la variable d'environnement
@@ -109,6 +110,21 @@ apiClient.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
+    }
+
+    // Capturer les erreurs réseau dans Sentry (sauf les 401 qui sont gérées par le refresh)
+    if (error.response?.status !== 401) {
+      Sentry.captureException(error, {
+        tags: {
+          api_error: true,
+          status_code: error.response?.status,
+        },
+        extra: {
+          url: error.config?.url,
+          method: error.config?.method,
+          response_data: error.response?.data,
+        },
+      });
     }
 
     return Promise.reject(error);

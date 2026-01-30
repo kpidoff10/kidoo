@@ -52,6 +52,36 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     }
   }
 
+  // Résoudre les imports vers kidoo-app/ depuis la racine du monorepo
+  // Ex: ./kidoo-app/src/App, ./kidoo-app/index, etc.
+  if (moduleName.startsWith('./kidoo-app/') || moduleName.startsWith('../kidoo-app/')) {
+    const relativePath = moduleName.replace(/^(\.\.?\/)+kidoo-app\//, '');
+    const correctPath = path.resolve(kidooAppRoot, relativePath);
+    const extensions = ['tsx', 'ts', 'jsx', 'js', 'json'];
+    
+    // Essayer d'abord comme fichier avec extension
+    for (const ext of extensions) {
+      const fullPath = `${correctPath}.${ext}`;
+      if (fs.existsSync(fullPath)) {
+        return {
+          filePath: fullPath,
+          type: 'sourceFile',
+        };
+      }
+    }
+    
+    // Essayer aussi comme répertoire avec index
+    for (const ext of extensions) {
+      const fullPath = path.join(correctPath, `index.${ext}`);
+      if (fs.existsSync(fullPath)) {
+        return {
+          filePath: fullPath,
+          type: 'sourceFile',
+        };
+      }
+    }
+  }
+
   // Corriger tous les chemins ../src/ (quel que soit le nombre de ../) qui pointent vers kidoo-app/src/
   // Cela se produit quand Babel transforme @/theme en ../../src/theme, @/api en ../../../src/api, etc.
   // Pattern: un ou plusieurs ../ suivis de src/

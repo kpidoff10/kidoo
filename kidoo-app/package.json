@@ -26,6 +26,7 @@
     "@react-navigation/elements": "^2.6.4",
     "@react-navigation/native": "^7.1.17",
     "@react-navigation/native-stack": "^7.3.26",
+    "@sentry/react-native": "^7.11.0",
     "@tanstack/query-async-storage-persister": "^5.90.21",
     "@tanstack/react-query": "^5.90.19",
     "@tanstack/react-query-persist-client": "^5.90.21",

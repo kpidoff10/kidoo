@@ -20,6 +20,7 @@ import { KIDOO_MODELS, isValidKidooModel, convertBleModelToApiModel } from '@/co
 import { useBottomSheet, UseBottomSheetReturn } from '@/hooks/useBottomSheet';
 import { useKidoos } from '@/hooks/useKidoos';
 import { useCreateKidoo } from '@/hooks/useKidoos';
+import { captureError } from '@/lib/sentry';
 import * as BLECommands from './commands';
 import { BLECommand, CommandResult } from './commands';
 
@@ -196,9 +197,15 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
     return () => {
       subscription.remove();
       // Déconnecter le device si connecté
+      // WORKAROUND pour le bug connu de react-native-ble-plx :
+      // Ne pas appeler cancelConnection() directement car cela peut causer un crash
+      // Réinitialiser simplement la référence et laisser le callback onDisconnected() gérer
       if (connectedDeviceRef.current) {
-        connectedDeviceRef.current.cancelConnection().catch(console.error);
+        // Réinitialiser la référence immédiatement pour éviter les opérations concurrentes
         connectedDeviceRef.current = null;
+        // Ne PAS appeler cancelConnection() ici - laisser le callback onDisconnected() gérer
+        // Si le device est toujours connecté, il se déconnectera naturellement
+        // et le callback onDisconnected() sera appelé automatiquement
       }
       managerRef.current?.destroy();
     };
@@ -450,10 +457,20 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
       }
 
       // Si connecté à un autre device, se déconnecter d'abord
+      // WORKAROUND: Vérifier isConnected() avant cancelConnection() pour éviter le crash
       if (state.isConnected && state.connectedDevice?.id !== deviceId && connectedDeviceRef.current) {
         console.log('[BLE] Déconnexion du device précédent:', state.connectedDevice?.id);
         try {
-          await connectedDeviceRef.current.cancelConnection();
+          // Vérifier si toujours connecté avant de tenter cancelConnection()
+          const isStillConnected = await connectedDeviceRef.current.isConnected().catch(() => false);
+          if (isStillConnected) {
+            await Promise.race([
+              connectedDeviceRef.current.cancelConnection(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1000)),
+            ]).catch(() => {
+              // Ignorer les erreurs - le callback onDisconnected() gérera la déconnexion
+            });
+          }
         } catch (error) {
           console.warn('[BLE] Erreur lors de la déconnexion du device précédent:', error);
         }
@@ -502,9 +519,18 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
         await bleDevice.discoverAllServicesAndCharacteristics();
       } catch (discoverError: any) {
         // Si la découverte échoue, nettoyer et re-throw
+        // WORKAROUND: Vérifier isConnected() avant cancelConnection() pour éviter le crash
         connectedDeviceRef.current = null;
         try {
-          await bleDevice.cancelConnection();
+          const isStillConnected = await bleDevice.isConnected().catch(() => false);
+          if (isStillConnected) {
+            await Promise.race([
+              bleDevice.cancelConnection(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1000)),
+            ]).catch(() => {
+              // Ignorer les erreurs - le callback onDisconnected() gérera la déconnexion
+            });
+          }
         } catch (cancelError) {
           // Ignorer les erreurs de cancelConnection
         }
@@ -533,6 +559,8 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
       // IMPORTANT: Wrapper dans try-catch pour éviter les crashes
       // La bibliothèque peut appeler ce callback même pendant le nettoyage
       // et peut essayer de rejeter une Promise avec un code null, ce qui cause un crash
+      // Le problème vient de react-native-ble-plx qui essaie de rejeter une Promise avec un code null
+      // dans SafePromise.reject() quand le device se déconnecte automatiquement
       bleDevice.onDisconnected((error, device) => {
         try {
           // Logger l'erreur de manière sécurisée (l'erreur peut être null ou avoir un code null)
@@ -547,20 +575,42 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
           
           // Réinitialiser la référence AVANT de mettre à jour le state
           // pour éviter que d'autres opérations BLE tentent d'utiliser le device déconnecté
-          connectedDeviceRef.current = null;
+          // IMPORTANT: Réinitialiser immédiatement pour éviter que d'autres callbacks
+          // tentent d'utiliser le device pendant qu'il se déconnecte
+          if (connectedDeviceRef.current?.id === device?.id) {
+            connectedDeviceRef.current = null;
+          }
           
           // Utiliser setTimeout pour différer la mise à jour du state
           // et éviter que cela interfère avec des opérations BLE en cours
+          // Cela permet aussi d'éviter les crashes si le callback est appelé pendant le nettoyage
           setTimeout(() => {
-            setState((prev) => ({
-              ...prev,
-              isConnected: false,
-              connectedDevice: null,
-            }));
-          }, 0);
+            try {
+              setState((prev) => {
+                // Vérifier que le device déconnecté est bien celui qui était connecté
+                if (prev.connectedDevice?.id === device?.id) {
+                  return {
+                    ...prev,
+                    isConnected: false,
+                    connectedDevice: null,
+                  };
+                }
+                return prev;
+              });
+            } catch (stateError) {
+              // Ignorer les erreurs de mise à jour du state
+              console.warn('[BLE] Erreur lors de la mise à jour du state (ignorée):', stateError);
+            }
+          }, 100); // Délai pour éviter les conflits avec les opérations BLE en cours
         } catch (err) {
           // Ignorer les erreurs dans le callback de déconnexion
           // pour éviter les crashes en cascade
+          // Capturer dans Sentry pour debug
+          captureError(err instanceof Error ? err : new Error(String(err)), {
+            source: 'BluetoothContext',
+            action: 'onDisconnected_callback',
+            deviceId: device?.id,
+          });
           console.error('[BLE] Erreur dans le callback onDisconnected (ignorée):', err);
         }
       });
@@ -622,19 +672,45 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
         return;
       }
 
-      // Déconnecter le device BLE avec protection contre les erreurs
-      // La bibliothèque peut déjà avoir nettoyé la connexion automatiquement
+      // WORKAROUND pour le bug connu de react-native-ble-plx :
+      // https://github.com/dotintent/react-native-ble-plx/issues/1303
+      // 
+      // Le problème : cancelConnection() peut causer un NullPointerException
+      // si appelé quand le device est déjà en train de se déconnecter automatiquement
+      // (l'ESP32 ferme le BLE après le setup WiFi)
+      //
+      // Solution : Ne PAS appeler cancelConnection() si on sait que le device
+      // va se déconnecter automatiquement. Laisser le callback onDisconnected()
+      // gérer la déconnexion proprement.
+      //
+      // Si on doit vraiment déconnecter manuellement, vérifier d'abord isConnected()
+      // et utiliser un timeout pour éviter les blocages
       try {
-        await deviceToDisconnect.cancelConnection();
+        // Vérifier si le device est toujours connecté avant de tenter la déconnexion
+        // Si isConnected() échoue ou retourne false, ne pas appeler cancelConnection()
+        const isStillConnected = await deviceToDisconnect.isConnected().catch(() => false);
+        if (isStillConnected) {
+          // Utiliser un timeout très court pour éviter les blocages
+          // et permettre au callback onDisconnected() de gérer la déconnexion
+          await Promise.race([
+            deviceToDisconnect.cancelConnection(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 500)),
+          ]).catch(() => {
+            // Ignorer les timeouts et erreurs - c'est normal si le device se déconnecte automatiquement
+          });
+        }
       } catch (cancelError: any) {
-        // Ignorer les erreurs de cancelConnection car la bibliothèque
-        // peut avoir déjà nettoyé la connexion automatiquement
-        // (par exemple si la connexion était déjà perdue)
-        console.log('Erreur lors de cancelConnection (peut être ignorée):', cancelError?.message);
+        // Ignorer silencieusement - le callback onDisconnected() gérera la déconnexion
+        // Ne pas logger pour éviter le bruit dans les logs
       }
 
       // Toast de déconnexion retiré - la déconnexion est silencieuse
     } catch (error) {
+      // Capturer l'erreur dans Sentry mais ne pas bloquer
+      captureError(error instanceof Error ? error : new Error(String(error)), {
+        source: 'BluetoothContext',
+        action: 'disconnectDevice',
+      });
       console.error('Erreur lors de la déconnexion:', error);
       // Mettre à jour le state même en cas d'erreur
       connectedDeviceRef.current = null;
@@ -909,13 +985,44 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
         sleepTimeout: formData.sleepTimeout !== undefined ? formData.sleepTimeout : undefined,
       });
 
-      await addDeviceSheet.close();
+      // Fermer le sheet et nettoyer l'état de manière sécurisée
+      try {
+        await addDeviceSheet.close();
+      } catch (closeError) {
+        // Capturer les erreurs de fermeture dans Sentry (peuvent indiquer un problème)
+        captureError(closeError instanceof Error ? closeError : new Error(String(closeError)), {
+          source: 'BluetoothContext',
+          action: 'closeAddDeviceSheet',
+          context: 'after_successful_kidoo_creation',
+        });
+        console.warn('Erreur lors de la fermeture du sheet (peut être déjà fermé):', closeError);
+      }
+      
       setPendingDeviceForAddSheet(null);
       clearPendingKidoo();
       isManualAddInProgressRef.current = false; // Réinitialiser le flag
     } catch (error) {
       console.error('Erreur lors de l\'ajout du Kidoo:', error);
+      // Capturer l'erreur dans Sentry
+      captureError(error instanceof Error ? error : new Error(String(error)), {
+        source: 'BluetoothContext',
+        action: 'handleAddDeviceComplete',
+        formData: {
+          name: formData.name,
+          wifiSSID: formData.wifiSSID,
+          hasDeviceId: !!formData.deviceId,
+          hasMacAddress: !!formData.macAddress,
+        },
+        deviceId: device?.id,
+        detectedModel,
+      });
       isManualAddInProgressRef.current = false; // Réinitialiser le flag même en cas d'erreur
+      
+      // Réafficher le toast d'erreur si nécessaire
+      showToast.error({
+        title: t('toast.error'),
+        message: t('errors.generic'),
+      });
     }
   }, [pendingDeviceForAddSheet, createKidoo, addDeviceSheet, clearPendingKidoo]);
 

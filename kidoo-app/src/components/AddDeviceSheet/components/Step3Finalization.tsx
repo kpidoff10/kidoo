@@ -229,15 +229,16 @@ export function Step3Finalization({ device, onSuccess }: Step3FinalizationProps)
               }),
             });
             
-            // IMPORTANT: Déconnecter immédiatement après un setup réussi
-            // L'ESP32 va désactiver le BLE, donc on déconnecte proprement avant
-            // pour éviter que la bibliothèque ne tente de nettoyer automatiquement
-            // et cause un crash (NullPointerException)
-            try {
-              await disconnectDevice();
-            } catch (disconnectError) {
-              // Ignorer les erreurs de déconnexion (le device peut déjà être déconnecté)
-            }
+            // IMPORTANT: NE PAS déconnecter manuellement après un setup réussi
+            // L'ESP32 va désactiver le BLE automatiquement, ce qui déclenchera onDisconnected()
+            // Appeler disconnectDevice() ou cancelConnection() ici cause un crash connu de react-native-ble-plx
+            // (NullPointerException: Promise.reject avec code null)
+            // 
+            // WORKAROUND: Laisser l'ESP32 se déconnecter automatiquement et gérer la déconnexion
+            // dans le callback onDisconnected() qui est déjà protégé contre les crashes
+            // 
+            // Référence: https://github.com/dotintent/react-native-ble-plx/issues/1303
+            // Le callback onDisconnected() sera appelé automatiquement quand l'ESP32 ferme le BLE
           } else if (result.success && result.wifiConnected === false) {
             // La commande a réussi mais la connexion WiFi a échoué
             setWifiValidation({
@@ -283,6 +284,15 @@ export function Step3Finalization({ device, onSuccess }: Step3FinalizationProps)
               }),
             });
           } else {
+            // Capturer l'erreur dans Sentry (sauf les déconnexions normales)
+            const { captureError } = require('@/lib/sentry');
+            captureError(error instanceof Error ? error : new Error(errorMessage), {
+              source: 'Step3Finalization',
+              action: 'sendSetup',
+              errorReason,
+              deviceId: device?.id,
+            });
+            
             setWifiValidation({
               status: 'error',
               message: t('device.add.step3.wifi.setupError', {
@@ -404,14 +414,25 @@ export function Step3Finalization({ device, onSuccess }: Step3FinalizationProps)
             })}
             variant="primary"
             onPress={() => {
-              onSuccess?.({
-                deviceId,
-                macAddress, // Adresse MAC WiFi (renvoyée par l'ESP32)
-                bluetoothMacAddress: device?.id, // Adresse MAC Bluetooth (device.id est l'ID BLE qui correspond à l'adresse MAC)
-                brightness,
-                sleepTimeout,
-                firmwareVersion,
-              });
+              try {
+                onSuccess?.({
+                  deviceId,
+                  macAddress, // Adresse MAC WiFi (renvoyée par l'ESP32)
+                  bluetoothMacAddress: device?.id, // Adresse MAC Bluetooth (device.id est l'ID BLE qui correspond à l'adresse MAC)
+                  brightness,
+                  sleepTimeout,
+                  firmwareVersion,
+                });
+              } catch (error) {
+                // Capturer les erreurs lors de l'appel à onSuccess
+                const { captureError } = require('@/lib/sentry');
+                captureError(error instanceof Error ? error : new Error(String(error)), {
+                  source: 'Step3Finalization',
+                  action: 'onSuccess_callback',
+                  deviceId,
+                });
+                console.error('[Step3] Erreur lors de l\'appel à onSuccess:', error);
+              }
             }}
             style={styles.validateButton}
           />

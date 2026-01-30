@@ -155,7 +155,8 @@ function AddDeviceSheetContent({
               sleepTimeout: data?.sleepTimeout, // Sleep timeout en millisecondes
               firmwareVersion: data?.firmwareVersion, // Version du firmware ESP32
             });
-            bottomSheet.close();
+            // Ne pas fermer ici - laissez BluetoothContext gérer la fermeture
+            // bottomSheet.close(); // Retiré pour éviter la double fermeture
           }}
         />
       ),

@@ -16,6 +16,7 @@ import { tokenStorage, developerStorage } from '@/utils/storage';
 import { showToast } from '@/components/ui/Toast';
 import { useTranslation } from 'react-i18next';
 import { queryClient } from '@/lib/queryClient';
+import { setUser as setSentryUser, setTag } from '@/lib/sentry';
 
 const PROFILE_KEY = ['profile'];
 
@@ -59,6 +60,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const loadDeveloperMode = async () => {
     try {
       const isDeveloper = await developerStorage.isEnabled();
+      // Ajouter le tag développeur dans Sentry
+      setTag('developer_mode', isDeveloper ? 'enabled' : 'disabled');
       setState((prev) => ({
         ...prev,
         isDeveloper,
@@ -88,6 +91,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Synchroniser le cache React Query
       queryClient.setQueryData<User>(PROFILE_KEY, user);
       
+      // Mettre à jour le contexte utilisateur dans Sentry
+      setSentryUser({
+        id: user.id,
+        email: user.email,
+        username: user.name || user.email,
+      });
+      
       setState((prev) => ({
         ...prev,
         user,
@@ -97,6 +107,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       // Token invalide ou expiré
       await tokenStorage.clearTokens();
+      // Réinitialiser le contexte utilisateur dans Sentry
+      setSentryUser(null);
       setState((prev) => ({
         ...prev,
         user: null,
@@ -115,6 +127,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       // Synchroniser le cache React Query
       queryClient.setQueryData<User>(PROFILE_KEY, response.user);
+      
+      // Mettre à jour le contexte utilisateur dans Sentry
+      setSentryUser({
+        id: response.user.id,
+        email: response.user.email,
+        username: response.user.name || response.user.email,
+      });
       
       setState((prev) => ({
         ...prev,
@@ -137,6 +156,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       // Stocker les tokens
       await tokenStorage.setTokens(response.accessToken, response.refreshToken);
+      
+      // Mettre à jour le contexte utilisateur dans Sentry
+      setSentryUser({
+        id: response.user.id,
+        email: response.user.email,
+        username: response.user.name || response.user.email,
+      });
       
       setState((prev) => ({
         ...prev,
@@ -171,6 +197,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Nettoyer le cache React Query
       queryClient.removeQueries({ queryKey: PROFILE_KEY });
       
+      // Réinitialiser le contexte utilisateur dans Sentry
+      setSentryUser(null);
+      
       setState((prev) => ({
         ...prev,
         user: null,
@@ -183,6 +212,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const updateUser = useCallback(async (data: { name?: string }) => {
     try {
       const updatedUser = await authApi.updateProfile(data);
+      
+      // Mettre à jour le contexte utilisateur dans Sentry
+      setSentryUser({
+        id: updatedUser.id,
+        email: updatedUser.email,
+        username: updatedUser.name || updatedUser.email,
+      });
       
       setState((prev) => ({
         ...prev,
@@ -204,6 +240,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Synchroniser le cache React Query
       queryClient.setQueryData<User>(PROFILE_KEY, user);
       
+      // Mettre à jour le contexte utilisateur dans Sentry
+      setSentryUser({
+        id: user.id,
+        email: user.email,
+        username: user.name || user.email,
+      });
+      
       setState((prev) => ({
         ...prev,
         user,
@@ -216,6 +259,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const setDeveloperMode = useCallback(async (enabled: boolean) => {
     try {
       await developerStorage.setEnabled(enabled);
+      // Mettre à jour le tag développeur dans Sentry
+      setTag('developer_mode', enabled ? 'enabled' : 'disabled');
       setState((prev) => ({
         ...prev,
         isDeveloper: enabled,
