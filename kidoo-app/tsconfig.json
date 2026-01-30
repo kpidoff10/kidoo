@@ -3,6 +3,10 @@
   "compilerOptions": {
     "moduleResolution": "bundler",
     "strict": true,
+    "jsx": "react-native",
+    "jsxImportSource": "react",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
@@ -10,7 +14,9 @@
       "@shared/*": ["../shared/*"],
       "@/shared": ["../shared/index.ts"],
       "@/shared/*": ["../shared/*"]
-    }
+    },
+    "typeRoots": ["./node_modules/@types"],
+    "skipLibCheck": true
   },
-  "include": ["src/**/*", "../shared/**/*"]
+  "include": ["index.tsx", "App.tsx", "types.d.ts", "src/**/*", "../shared/**/*"]
 }

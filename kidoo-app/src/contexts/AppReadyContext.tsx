@@ -22,11 +22,18 @@ export function AppReadyProvider({ children }: AppReadyProviderProps) {
   useEffect(() => {
     async function prepare() {
       try {
-        // Attendre que le splash screen soit caché
+        // Configurer l'animation de fondu pour le splash screen
+        // Duration en millisecondes (500ms = 0.5 seconde)
+        SplashScreen.setOptions({
+          duration: 500,
+          fade: true,
+        });
+        
+        // Attendre que le splash screen soit caché avec animation de fondu
         await SplashScreen.hideAsync();
         
-        // Petit délai supplémentaire pour s'assurer que tout est rendu
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        // Petit délai supplémentaire pour s'assurer que l'animation est terminée
+        await new Promise((resolve) => setTimeout(resolve, 100));
         
         setIsAppReady(true);
       } catch (error) {

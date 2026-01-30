@@ -123,8 +123,53 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
     pendingKidooDevice: null,
   });
 
-  // Initialiser le BLE Manager
+  const checkBluetoothAvailability = useCallback(async () => {
+    try {
+      if (!managerRef.current) {
+        return;
+      }
+
+      const state = await managerRef.current.state();
+      const isAvailable = state !== State.Unsupported;
+      const isEnabled = state === State.PoweredOn;
+
+      setState((prev) => ({
+        ...prev,
+        isAvailable,
+        isEnabled,
+      }));
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        isAvailable: false,
+        isEnabled: false,
+      }));
+    }
+  }, []);
+
+  // Initialiser le BLE Manager (uniquement sur mobile, pas sur web)
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      // BLE n'est pas disponible sur web - définir l'état comme non disponible
+      setState((prev) => ({
+        ...prev,
+        isAvailable: false,
+        isEnabled: false,
+      }));
+      return;
+    }
+    
+    // Vérifier que BleManager est disponible (peut être undefined sur certaines plateformes)
+    if (!BleManager) {
+      console.warn('[BLE] BleManager n\'est pas disponible sur cette plateforme');
+      setState((prev) => ({
+        ...prev,
+        isAvailable: false,
+        isEnabled: false,
+      }));
+      return;
+    }
+    
     if (!managerRef.current) {
       managerRef.current = new BleManager();
     }
@@ -157,31 +202,7 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
       }
       managerRef.current?.destroy();
     };
-  }, []);
-
-  const checkBluetoothAvailability = useCallback(async () => {
-    try {
-      if (!managerRef.current) {
-        return;
-      }
-
-      const state = await managerRef.current.state();
-      const isAvailable = state !== State.Unsupported;
-      const isEnabled = state === State.PoweredOn;
-
-      setState((prev) => ({
-        ...prev,
-        isAvailable,
-        isEnabled,
-      }));
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        isAvailable: false,
-        isEnabled: false,
-      }));
-    }
-  }, []);
+  }, [checkBluetoothAvailability]);
 
   const requestPermissions = useCallback(async (): Promise<boolean> => {
     try {
@@ -458,12 +479,42 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
 
       // Se connecter au device via BLE avec négociation MTU
       // Négocier un MTU de 512 bytes pour permettre l'envoi de commandes JSON plus longues
-      const bleDevice = await managerRef.current.connectToDevice(deviceId, {
-        requestMTU: 512,
-      });
+      // Wrapper dans un try-catch pour gérer les déconnexions pendant la connexion
+      let bleDevice: Device;
+      try {
+        bleDevice = await managerRef.current.connectToDevice(deviceId, {
+          requestMTU: 512,
+        });
+      } catch (connectError: any) {
+        // Si la connexion échoue, nettoyer et re-throw
+        connectedDeviceRef.current = null;
+        setState((prev) => ({
+          ...prev,
+          isConnected: false,
+          connectedDevice: null,
+        }));
+        throw connectError;
+      }
       
       // Découvrir les services et caractéristiques
-      await bleDevice.discoverAllServicesAndCharacteristics();
+      // Wrapper dans un try-catch pour gérer les déconnexions pendant la découverte
+      try {
+        await bleDevice.discoverAllServicesAndCharacteristics();
+      } catch (discoverError: any) {
+        // Si la découverte échoue, nettoyer et re-throw
+        connectedDeviceRef.current = null;
+        try {
+          await bleDevice.cancelConnection();
+        } catch (cancelError) {
+          // Ignorer les erreurs de cancelConnection
+        }
+        setState((prev) => ({
+          ...prev,
+          isConnected: false,
+          connectedDevice: null,
+        }));
+        throw discoverError;
+      }
       
       // Le MTU a été négocié lors de la connexion avec requestMTU: 512
       console.log('[BLE] MTU négocié: 512 bytes (demandé lors de la connexion)');
@@ -481,38 +532,74 @@ export function BluetoothProvider({ children }: BluetoothProviderProps) {
       // Écouter les événements de déconnexion
       // IMPORTANT: Wrapper dans try-catch pour éviter les crashes
       // La bibliothèque peut appeler ce callback même pendant le nettoyage
+      // et peut essayer de rejeter une Promise avec un code null, ce qui cause un crash
       bleDevice.onDisconnected((error, device) => {
         try {
-          console.log('Device déconnecté:', device?.id, error);
+          // Logger l'erreur de manière sécurisée (l'erreur peut être null ou avoir un code null)
+          const errorInfo = error 
+            ? {
+                message: error.message || 'Unknown error',
+                reason: error.reason || 'Unknown reason',
+                errorCode: error.errorCode || 'Unknown code',
+              }
+            : 'No error object';
+          console.log('[BLE] Device déconnecté:', device?.id, errorInfo);
+          
           // Réinitialiser la référence AVANT de mettre à jour le state
           // pour éviter que d'autres opérations BLE tentent d'utiliser le device déconnecté
           connectedDeviceRef.current = null;
-          setState((prev) => ({
-            ...prev,
-            isConnected: false,
-            connectedDevice: null,
-          }));
+          
+          // Utiliser setTimeout pour différer la mise à jour du state
+          // et éviter que cela interfère avec des opérations BLE en cours
+          setTimeout(() => {
+            setState((prev) => ({
+              ...prev,
+              isConnected: false,
+              connectedDevice: null,
+            }));
+          }, 0);
         } catch (err) {
           // Ignorer les erreurs dans le callback de déconnexion
           // pour éviter les crashes en cascade
-          console.error('Erreur dans le callback onDisconnected (ignorée):', err);
+          console.error('[BLE] Erreur dans le callback onDisconnected (ignorée):', err);
         }
       });
-    } catch (error) {
-      console.error('Erreur lors de la connexion:', error);
+    } catch (error: any) {
+      // Logger l'erreur de manière sécurisée
+      const errorMessage = error?.message || 'Unknown error';
+      const errorReason = error?.reason || 'Unknown reason';
+      console.error('[BLE] Erreur lors de la connexion:', {
+        message: errorMessage,
+        reason: errorReason,
+        errorCode: error?.errorCode,
+      });
+      
+      // Nettoyer l'état
       connectedDeviceRef.current = null;
       setState((prev) => ({
         ...prev,
         isConnected: false,
         connectedDevice: null,
       }));
-      showToast.error({
-        title: t('toast.error'),
-        message: t('bluetooth.errors.connectionError', {
-          defaultValue: 'Erreur lors de la connexion',
-        }),
-      });
-      throw error; // Re-throw pour que l'appelant puisse gérer l'erreur
+      
+      // Ne pas afficher de toast si c'est une déconnexion normale pendant le setup
+      // (l'ESP32 peut se déconnecter automatiquement après le setup WiFi)
+      const isNormalDisconnection = 
+        errorReason === 'DeviceDisconnected' ||
+        errorMessage?.includes('disconnected') ||
+        errorMessage?.includes('DeviceDisconnected');
+      
+      if (!isNormalDisconnection) {
+        showToast.error({
+          title: t('toast.error'),
+          message: t('bluetooth.errors.connectionError', {
+            defaultValue: 'Erreur lors de la connexion',
+          }),
+        });
+      }
+      
+      // Re-throw pour que l'appelant puisse gérer l'erreur
+      throw error;
     }
   }, [state.scannedDevices, state.isConnected, state.connectedDevice, t]);
 

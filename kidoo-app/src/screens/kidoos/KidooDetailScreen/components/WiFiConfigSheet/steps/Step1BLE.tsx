@@ -104,18 +104,37 @@ export function Step1BLE({ kidoo, onSuccess }: Step1BLEProps) {
           await connectToDevice(foundDevice.id);
           // Le state sera mis à jour et déclenchera l'autre useEffect
         } catch (error: any) {
-          console.error('Erreur lors de la connexion BLE:', error);
+          // Logger l'erreur de manière sécurisée
+          const errorMessage = error?.message || 'Unknown error';
+          const errorReason = error?.reason || 'Unknown reason';
+          console.error('[Step1BLE] Erreur lors de la connexion BLE:', {
+            message: errorMessage,
+            reason: errorReason,
+          });
+          
           isConnectingRef.current = false; // Réinitialiser le flag en cas d'erreur
           attemptedDeviceIdRef.current = null; // Permettre de réessayer pour ce device
-          setStatus('error');
           
-          // Extraire un message d'erreur plus descriptif si possible
-          const errorMsg = error?.message || error?.reason || 
-            t('kidoos.wifiConfig.step1.error.connectionFailed', {
-              defaultValue: 'Échec de la connexion BLE'
-            });
+          // Ne pas afficher d'erreur si c'est une déconnexion normale
+          // (peut arriver si le device se déconnecte pendant le setup)
+          const isNormalDisconnection = 
+            errorReason === 'DeviceDisconnected' ||
+            errorMessage?.includes('disconnected') ||
+            errorMessage?.includes('DeviceDisconnected');
           
-          setErrorMessage(errorMsg);
+          if (!isNormalDisconnection) {
+            setStatus('error');
+            // Extraire un message d'erreur plus descriptif si possible
+            const errorMsg = errorMessage || errorReason || 
+              t('kidoos.wifiConfig.step1.error.connectionFailed', {
+                defaultValue: 'Échec de la connexion BLE'
+              });
+            setErrorMessage(errorMsg);
+          } else {
+            // Si c'est une déconnexion normale, réinitialiser pour permettre une nouvelle tentative
+            setStatus('pending');
+            setErrorMessage(null);
+          }
         }
       };
       

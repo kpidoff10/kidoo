@@ -2,10 +2,11 @@
  * Kidoo App - Main Entry Point
  */
 
-import React, { useEffect } from 'react';
-import { StatusBar, useColorScheme, View } from 'react-native';
+import React from 'react';
+import { StatusBar, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import Toast from 'react-native-toast-message';
@@ -18,20 +19,20 @@ import { AppReadyProvider } from '@/contexts/AppReadyContext';
 import { queryClient, asyncStoragePersister, persistOptions } from '@/lib/queryClient';
 
 // Components
-import { ErrorBoundary, OfflineBanner, createToastConfig } from '@/components';
+import { ErrorBoundary, OfflineBanner } from '@/components';
+import { createToastConfig } from '@/components/ui';
 
 // Navigation
 import { RootNavigator } from '@/navigation';
 
-// i18n
-import '@/i18n';
-
 // Prevent splash screen from auto hiding
 SplashScreen.preventAutoHideAsync();
 
+// i18n - Import après les autres pour éviter les problèmes d'initialisation
+import '@/i18n';
+
 function AppContent() {
   const { colors, isDark } = useTheme();
-  const colorScheme = useColorScheme();
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -50,22 +51,24 @@ export function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ThemeProvider>
-          <ErrorBoundary>
-            <PersistQueryClientProvider
-              client={queryClient}
-              persistOptions={persistOptions}
-            >
-              <AppReadyProvider>
-                <NetworkProvider>
-                  <AuthProvider>
-                    <AppContent />
-                  </AuthProvider>
-                </NetworkProvider>
-              </AppReadyProvider>
-            </PersistQueryClientProvider>
-          </ErrorBoundary>
-        </ThemeProvider>
+        <TrueSheetProvider>
+          <ThemeProvider>
+            <ErrorBoundary>
+              <PersistQueryClientProvider
+                client={queryClient}
+                persistOptions={persistOptions}
+              >
+                <AppReadyProvider>
+                  <NetworkProvider>
+                    <AuthProvider>
+                      <AppContent />
+                    </AuthProvider>
+                  </NetworkProvider>
+                </AppReadyProvider>
+              </PersistQueryClientProvider>
+            </ErrorBoundary>
+          </ThemeProvider>
+        </TrueSheetProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

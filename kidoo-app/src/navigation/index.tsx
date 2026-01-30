@@ -1,3 +1,4 @@
+import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { HeaderButton, Text } from '@react-navigation/elements';
 import {
@@ -5,14 +6,28 @@ import {
   StaticParamList,
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Image } from 'react-native';
-import bell from '../assets/bell.png';
-import newspaper from '../assets/newspaper.png';
-import { Home } from './screens/Home';
-import { Profile } from './screens/Profile';
-import { Settings } from './screens/Settings';
-import { Updates } from './screens/Updates';
-import { NotFound } from './screens/NotFound';
+import { View, Text as RNText } from 'react-native';
+import { HomeScreen as Home } from '../screens';
+import { ProfileSheet as Profile } from '../screens';
+
+// Composants temporaires - TODO: Créer les vrais screens
+const Settings = () => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <RNText>Settings</RNText>
+  </View>
+);
+
+const Updates = () => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <RNText>Updates</RNText>
+  </View>
+);
+
+const NotFound = () => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <RNText>404 - Not Found</RNText>
+  </View>
+);
 
 const HomeTabs = createBottomTabNavigator({
   screens: {
@@ -20,32 +35,10 @@ const HomeTabs = createBottomTabNavigator({
       screen: Home,
       options: {
         title: 'Feed',
-        tabBarIcon: ({ color, size }) => (
-          <Image
-            source={newspaper}
-            tintColor={color}
-            style={{
-              width: size,
-              height: size,
-            }}
-          />
-        ),
       },
     },
     Updates: {
       screen: Updates,
-      options: {
-        tabBarIcon: ({ color, size }) => (
-          <Image
-            source={bell}
-            tintColor={color}
-            style={{
-              width: size,
-              height: size,
-            }}
-          />
-        ),
-      },
     },
   },
 });

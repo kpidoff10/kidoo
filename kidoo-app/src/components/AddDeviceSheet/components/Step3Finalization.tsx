@@ -123,14 +123,33 @@ export function Step3Finalization({ device, onSuccess }: Step3FinalizationProps)
           
           await connectToDevice(device.id);
           // Le state sera mis à jour et déclenchera l'autre useEffect
-        } catch (error) {
-          console.error('Erreur lors de la connexion BLE:', error);
-          setBleValidation({
-            status: 'error',
-            message: t('device.add.step3.ble.error', {
-              defaultValue: 'Connexion BLE non établie',
-            }),
+        } catch (error: any) {
+          // Logger l'erreur de manière sécurisée
+          const errorMessage = error?.message || 'Unknown error';
+          const errorReason = error?.reason || 'Unknown reason';
+          console.error('[Step3] Erreur lors de la connexion BLE:', {
+            message: errorMessage,
+            reason: errorReason,
           });
+          
+          // Ne pas afficher d'erreur si c'est une déconnexion normale
+          // (peut arriver si le device se déconnecte pendant le setup)
+          const isNormalDisconnection = 
+            errorReason === 'DeviceDisconnected' ||
+            errorMessage?.includes('disconnected') ||
+            errorMessage?.includes('DeviceDisconnected');
+          
+          if (!isNormalDisconnection) {
+            setBleValidation({
+              status: 'error',
+              message: t('device.add.step3.ble.error', {
+                defaultValue: 'Connexion BLE non établie',
+              }),
+            });
+          } else {
+            // Si c'est une déconnexion normale, réinitialiser pour permettre une nouvelle tentative
+            setBleValidation({ status: 'pending' });
+          }
         }
       };
       
@@ -236,14 +255,41 @@ export function Step3Finalization({ device, onSuccess }: Step3FinalizationProps)
               }),
             });
           }
-        } catch (error) {
-          console.error('Erreur lors de l\'envoi de la commande setup:', error);
-          setWifiValidation({
-            status: 'error',
-            message: t('device.add.step3.wifi.setupError', {
-              defaultValue: 'Erreur lors de la configuration WiFi',
-            }),
+        } catch (error: any) {
+          // Logger l'erreur de manière sécurisée
+          const errorMessage = error?.message || 'Unknown error';
+          const errorReason = error?.reason || 'Unknown reason';
+          console.error('[Step3] Erreur lors de l\'envoi de la commande setup:', {
+            message: errorMessage,
+            reason: errorReason,
           });
+          
+          // Si c'est une déconnexion pendant le setup, c'est normal
+          // (l'ESP32 peut se déconnecter après avoir configuré le WiFi)
+          const isDisconnectionError = 
+            errorReason === 'DeviceDisconnected' ||
+            errorMessage?.includes('disconnected') ||
+            errorMessage?.includes('DeviceDisconnected') ||
+            errorMessage?.includes('not connected');
+          
+          if (isDisconnectionError) {
+            // Si la déconnexion arrive pendant le setup, considérer que c'est peut-être un succès
+            // (l'ESP32 peut se déconnecter après avoir configuré le WiFi)
+            // Mais on ne peut pas savoir si le WiFi a réussi, donc on marque comme erreur
+            setWifiValidation({
+              status: 'error',
+              message: t('device.add.step3.wifi.connectionFailed', {
+                defaultValue: 'Configuration WiFi sauvegardée mais connexion échouée',
+              }),
+            });
+          } else {
+            setWifiValidation({
+              status: 'error',
+              message: t('device.add.step3.wifi.setupError', {
+                defaultValue: 'Erreur lors de la configuration WiFi',
+              }),
+            });
+          }
         }
       };
       

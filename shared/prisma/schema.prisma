@@ -54,6 +54,12 @@ model Kidoo {
   brightness   Int @default(100) // Luminosité (10-100)
   sleepTimeout Int @default(30000) // Timeout de sommeil en ms (5000-300000)
 
+  // Configuration du sleep mode (mode veille)
+  sleepColorR Int? // Composante rouge de la couleur de veille (0-255, null si non configuré)
+  sleepColorG Int? // Composante verte de la couleur de veille (0-255, null si non configuré)
+  sleepColorB Int? // Composante bleue de la couleur de veille (0-255, null si non configuré)
+  sleepEffect Int? // Effet LED pour le sleep mode (0 = LED_EFFECT_NONE, null si non configuré)
+
   user        User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
   tags        Tag[]
   configBasic KidooConfigBasic? // Configuration spécifique au modèle Basic (relation 1:1)

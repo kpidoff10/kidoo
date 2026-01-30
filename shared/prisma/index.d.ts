@@ -363,8 +363,8 @@ export namespace Prisma {
   export import Exact = $Public.Exact
 
   /**
-   * Prisma Client JS version: 7.2.0
-   * Query Engine version: 0c8ef2ce45c83248ab3df073180d5eda9e8be7a3
+   * Prisma Client JS version: 7.3.0
+   * Query Engine version: 9d6ad21cbbceab97458517b147a6a09ff43aa735
    */
   export type PrismaVersion = {
     client: string
@@ -3194,11 +3194,19 @@ export namespace Prisma {
   export type KidooAvgAggregateOutputType = {
     brightness: number | null
     sleepTimeout: number | null
+    sleepColorR: number | null
+    sleepColorG: number | null
+    sleepColorB: number | null
+    sleepEffect: number | null
   }
 
   export type KidooSumAggregateOutputType = {
     brightness: number | null
     sleepTimeout: number | null
+    sleepColorR: number | null
+    sleepColorG: number | null
+    sleepColorB: number | null
+    sleepEffect: number | null
   }
 
   export type KidooMinAggregateOutputType = {
@@ -3218,6 +3226,10 @@ export namespace Prisma {
     updatedAt: Date | null
     brightness: number | null
     sleepTimeout: number | null
+    sleepColorR: number | null
+    sleepColorG: number | null
+    sleepColorB: number | null
+    sleepEffect: number | null
   }
 
   export type KidooMaxAggregateOutputType = {
@@ -3237,6 +3249,10 @@ export namespace Prisma {
     updatedAt: Date | null
     brightness: number | null
     sleepTimeout: number | null
+    sleepColorR: number | null
+    sleepColorG: number | null
+    sleepColorB: number | null
+    sleepEffect: number | null
   }
 
   export type KidooCountAggregateOutputType = {
@@ -3256,6 +3272,10 @@ export namespace Prisma {
     updatedAt: number
     brightness: number
     sleepTimeout: number
+    sleepColorR: number
+    sleepColorG: number
+    sleepColorB: number
+    sleepEffect: number
     _all: number
   }
 
@@ -3263,11 +3283,19 @@ export namespace Prisma {
   export type KidooAvgAggregateInputType = {
     brightness?: true
     sleepTimeout?: true
+    sleepColorR?: true
+    sleepColorG?: true
+    sleepColorB?: true
+    sleepEffect?: true
   }
 
   export type KidooSumAggregateInputType = {
     brightness?: true
     sleepTimeout?: true
+    sleepColorR?: true
+    sleepColorG?: true
+    sleepColorB?: true
+    sleepEffect?: true
   }
 
   export type KidooMinAggregateInputType = {
@@ -3287,6 +3315,10 @@ export namespace Prisma {
     updatedAt?: true
     brightness?: true
     sleepTimeout?: true
+    sleepColorR?: true
+    sleepColorG?: true
+    sleepColorB?: true
+    sleepEffect?: true
   }
 
   export type KidooMaxAggregateInputType = {
@@ -3306,6 +3338,10 @@ export namespace Prisma {
     updatedAt?: true
     brightness?: true
     sleepTimeout?: true
+    sleepColorR?: true
+    sleepColorG?: true
+    sleepColorB?: true
+    sleepEffect?: true
   }
 
   export type KidooCountAggregateInputType = {
@@ -3325,6 +3361,10 @@ export namespace Prisma {
     updatedAt?: true
     brightness?: true
     sleepTimeout?: true
+    sleepColorR?: true
+    sleepColorG?: true
+    sleepColorB?: true
+    sleepEffect?: true
     _all?: true
   }
 
@@ -3431,6 +3471,10 @@ export namespace Prisma {
     updatedAt: Date
     brightness: number
     sleepTimeout: number
+    sleepColorR: number | null
+    sleepColorG: number | null
+    sleepColorB: number | null
+    sleepEffect: number | null
     _count: KidooCountAggregateOutputType | null
     _avg: KidooAvgAggregateOutputType | null
     _sum: KidooSumAggregateOutputType | null
@@ -3469,6 +3513,10 @@ export namespace Prisma {
     updatedAt?: boolean
     brightness?: boolean
     sleepTimeout?: boolean
+    sleepColorR?: boolean
+    sleepColorG?: boolean
+    sleepColorB?: boolean
+    sleepEffect?: boolean
     user?: boolean | Kidoo$userArgs<ExtArgs>
     tags?: boolean | Kidoo$tagsArgs<ExtArgs>
     configBasic?: boolean | Kidoo$configBasicArgs<ExtArgs>
@@ -3493,6 +3541,10 @@ export namespace Prisma {
     updatedAt?: boolean
     brightness?: boolean
     sleepTimeout?: boolean
+    sleepColorR?: boolean
+    sleepColorG?: boolean
+    sleepColorB?: boolean
+    sleepEffect?: boolean
     user?: boolean | Kidoo$userArgs<ExtArgs>
   }, ExtArgs["result"]["kidoo"]>
 
@@ -3513,6 +3565,10 @@ export namespace Prisma {
     updatedAt?: boolean
     brightness?: boolean
     sleepTimeout?: boolean
+    sleepColorR?: boolean
+    sleepColorG?: boolean
+    sleepColorB?: boolean
+    sleepEffect?: boolean
     user?: boolean | Kidoo$userArgs<ExtArgs>
   }, ExtArgs["result"]["kidoo"]>
 
@@ -3533,9 +3589,13 @@ export namespace Prisma {
     updatedAt?: boolean
     brightness?: boolean
     sleepTimeout?: boolean
+    sleepColorR?: boolean
+    sleepColorG?: boolean
+    sleepColorB?: boolean
+    sleepEffect?: boolean
   }
 
-  export type KidooOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "model" | "macAddress" | "bluetoothMacAddress" | "deviceId" | "firmwareVersion" | "lastConnected" | "isConnected" | "wifiSSID" | "userId" | "isSynced" | "createdAt" | "updatedAt" | "brightness" | "sleepTimeout", ExtArgs["result"]["kidoo"]>
+  export type KidooOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "model" | "macAddress" | "bluetoothMacAddress" | "deviceId" | "firmwareVersion" | "lastConnected" | "isConnected" | "wifiSSID" | "userId" | "isSynced" | "createdAt" | "updatedAt" | "brightness" | "sleepTimeout" | "sleepColorR" | "sleepColorG" | "sleepColorB" | "sleepEffect", ExtArgs["result"]["kidoo"]>
   export type KidooInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | Kidoo$userArgs<ExtArgs>
     tags?: boolean | Kidoo$tagsArgs<ExtArgs>
@@ -3575,6 +3635,10 @@ export namespace Prisma {
       updatedAt: Date
       brightness: number
       sleepTimeout: number
+      sleepColorR: number | null
+      sleepColorG: number | null
+      sleepColorB: number | null
+      sleepEffect: number | null
     }, ExtArgs["result"]["kidoo"]>
     composites: {}
   }
@@ -4018,6 +4082,10 @@ export namespace Prisma {
     readonly updatedAt: FieldRef<"Kidoo", 'DateTime'>
     readonly brightness: FieldRef<"Kidoo", 'Int'>
     readonly sleepTimeout: FieldRef<"Kidoo", 'Int'>
+    readonly sleepColorR: FieldRef<"Kidoo", 'Int'>
+    readonly sleepColorG: FieldRef<"Kidoo", 'Int'>
+    readonly sleepColorB: FieldRef<"Kidoo", 'Int'>
+    readonly sleepEffect: FieldRef<"Kidoo", 'Int'>
   }
     
 
@@ -14848,7 +14916,11 @@ export namespace Prisma {
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
     brightness: 'brightness',
-    sleepTimeout: 'sleepTimeout'
+    sleepTimeout: 'sleepTimeout',
+    sleepColorR: 'sleepColorR',
+    sleepColorG: 'sleepColorG',
+    sleepColorB: 'sleepColorB',
+    sleepEffect: 'sleepEffect'
   };
 
   export type KidooScalarFieldEnum = (typeof KidooScalarFieldEnum)[keyof typeof KidooScalarFieldEnum]
@@ -15214,6 +15286,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"Kidoo"> | Date | string
     brightness?: IntFilter<"Kidoo"> | number
     sleepTimeout?: IntFilter<"Kidoo"> | number
+    sleepColorR?: IntNullableFilter<"Kidoo"> | number | null
+    sleepColorG?: IntNullableFilter<"Kidoo"> | number | null
+    sleepColorB?: IntNullableFilter<"Kidoo"> | number | null
+    sleepEffect?: IntNullableFilter<"Kidoo"> | number | null
     user?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
     tags?: TagListRelationFilter
     configBasic?: XOR<KidooConfigBasicNullableScalarRelationFilter, KidooConfigBasicWhereInput> | null
@@ -15237,6 +15313,10 @@ export namespace Prisma {
     updatedAt?: SortOrder
     brightness?: SortOrder
     sleepTimeout?: SortOrder
+    sleepColorR?: SortOrderInput | SortOrder
+    sleepColorG?: SortOrderInput | SortOrder
+    sleepColorB?: SortOrderInput | SortOrder
+    sleepEffect?: SortOrderInput | SortOrder
     user?: UserOrderByWithRelationInput
     tags?: TagOrderByRelationAggregateInput
     configBasic?: KidooConfigBasicOrderByWithRelationInput
@@ -15263,6 +15343,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"Kidoo"> | Date | string
     brightness?: IntFilter<"Kidoo"> | number
     sleepTimeout?: IntFilter<"Kidoo"> | number
+    sleepColorR?: IntNullableFilter<"Kidoo"> | number | null
+    sleepColorG?: IntNullableFilter<"Kidoo"> | number | null
+    sleepColorB?: IntNullableFilter<"Kidoo"> | number | null
+    sleepEffect?: IntNullableFilter<"Kidoo"> | number | null
     user?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
     tags?: TagListRelationFilter
     configBasic?: XOR<KidooConfigBasicNullableScalarRelationFilter, KidooConfigBasicWhereInput> | null
@@ -15286,6 +15370,10 @@ export namespace Prisma {
     updatedAt?: SortOrder
     brightness?: SortOrder
     sleepTimeout?: SortOrder
+    sleepColorR?: SortOrderInput | SortOrder
+    sleepColorG?: SortOrderInput | SortOrder
+    sleepColorB?: SortOrderInput | SortOrder
+    sleepEffect?: SortOrderInput | SortOrder
     _count?: KidooCountOrderByAggregateInput
     _avg?: KidooAvgOrderByAggregateInput
     _max?: KidooMaxOrderByAggregateInput
@@ -15313,6 +15401,10 @@ export namespace Prisma {
     updatedAt?: DateTimeWithAggregatesFilter<"Kidoo"> | Date | string
     brightness?: IntWithAggregatesFilter<"Kidoo"> | number
     sleepTimeout?: IntWithAggregatesFilter<"Kidoo"> | number
+    sleepColorR?: IntNullableWithAggregatesFilter<"Kidoo"> | number | null
+    sleepColorG?: IntNullableWithAggregatesFilter<"Kidoo"> | number | null
+    sleepColorB?: IntNullableWithAggregatesFilter<"Kidoo"> | number | null
+    sleepEffect?: IntNullableWithAggregatesFilter<"Kidoo"> | number | null
   }
 
   export type TagWhereInput = {
@@ -16131,6 +16223,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     brightness?: number
     sleepTimeout?: number
+    sleepColorR?: number | null
+    sleepColorG?: number | null
+    sleepColorB?: number | null
+    sleepEffect?: number | null
     user?: UserCreateNestedOneWithoutKidoosInput
     tags?: TagCreateNestedManyWithoutKidooInput
     configBasic?: KidooConfigBasicCreateNestedOneWithoutKidooInput
@@ -16154,6 +16250,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     brightness?: number
     sleepTimeout?: number
+    sleepColorR?: number | null
+    sleepColorG?: number | null
+    sleepColorB?: number | null
+    sleepEffect?: number | null
     tags?: TagUncheckedCreateNestedManyWithoutKidooInput
     configBasic?: KidooConfigBasicUncheckedCreateNestedOneWithoutKidooInput
     configDream?: KidooConfigDreamUncheckedCreateNestedOneWithoutKidooInput
@@ -16175,6 +16275,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
+    sleepColorR?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorG?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorB?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepEffect?: NullableIntFieldUpdateOperationsInput | number | null
     user?: UserUpdateOneWithoutKidoosNestedInput
     tags?: TagUpdateManyWithoutKidooNestedInput
     configBasic?: KidooConfigBasicUpdateOneWithoutKidooNestedInput
@@ -16198,6 +16302,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
+    sleepColorR?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorG?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorB?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepEffect?: NullableIntFieldUpdateOperationsInput | number | null
     tags?: TagUncheckedUpdateManyWithoutKidooNestedInput
     configBasic?: KidooConfigBasicUncheckedUpdateOneWithoutKidooNestedInput
     configDream?: KidooConfigDreamUncheckedUpdateOneWithoutKidooNestedInput
@@ -16220,6 +16328,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     brightness?: number
     sleepTimeout?: number
+    sleepColorR?: number | null
+    sleepColorG?: number | null
+    sleepColorB?: number | null
+    sleepEffect?: number | null
   }
 
   export type KidooUpdateManyMutationInput = {
@@ -16238,6 +16350,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
+    sleepColorR?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorG?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorB?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepEffect?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
   export type KidooUncheckedUpdateManyInput = {
@@ -16257,6 +16373,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
+    sleepColorR?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorG?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorB?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepEffect?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
   export type TagCreateInput = {
@@ -17237,6 +17357,17 @@ export namespace Prisma {
     not?: NestedIntFilter<$PrismaModel> | number
   }
 
+  export type IntNullableFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableFilter<$PrismaModel> | number | null
+  }
+
   export type UserNullableScalarRelationFilter = {
     is?: UserWhereInput | null
     isNot?: UserWhereInput | null
@@ -17269,11 +17400,19 @@ export namespace Prisma {
     updatedAt?: SortOrder
     brightness?: SortOrder
     sleepTimeout?: SortOrder
+    sleepColorR?: SortOrder
+    sleepColorG?: SortOrder
+    sleepColorB?: SortOrder
+    sleepEffect?: SortOrder
   }
 
   export type KidooAvgOrderByAggregateInput = {
     brightness?: SortOrder
     sleepTimeout?: SortOrder
+    sleepColorR?: SortOrder
+    sleepColorG?: SortOrder
+    sleepColorB?: SortOrder
+    sleepEffect?: SortOrder
   }
 
   export type KidooMaxOrderByAggregateInput = {
@@ -17293,6 +17432,10 @@ export namespace Prisma {
     updatedAt?: SortOrder
     brightness?: SortOrder
     sleepTimeout?: SortOrder
+    sleepColorR?: SortOrder
+    sleepColorG?: SortOrder
+    sleepColorB?: SortOrder
+    sleepEffect?: SortOrder
   }
 
   export type KidooMinOrderByAggregateInput = {
@@ -17312,11 +17455,19 @@ export namespace Prisma {
     updatedAt?: SortOrder
     brightness?: SortOrder
     sleepTimeout?: SortOrder
+    sleepColorR?: SortOrder
+    sleepColorG?: SortOrder
+    sleepColorB?: SortOrder
+    sleepEffect?: SortOrder
   }
 
   export type KidooSumOrderByAggregateInput = {
     brightness?: SortOrder
     sleepTimeout?: SortOrder
+    sleepColorR?: SortOrder
+    sleepColorG?: SortOrder
+    sleepColorB?: SortOrder
+    sleepEffect?: SortOrder
   }
 
   export type BoolWithAggregatesFilter<$PrismaModel = never> = {
@@ -17341,6 +17492,22 @@ export namespace Prisma {
     _sum?: NestedIntFilter<$PrismaModel>
     _min?: NestedIntFilter<$PrismaModel>
     _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type IntNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedIntNullableFilter<$PrismaModel>
+    _max?: NestedIntNullableFilter<$PrismaModel>
   }
 
   export type EnumTagTypeNullableFilter<$PrismaModel = never> = {
@@ -17406,17 +17573,6 @@ export namespace Prisma {
     _max?: NestedEnumTagTypeNullableFilter<$PrismaModel>
   }
 
-  export type IntNullableFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntNullableFilter<$PrismaModel> | number | null
-  }
-
   export type AccountProviderProviderAccountIdCompoundUniqueInput = {
     provider: string
     providerAccountId: string
@@ -17473,22 +17629,6 @@ export namespace Prisma {
 
   export type AccountSumOrderByAggregateInput = {
     expires_at?: SortOrder
-  }
-
-  export type IntNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntNullableWithAggregatesFilter<$PrismaModel> | number | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _avg?: NestedFloatNullableFilter<$PrismaModel>
-    _sum?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedIntNullableFilter<$PrismaModel>
-    _max?: NestedIntNullableFilter<$PrismaModel>
   }
 
   export type SessionCountOrderByAggregateInput = {
@@ -18156,6 +18296,14 @@ export namespace Prisma {
     divide?: number
   }
 
+  export type NullableIntFieldUpdateOperationsInput = {
+    set?: number | null
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
   export type UserUpdateOneWithoutKidoosNestedInput = {
     create?: XOR<UserCreateWithoutKidoosInput, UserUncheckedCreateWithoutKidoosInput>
     connectOrCreate?: UserCreateOrConnectWithoutKidoosInput
@@ -18312,14 +18460,6 @@ export namespace Prisma {
     create?: XOR<UserCreateWithoutAccountsInput, UserUncheckedCreateWithoutAccountsInput>
     connectOrCreate?: UserCreateOrConnectWithoutAccountsInput
     connect?: UserWhereUniqueInput
-  }
-
-  export type NullableIntFieldUpdateOperationsInput = {
-    set?: number | null
-    increment?: number
-    decrement?: number
-    multiply?: number
-    divide?: number
   }
 
   export type UserUpdateOneRequiredWithoutAccountsNestedInput = {
@@ -18694,23 +18834,6 @@ export namespace Prisma {
     not?: NestedFloatFilter<$PrismaModel> | number
   }
 
-  export type NestedEnumTagTypeNullableFilter<$PrismaModel = never> = {
-    equals?: $Enums.TagType | EnumTagTypeFieldRefInput<$PrismaModel> | null
-    in?: $Enums.TagType[] | ListEnumTagTypeFieldRefInput<$PrismaModel> | null
-    notIn?: $Enums.TagType[] | ListEnumTagTypeFieldRefInput<$PrismaModel> | null
-    not?: NestedEnumTagTypeNullableFilter<$PrismaModel> | $Enums.TagType | null
-  }
-
-  export type NestedEnumTagTypeNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.TagType | EnumTagTypeFieldRefInput<$PrismaModel> | null
-    in?: $Enums.TagType[] | ListEnumTagTypeFieldRefInput<$PrismaModel> | null
-    notIn?: $Enums.TagType[] | ListEnumTagTypeFieldRefInput<$PrismaModel> | null
-    not?: NestedEnumTagTypeNullableWithAggregatesFilter<$PrismaModel> | $Enums.TagType | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedEnumTagTypeNullableFilter<$PrismaModel>
-    _max?: NestedEnumTagTypeNullableFilter<$PrismaModel>
-  }
-
   export type NestedIntNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel> | null
     in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
@@ -18736,6 +18859,23 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+
+  export type NestedEnumTagTypeNullableFilter<$PrismaModel = never> = {
+    equals?: $Enums.TagType | EnumTagTypeFieldRefInput<$PrismaModel> | null
+    in?: $Enums.TagType[] | ListEnumTagTypeFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.TagType[] | ListEnumTagTypeFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumTagTypeNullableFilter<$PrismaModel> | $Enums.TagType | null
+  }
+
+  export type NestedEnumTagTypeNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.TagType | EnumTagTypeFieldRefInput<$PrismaModel> | null
+    in?: $Enums.TagType[] | ListEnumTagTypeFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.TagType[] | ListEnumTagTypeFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumTagTypeNullableWithAggregatesFilter<$PrismaModel> | $Enums.TagType | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedEnumTagTypeNullableFilter<$PrismaModel>
+    _max?: NestedEnumTagTypeNullableFilter<$PrismaModel>
   }
 
   export type NestedBigIntNullableFilter<$PrismaModel = never> = {
@@ -18841,6 +18981,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     brightness?: number
     sleepTimeout?: number
+    sleepColorR?: number | null
+    sleepColorG?: number | null
+    sleepColorB?: number | null
+    sleepEffect?: number | null
     tags?: TagCreateNestedManyWithoutKidooInput
     configBasic?: KidooConfigBasicCreateNestedOneWithoutKidooInput
     configDream?: KidooConfigDreamCreateNestedOneWithoutKidooInput
@@ -18862,6 +19006,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     brightness?: number
     sleepTimeout?: number
+    sleepColorR?: number | null
+    sleepColorG?: number | null
+    sleepColorB?: number | null
+    sleepEffect?: number | null
     tags?: TagUncheckedCreateNestedManyWithoutKidooInput
     configBasic?: KidooConfigBasicUncheckedCreateNestedOneWithoutKidooInput
     configDream?: KidooConfigDreamUncheckedCreateNestedOneWithoutKidooInput
@@ -19047,6 +19195,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"Kidoo"> | Date | string
     brightness?: IntFilter<"Kidoo"> | number
     sleepTimeout?: IntFilter<"Kidoo"> | number
+    sleepColorR?: IntNullableFilter<"Kidoo"> | number | null
+    sleepColorG?: IntNullableFilter<"Kidoo"> | number | null
+    sleepColorB?: IntNullableFilter<"Kidoo"> | number | null
+    sleepEffect?: IntNullableFilter<"Kidoo"> | number | null
   }
 
   export type TagUpsertWithWhereUniqueWithoutUserInput = {
@@ -19409,6 +19561,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     brightness?: number
     sleepTimeout?: number
+    sleepColorR?: number | null
+    sleepColorG?: number | null
+    sleepColorB?: number | null
+    sleepEffect?: number | null
     user?: UserCreateNestedOneWithoutKidoosInput
     configBasic?: KidooConfigBasicCreateNestedOneWithoutKidooInput
     configDream?: KidooConfigDreamCreateNestedOneWithoutKidooInput
@@ -19431,6 +19587,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     brightness?: number
     sleepTimeout?: number
+    sleepColorR?: number | null
+    sleepColorG?: number | null
+    sleepColorB?: number | null
+    sleepEffect?: number | null
     configBasic?: KidooConfigBasicUncheckedCreateNestedOneWithoutKidooInput
     configDream?: KidooConfigDreamUncheckedCreateNestedOneWithoutKidooInput
   }
@@ -19542,6 +19702,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
+    sleepColorR?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorG?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorB?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepEffect?: NullableIntFieldUpdateOperationsInput | number | null
     user?: UserUpdateOneWithoutKidoosNestedInput
     configBasic?: KidooConfigBasicUpdateOneWithoutKidooNestedInput
     configDream?: KidooConfigDreamUpdateOneWithoutKidooNestedInput
@@ -19564,6 +19728,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
+    sleepColorR?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorG?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorB?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepEffect?: NullableIntFieldUpdateOperationsInput | number | null
     configBasic?: KidooConfigBasicUncheckedUpdateOneWithoutKidooNestedInput
     configDream?: KidooConfigDreamUncheckedUpdateOneWithoutKidooNestedInput
   }
@@ -19933,6 +20101,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     brightness?: number
     sleepTimeout?: number
+    sleepColorR?: number | null
+    sleepColorG?: number | null
+    sleepColorB?: number | null
+    sleepEffect?: number | null
     user?: UserCreateNestedOneWithoutKidoosInput
     tags?: TagCreateNestedManyWithoutKidooInput
     configDream?: KidooConfigDreamCreateNestedOneWithoutKidooInput
@@ -19955,6 +20127,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     brightness?: number
     sleepTimeout?: number
+    sleepColorR?: number | null
+    sleepColorG?: number | null
+    sleepColorB?: number | null
+    sleepEffect?: number | null
     tags?: TagUncheckedCreateNestedManyWithoutKidooInput
     configDream?: KidooConfigDreamUncheckedCreateNestedOneWithoutKidooInput
   }
@@ -19991,6 +20167,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
+    sleepColorR?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorG?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorB?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepEffect?: NullableIntFieldUpdateOperationsInput | number | null
     user?: UserUpdateOneWithoutKidoosNestedInput
     tags?: TagUpdateManyWithoutKidooNestedInput
     configDream?: KidooConfigDreamUpdateOneWithoutKidooNestedInput
@@ -20013,6 +20193,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
+    sleepColorR?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorG?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorB?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepEffect?: NullableIntFieldUpdateOperationsInput | number | null
     tags?: TagUncheckedUpdateManyWithoutKidooNestedInput
     configDream?: KidooConfigDreamUncheckedUpdateOneWithoutKidooNestedInput
   }
@@ -20033,6 +20217,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     brightness?: number
     sleepTimeout?: number
+    sleepColorR?: number | null
+    sleepColorG?: number | null
+    sleepColorB?: number | null
+    sleepEffect?: number | null
     user?: UserCreateNestedOneWithoutKidoosInput
     tags?: TagCreateNestedManyWithoutKidooInput
     configBasic?: KidooConfigBasicCreateNestedOneWithoutKidooInput
@@ -20055,6 +20243,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     brightness?: number
     sleepTimeout?: number
+    sleepColorR?: number | null
+    sleepColorG?: number | null
+    sleepColorB?: number | null
+    sleepEffect?: number | null
     tags?: TagUncheckedCreateNestedManyWithoutKidooInput
     configBasic?: KidooConfigBasicUncheckedCreateNestedOneWithoutKidooInput
   }
@@ -20151,6 +20343,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
+    sleepColorR?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorG?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorB?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepEffect?: NullableIntFieldUpdateOperationsInput | number | null
     user?: UserUpdateOneWithoutKidoosNestedInput
     tags?: TagUpdateManyWithoutKidooNestedInput
     configBasic?: KidooConfigBasicUpdateOneWithoutKidooNestedInput
@@ -20173,6 +20369,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
+    sleepColorR?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorG?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorB?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepEffect?: NullableIntFieldUpdateOperationsInput | number | null
     tags?: TagUncheckedUpdateManyWithoutKidooNestedInput
     configBasic?: KidooConfigBasicUncheckedUpdateOneWithoutKidooNestedInput
   }
@@ -20449,6 +20649,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     brightness?: number
     sleepTimeout?: number
+    sleepColorR?: number | null
+    sleepColorG?: number | null
+    sleepColorB?: number | null
+    sleepEffect?: number | null
   }
 
   export type TagCreateManyUserInput = {
@@ -20553,6 +20757,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
+    sleepColorR?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorG?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorB?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepEffect?: NullableIntFieldUpdateOperationsInput | number | null
     tags?: TagUpdateManyWithoutKidooNestedInput
     configBasic?: KidooConfigBasicUpdateOneWithoutKidooNestedInput
     configDream?: KidooConfigDreamUpdateOneWithoutKidooNestedInput
@@ -20574,6 +20782,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
+    sleepColorR?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorG?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorB?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepEffect?: NullableIntFieldUpdateOperationsInput | number | null
     tags?: TagUncheckedUpdateManyWithoutKidooNestedInput
     configBasic?: KidooConfigBasicUncheckedUpdateOneWithoutKidooNestedInput
     configDream?: KidooConfigDreamUncheckedUpdateOneWithoutKidooNestedInput
@@ -20595,6 +20807,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     brightness?: IntFieldUpdateOperationsInput | number
     sleepTimeout?: IntFieldUpdateOperationsInput | number
+    sleepColorR?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorG?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepColorB?: NullableIntFieldUpdateOperationsInput | number | null
+    sleepEffect?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
   export type TagUpdateWithoutUserInput = {

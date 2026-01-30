@@ -6,5 +6,6 @@
     "esp32/**/*",
     "**/node_modules/**",
     "**/.pio/**"
-  ]
+  ],
+  "extends": "expo/tsconfig.base"
 }
