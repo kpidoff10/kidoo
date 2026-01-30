@@ -694,11 +694,10 @@ void LEDManager::checkSleepMode() {
         currentEffect = savedEffect;
         savedEffect = LED_EFFECT_NONE;
       }
-      // Réinitialiser le timer d'activité UNIQUEMENT si on réveille depuis le sleep
-      lastActivityTime = millis();
     }
-    // Si on n'était pas en sleep, ne pas réinitialiser lastActivityTime
-    // pour permettre le sleep même si le BLE est actif (si timeout très court)
+    // IMPORTANT: Réinitialiser le timer d'activité pour empêcher le sleep mode
+    // Le sleep mode ne doit jamais éteindre les LEDs quand le BLE est actif (mode appairage)
+    lastActivityTime = millis();
     return;
   }
   #endif

@@ -7,6 +7,8 @@
     "start:go": "expo start",
     "web": "expo start --web",
     "android": "expo run:android",
+    "android:release": "expo run:android --variant release",
+    "android:release:monorepo": "powershell -ExecutionPolicy Bypass -File ./build-android-release.ps1",
     "ios": "expo run:ios",
     "prebuild": "expo prebuild",
     "prebuild:clean": "expo prebuild --clean"

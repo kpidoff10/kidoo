@@ -49,5 +49,6 @@
     "javascriptreact",
     "typescript",
     "typescriptreact"
-  ]
+  ],
+  "java.configuration.updateBuildConfiguration": "interactive"
 }

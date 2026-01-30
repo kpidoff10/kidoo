@@ -94,6 +94,7 @@
   #define PRIORITY_AUDIO      4   // La plus haute acceptable
   #define PRIORITY_LED        3   // Animations fluides sans casser le RTOS
   #define PRIORITY_PUBNUB     2   // Réseau
+  #define PRIORITY_BLE_COMMAND 2  // Traitement commandes BLE (même priorité que PubNub)
   #define PRIORITY_WIFI_RETRY 1   // Background
 #else
   // Dual-core : Plus de marge car les tâches sont réparties
@@ -101,6 +102,7 @@
   #define PRIORITY_LED        10  // Moyenne - LEDs moins critiques que l'audio
   #define PRIORITY_AUDIO      23  // Maximale - audio temps-réel (égal à WiFi)
   #define PRIORITY_PUBNUB     2   // Basse - réseau non critique
+  #define PRIORITY_BLE_COMMAND 2  // Traitement commandes BLE (même priorité que PubNub)
   #define PRIORITY_WIFI_RETRY 1   // Très basse - retry en background
 #endif
 
@@ -124,6 +126,7 @@
 #define STACK_SIZE_AUDIO        16384   // AudioManager (décodage MP3/streaming) - augmenté pour buffer
 #define STACK_SIZE_PUBNUB       8192    // PubNubManager (HTTP + JSON)
 #define STACK_SIZE_WIFI_RETRY   4096    // WiFi retry
+#define STACK_SIZE_BLE_COMMAND  8192    // Tâche de traitement des commandes BLE (JSON parsing, base64, etc.)
 
 // ============================================
 // Helpers pour l'allocation mémoire

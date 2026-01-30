@@ -2,6 +2,10 @@
 #include "../../../model_config.h"
 #include "commands/ble_command_handler.h"
 #include "../ble_config/ble_config_manager.h"
+#include "../../config/core_config.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/queue.h>
 
 #ifdef HAS_BLE
 #include <BLEDevice.h>
@@ -14,41 +18,103 @@
 #define CHARACTERISTIC_UUID_RX "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define CHARACTERISTIC_UUID_TX "beb5483e-36e1-4688-b7f5-ea07361b26a9"
 
+// Taille maximale d'une commande BLE (base64 décodé peut être jusqu'à 512 bytes)
+#define BLE_COMMAND_MAX_SIZE 512
+
+// Structure pour passer les commandes BLE à la tâche de traitement
+struct BLECommandMessage {
+  char data[BLE_COMMAND_MAX_SIZE + 1];  // +1 pour le null terminator
+  size_t length;
+};
+
 // Variables statiques BLE (seulement si HAS_BLE est défini)
 static BLEServer* pServer = nullptr;
 static BLEService* pService = nullptr;
 static BLECharacteristic* pTxCharacteristic = nullptr;
+static QueueHandle_t bleCommandQueue = nullptr;
+static TaskHandle_t bleCommandTaskHandle = nullptr;
+static bool commandTaskRunning = false;
 
-// Callback pour les données reçues sur la caractéristique RX
-class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
-  void onWrite(BLECharacteristic* pCharacteristic) {
-    // getValue() retourne un String Arduino (pas std::string)
-    String data = pCharacteristic->getValue();
-    if (data.length() > 0) {
-      Serial.println("[BLE] ========================================");
-      Serial.println("[BLE] >>> COMMANDE BLE RECUE <<<");
-      Serial.print("[BLE] Taille des donnees: ");
-      Serial.println(data.length());
-      Serial.print("[BLE] Donnees brutes: ");
-      Serial.println(data);
-      
+// Tâche FreeRTOS pour traiter les commandes BLE avec une stack plus grande
+void bleCommandTask(void* parameter) {
+  BLECommandMessage msg;
+  
+  Serial.println("[BLE-TASK] Tâche de traitement des commandes BLE démarrée");
+  
+  while (commandTaskRunning && bleCommandQueue != nullptr) {
+    // Attendre une commande dans la queue (timeout de 1 seconde)
+    if (xQueueReceive(bleCommandQueue, &msg, pdMS_TO_TICKS(1000)) == pdTRUE) {
       // Nettoyer les données : supprimer les caractères nuls et espaces en fin
+      String data = String(msg.data);
       data.trim();
+      
       // Supprimer les caractères nuls éventuels
       int nullPos = data.indexOf('\0');
       if (nullPos >= 0) {
         data = data.substring(0, nullPos);
-        Serial.print("[BLE] Donnees nettoyees (caractere nul supprime): ");
-        Serial.println(data);
       }
       
-      // Traiter la commande
-      Serial.println("[BLE] Appel de BLECommandHandler::handleCommand...");
-      bool result = BLECommandHandler::handleCommand(data);
-      Serial.print("[BLE] Resultat de handleCommand: ");
-      Serial.println(result ? "true" : "false");
-      
-      Serial.println("[BLE] ========================================");
+      if (data.length() > 0) {
+        Serial.println("[BLE-TASK] ========================================");
+        Serial.println("[BLE-TASK] >>> COMMANDE BLE RECUE <<<");
+        Serial.print("[BLE-TASK] Taille des donnees: ");
+        Serial.println(data.length());
+        Serial.print("[BLE-TASK] Donnees brutes: ");
+        Serial.println(data);
+        
+        // Traiter la commande (avec une stack plus grande)
+        Serial.println("[BLE-TASK] Appel de BLECommandHandler::handleCommand...");
+        bool result = BLECommandHandler::handleCommand(data);
+        Serial.print("[BLE-TASK] Resultat de handleCommand: ");
+        Serial.println(result ? "true" : "false");
+        
+        Serial.println("[BLE-TASK] ========================================");
+      }
+    }
+  }
+  
+  Serial.println("[BLE-TASK] Tâche de traitement des commandes BLE arrêtée");
+  vTaskDelete(nullptr);
+}
+
+// Callback pour les données reçues sur la caractéristique RX
+// Ce callback doit être léger et rapide pour éviter les débordements de stack
+class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
+  void onWrite(BLECharacteristic* pCharacteristic) {
+    // Vérifier que la queue existe
+    if (bleCommandQueue == nullptr) {
+      Serial.println("[BLE] ERREUR: Queue de commandes BLE non initialisée");
+      return;
+    }
+    
+    // getValue() retourne un String Arduino (pas std::string)
+    String data = pCharacteristic->getValue();
+    if (data.length() == 0) {
+      return;
+    }
+    
+    // Limiter la taille pour éviter les débordements
+    if (data.length() > BLE_COMMAND_MAX_SIZE) {
+      Serial.print("[BLE] ERREUR: Commande trop longue (");
+      Serial.print(data.length());
+      Serial.print(" > ");
+      Serial.print(BLE_COMMAND_MAX_SIZE);
+      Serial.println(")");
+      return;
+    }
+    
+    // Préparer le message pour la queue
+    BLECommandMessage msg;
+    strncpy(msg.data, data.c_str(), BLE_COMMAND_MAX_SIZE);
+    msg.data[BLE_COMMAND_MAX_SIZE] = '\0';  // Assurer le null terminator
+    msg.length = data.length();
+    
+    // Envoyer la commande à la queue (non-bloquant avec timeout de 0)
+    // Si la queue est pleine, on ignore la commande (ne devrait pas arriver)
+    if (xQueueSend(bleCommandQueue, &msg, 0) != pdTRUE) {
+      Serial.println("[BLE] ERREUR: Impossible d'envoyer la commande à la queue (pleine?)");
+    } else {
+      Serial.println("[BLE] Commande envoyée à la queue de traitement");
     }
   }
 };
@@ -102,8 +168,25 @@ bool BLEManager::available = false;
 char* BLEManager::deviceName = nullptr;
 
 bool BLEManager::init(const char* deviceName) {
+  // Si déjà initialisé, nettoyer d'abord les ressources existantes
   if (initialized) {
-    return available;
+    // Arrêter la tâche de traitement des commandes si elle existe
+    if (commandTaskRunning && bleCommandTaskHandle != nullptr) {
+      commandTaskRunning = false;
+      // Attendre un peu pour que la tâche termine sa boucle
+      vTaskDelay(pdMS_TO_TICKS(100));
+      // Supprimer la tâche
+      if (bleCommandTaskHandle != nullptr) {
+        vTaskDelete(bleCommandTaskHandle);
+        bleCommandTaskHandle = nullptr;
+      }
+    }
+    
+    // Supprimer la queue si elle existe
+    if (bleCommandQueue != nullptr) {
+      vQueueDelete(bleCommandQueue);
+      bleCommandQueue = nullptr;
+    }
   }
   
   initialized = true;
@@ -165,6 +248,37 @@ bool BLEManager::init(const char* deviceName) {
   
   // Initialiser le command handler avec la caractéristique TX
   BLECommandHandler::init(pTxCharacteristic);
+  
+  // Créer la queue pour les commandes BLE (taille de 5 commandes max en attente)
+  bleCommandQueue = xQueueCreate(5, sizeof(BLECommandMessage));
+  if (bleCommandQueue == nullptr) {
+    Serial.println("[BLE] ERREUR: Impossible de créer la queue de commandes BLE");
+    available = false;
+    return false;
+  }
+  
+  // Créer la tâche FreeRTOS pour traiter les commandes BLE
+  commandTaskRunning = true;
+  BaseType_t taskResult = xTaskCreatePinnedToCore(
+    bleCommandTask,              // Fonction de la tâche
+    "BLECommandTask",           // Nom de la tâche
+    STACK_SIZE_BLE_COMMAND,     // Taille de la stack (définie dans core_config.h)
+    nullptr,                     // Paramètres
+    PRIORITY_BLE_COMMAND,       // Priorité (définie dans core_config.h)
+    &bleCommandTaskHandle,      // Handle
+    CORE_BLE                    // Core (défini dans core_config.h)
+  );
+  
+  if (taskResult != pdPASS) {
+    Serial.println("[BLE] ERREUR: Impossible de créer la tâche de traitement des commandes BLE");
+    vQueueDelete(bleCommandQueue);
+    bleCommandQueue = nullptr;
+    commandTaskRunning = false;
+    available = false;
+    return false;
+  }
+  
+  Serial.println("[BLE] Queue et tâche de traitement des commandes BLE créées");
   
   // Démarrer le service
   pService->start();

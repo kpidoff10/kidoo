@@ -30,7 +30,7 @@
 // -DAPI_BASE_URL=\"http://192.168.1.217:3000\" pour dev
 // -DAPI_BASE_URL=\"https://api.kidoo.com\" pour prod
 #ifndef API_BASE_URL
-#define API_BASE_URL "http://192.168.1.217:3000"  // Valeur par défaut (dev)
+#define API_BASE_URL "https://kidoo-box.com"  // Valeur par défaut (prod)
 #endif
 
 #endif // COMMON_DEFAULT_CONFIG_H
