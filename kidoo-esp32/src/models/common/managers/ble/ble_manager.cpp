@@ -8,6 +8,7 @@
 #include <freertos/queue.h>
 
 #ifdef HAS_BLE
+#include <string>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -87,16 +88,16 @@ class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
       return;
     }
     
-    // getValue() retourne un String Arduino (pas std::string)
-    String data = pCharacteristic->getValue();
-    if (data.length() == 0) {
+    // getValue() retourne std::string (BLE library)
+    std::string value = pCharacteristic->getValue();
+    if (value.empty()) {
       return;
     }
     
     // Limiter la taille pour éviter les débordements
-    if (data.length() > BLE_COMMAND_MAX_SIZE) {
+    if (value.length() > BLE_COMMAND_MAX_SIZE) {
       Serial.print("[BLE] ERREUR: Commande trop longue (");
-      Serial.print(data.length());
+      Serial.print(value.length());
       Serial.print(" > ");
       Serial.print(BLE_COMMAND_MAX_SIZE);
       Serial.println(")");
@@ -105,9 +106,9 @@ class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
     
     // Préparer le message pour la queue
     BLECommandMessage msg;
-    strncpy(msg.data, data.c_str(), BLE_COMMAND_MAX_SIZE);
+    strncpy(msg.data, value.c_str(), BLE_COMMAND_MAX_SIZE);
     msg.data[BLE_COMMAND_MAX_SIZE] = '\0';  // Assurer le null terminator
-    msg.length = data.length();
+    msg.length = value.length();
     
     // Envoyer la commande à la queue (non-bloquant avec timeout de 0)
     // Si la queue est pleine, on ignore la commande (ne devrait pas arriver)

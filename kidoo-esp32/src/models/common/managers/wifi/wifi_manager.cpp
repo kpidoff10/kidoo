@@ -129,6 +129,23 @@ bool WiFiManager::connect(const char* ssid, const char* password, uint32_t timeo
     if (millis() - startTime >= timeoutMs) {
       Serial.println();
       Serial.println("[WIFI] ERREUR: Timeout de connexion");
+      // Afficher la raison pour aider au diagnostic (box vs partage teléphone)
+      wl_status_t lastStatus = WiFi.status();
+      switch (lastStatus) {
+        case WL_NO_SSID_AVAIL:
+          Serial.println("[WIFI] Raison: reseau non trouve. Verifiez: SSID correct, box en 2.4 GHz (ESP32 ne fait pas 5 GHz), portee.");
+          break;
+        case WL_CONNECT_FAILED:
+          Serial.println("[WIFI] Raison: echec auth. Verifiez: mot de passe, box en WPA2 ou WPA2/WPA3 mixte (pas WPA3 seul).");
+          break;
+        case WL_DISCONNECTED:
+        case WL_CONNECTION_LOST:
+          Serial.println("[WIFI] Raison: connexion interrompue. Verifiez: signal, isolation client desactivee sur la box.");
+          break;
+        default:
+          Serial.printf("[WIFI] Raison: code status=%d. Voir doc ESP32 WiFi (2.4 GHz, WPA2).\n", (int)lastStatus);
+          break;
+      }
       connectionStatus = WIFI_STATUS_CONNECTION_FAILED;
       return false;
     }

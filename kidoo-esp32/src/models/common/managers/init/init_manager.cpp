@@ -92,6 +92,12 @@ bool InitManager::init() {
   }
   delay(100);
   
+  // Détecter sortie d'usine (carte SD neuve = pas de config.json) pour BLE + cercle bleu auto
+  bool configFileExists = SDManager::configFileExists();
+  if (!configFileExists && serialAvailable) {
+    Serial.println("[INIT] Pas de config.json (carte neuve / sortie d'usine)");
+  }
+  
   // ÉTAPE 2 : Initialiser le gestionnaire LED
   #ifdef HAS_LED
   if (HAS_LED) {
@@ -126,48 +132,64 @@ bool InitManager::init() {
   if (HAS_WIFI) {
     initWiFi();  // Tente de se connecter au WiFi configuré dans config.json
     
-    // Attendre un délai pour voir si le WiFi se connecte (le thread de retry peut prendre quelques secondes)
-    // Délai de 8 secondes pour laisser le temps au WiFi de se connecter
-    if (serialAvailable) {
-      Serial.println("[INIT] Attente de connexion WiFi (8 secondes)...");
-    }
-    unsigned long wifiWaitStart = millis();
-    const unsigned long WIFI_WAIT_TIMEOUT_MS = 8000;  // 8 secondes
-    
-    while ((millis() - wifiWaitStart) < WIFI_WAIT_TIMEOUT_MS) {
-      if (WiFiManager::isConnected()) {
-        if (serialAvailable) {
-          Serial.println("[INIT] WiFi connecte - BLE ne sera pas active automatiquement");
-        }
-        break;
-      }
-      delay(500);  // Vérifier toutes les 500ms
-    }
-    
-    delay(100);
-    
-    // Si le WiFi n'est toujours pas connecté après l'attente, activer automatiquement le BLE
-    // SANS feedback lumineux : l'utilisateur ne fait rien, on évite de perturber (LEDs éteintes)
-    #ifdef HAS_BLE
-    if (HAS_BLE && BLEConfigManager::isInitialized()) {
-      if (!WiFiManager::isConnected()) {
+    // Sortie d'usine (pas de config.json) : pas d'attente WiFi, BLE + mode cercle bleu direct
+    if (!configFileExists) {
+      #ifdef HAS_BLE
+      if (HAS_BLE && BLEConfigManager::isInitialized()) {
         if (serialAvailable) {
           Serial.println("");
           Serial.println("[INIT] ========================================");
-          Serial.println("[INIT] WiFi non connecte apres attente");
-          Serial.println("[INIT] Activation automatique du BLE pour configuration");
+          Serial.println("[INIT] Sortie d'usine - pas de configuration");
+          Serial.println("[INIT] Activation BLE + mode cercle bleu pour configuration");
           Serial.println("[INIT] BLE actif pendant 15 minutes (timeout automatique)");
           Serial.println("[INIT] ========================================");
         }
-        BLEConfigManager::enableBLE(0, false);  // Active avec durée par défaut, SANS feedback lumineux
+        BLEConfigManager::enableBLE(0, true);  // Avec feedback = cercle bleu (reconnaissance)
         bleAutoActivated = true;
-      } else {
-        if (serialAvailable) {
-          Serial.println("[INIT] WiFi connecte - BLE non active automatiquement");
+      }
+      #endif
+    } else {
+      // Config existante : attendre 8 s pour voir si le WiFi se connecte
+      if (serialAvailable) {
+        Serial.println("[INIT] Attente de connexion WiFi (8 secondes)...");
+      }
+      unsigned long wifiWaitStart = millis();
+      const unsigned long WIFI_WAIT_TIMEOUT_MS = 8000;  // 8 secondes
+      
+      while ((millis() - wifiWaitStart) < WIFI_WAIT_TIMEOUT_MS) {
+        if (WiFiManager::isConnected()) {
+          if (serialAvailable) {
+            Serial.println("[INIT] WiFi connecte - BLE ne sera pas active automatiquement");
+          }
+          break;
+        }
+        delay(500);  // Vérifier toutes les 500ms
+      }
+      
+      delay(100);
+      
+      // Si le WiFi n'est toujours pas connecté après l'attente, activer le BLE SANS cercle bleu
+      #ifdef HAS_BLE
+      if (HAS_BLE && BLEConfigManager::isInitialized()) {
+        if (!WiFiManager::isConnected()) {
+          if (serialAvailable) {
+            Serial.println("");
+            Serial.println("[INIT] ========================================");
+            Serial.println("[INIT] WiFi non connecte apres attente");
+            Serial.println("[INIT] Activation automatique du BLE pour configuration");
+            Serial.println("[INIT] BLE actif pendant 15 minutes (timeout automatique)");
+            Serial.println("[INIT] ========================================");
+          }
+          BLEConfigManager::enableBLE(0, false);  // SANS feedback lumineux
+          bleAutoActivated = true;
+        } else {
+          if (serialAvailable) {
+            Serial.println("[INIT] WiFi connecte - BLE non active automatiquement");
+          }
         }
       }
+      #endif
     }
-    #endif
   }
   #endif
   

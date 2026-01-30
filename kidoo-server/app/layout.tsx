@@ -15,6 +15,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Kidoo - Veilleuse intelligente pour enfants",
   description: "Kidoo est une veilleuse intelligente connectée qui accompagne les enfants au coucher et au réveil avec des routines personnalisables, des effets lumineux apaisants et bien plus encore.",
+  icons: {
+    icon: '/icon.png',
+    shortcut: '/favicon.ico',
+    apple: '/icon.png',
+  },
 };
 
 export default function RootLayout({

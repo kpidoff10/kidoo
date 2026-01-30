@@ -1,11 +1,6 @@
 {
   "buildCommand": "cd kidoo-server && npm run build",
-  "installCommand": "npm install",
+  "installCommand": "cd kidoo-server && node scripts/install-workspaces.js",
   "framework": "nextjs",
-  "outputDirectory": "kidoo-server/.next",
-  "git": {
-    "deploymentEnabled": {
-      "main": true
-    }
-  }
+  "outputDirectory": "kidoo-server/.next"
 }
