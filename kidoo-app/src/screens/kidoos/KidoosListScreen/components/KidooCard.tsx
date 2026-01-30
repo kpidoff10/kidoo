@@ -8,10 +8,10 @@ import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Card, Text, Accordion, Button } from '@/components/ui';
+import { Card, Text, Accordion, Button, ModelIcon } from '@/components/ui';
 import { useTheme } from '@/theme';
 import { Kidoo } from '@/api';
-import { getKidooModelDisplayName, getKidooModelIcon } from '@/config';
+import { getKidooModelDisplayName } from '@/config';
 import { useKidooContext } from '@/contexts';
 import { RootStackParamList } from '@/navigation/types';
 import { useControlDreamBedtime, useStopDreamRoutine } from '@/hooks';
@@ -89,7 +89,7 @@ export function KidooCard({ kidoo, onPress }: KidooCardProps) {
   });
 
   return (
-    <Card variant="elevated" style={styles.card}>
+    <Card variant="elevated" padding="sm" style={styles.card}>
       {/* Header principal - cliquable pour aller aux détails */}
       <View style={styles.headerContainer}>
         <Pressable
@@ -101,14 +101,13 @@ export function KidooCard({ kidoo, onPress }: KidooCardProps) {
           ]}
         >
           <View style={styles.iconContainer}>
-            <Ionicons
-              name={getKidooModelIcon(kidoo.model) as any}
-              size={32}
-              color={kidoo.isConnected ? colors.primary : colors.textTertiary}
+            <ModelIcon
+              model={kidoo.model}
+              size={80}
             />
           </View>
 
-          <View style={[styles.info, { marginLeft: spacing[3] }]}>
+          <View style={[styles.info, { marginLeft: spacing[4] }]}>
             <Text bold>{kidoo.name}</Text>
             <Text variant="caption" color="secondary">
               {t('kidoos.model')}: {getKidooModelDisplayName(kidoo.model)}
@@ -243,8 +242,8 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
+    width: 80,
+    height: 80,
     borderRadius: 12,
     backgroundColor: 'rgba(99, 102, 241, 0.1)',
     justifyContent: 'center',
